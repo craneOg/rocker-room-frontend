@@ -1,10 +1,11 @@
 import { ThemeProvider } from '@montage-ui/core'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { API_PATHS } from '../shared/api/assumptions'
 import { SessionProvider } from '../shared/auth/session'
+import { COPY } from '../shared/ui/copy'
 import { routes } from './routes'
 
 type Me = { id: string; onboardingRequired: boolean; isSuperAdmin: boolean }
@@ -136,18 +137,37 @@ describe('route guards', () => {
     expect(localStorage.getItem('lastClubId')).toBe('9')
   })
 
-  it('blocks clubs the user does not belong to', async () => {
+  it('shows not found for clubs the user does not belong to', async () => {
     mockApi({ me: user, memberships: [active('1')] })
-    const router = renderAt('/clubs/2/performances')
-    await findScreen('AUTH-003')
-    expect(router.state.location.pathname).toBe('/start')
+    renderAt('/clubs/2/performances')
+    expect(await screen.findByText(COPY.notFoundTitle)).toBeTruthy()
   })
 
-  it('keeps pending applicants out of the club', async () => {
+  it('shows not found to pending applicants', async () => {
     mockApi({ me: user, memberships: [active('1', 'MEMBER', 'PENDING')] })
-    const router = renderAt('/clubs/1')
-    await findScreen('AUTH-003')
-    expect(router.state.location.pathname).toBe('/start')
+    renderAt('/clubs/1')
+    expect(await screen.findByText(COPY.notFoundTitle)).toBeTruthy()
+  })
+
+  it('G-05 lets graduated members read the club', async () => {
+    mockApi({ me: user, memberships: [active('1', 'MEMBER', 'GRADUATED')] })
+    expect(renderAt('/clubs/1')).toBeTruthy()
+    expect(await findScreen('HOME-001')).toBeTruthy()
+  })
+
+  it('lets officers on leave into officer screens', async () => {
+    mockApi({
+      me: user,
+      memberships: [active('1', 'CLUB_ADMIN', 'ON_LEAVE')],
+    })
+    renderAt('/clubs/1/join-requests')
+    expect(await findScreen('CLUB-104')).toBeTruthy()
+  })
+
+  it('resolves static paths before dynamic ones', async () => {
+    mockApi({ me: user, memberships: [active('1', 'CLUB_ADMIN')] })
+    renderAt('/clubs/1/members/new')
+    expect(await findScreen('CLUB-105')).toBeTruthy()
   })
 
   it('redirects non-officers from officer screens to the club home', async () => {
@@ -160,7 +180,7 @@ describe('route guards', () => {
   it('lets officers into officer screens', async () => {
     mockApi({ me: user, memberships: [active('1', 'CLUB_ADMIN')] })
     renderAt('/clubs/1/join-requests')
-    expect(await findScreen('CLUB-103')).toBeTruthy()
+    expect(await findScreen('CLUB-104')).toBeTruthy()
   })
 
   it('keeps /admin for Super Admin only', async () => {
@@ -172,6 +192,6 @@ describe('route guards', () => {
 
     mockApi({ me: { ...user, isSuperAdmin: true } })
     renderAt('/admin/users')
-    expect(await findScreen('/admin/...')).toBeTruthy()
+    expect(await findScreen('SADM-004')).toBeTruthy()
   })
 })

@@ -1,7 +1,7 @@
 import { Navigate, Outlet, useParams } from 'react-router'
 import { saveLastClubId } from '../shared/lib/lastClub'
 import { isClubAdmin, isClubMember, useSession } from '../shared/auth/session'
-import { PageLoading } from '../shared/ui/StateViews'
+import { NotFoundView, PageLoading } from '../shared/ui/StateViews'
 import { useEffect } from 'react'
 
 // Guards only control what is shown; the server response is the source of truth for permissions.
@@ -26,7 +26,8 @@ export function RequireClubMember() {
   useEffect(() => {
     if (member) saveLastClubId(clubId)
   }, [member, clubId])
-  if (!member) return <Navigate to="/" replace />
+  // COM-003 #8, G-05: existence and permission are not distinguished.
+  if (!member) return <NotFoundView onHome={() => location.assign('/')} />
   return <Outlet />
 }
 

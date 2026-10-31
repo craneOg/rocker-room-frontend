@@ -40,13 +40,21 @@ function NotFoundRoute() {
   return <NotFoundView onHome={() => location.assign('/')} />
 }
 
-// Screen IDs not yet fixed in the screen spec show their route pattern instead of a guessed ID.
+const subScreens = (entries: [path: string, screenId: string][]) =>
+  entries.map(([path, screenId]) => ({
+    path,
+    ...screen(screenId, { sub: true }),
+  }))
+
+const PERF = 'performances/:performanceId'
+
+// Screen IDs follow APPX-002. Paths are this app's own decision: the spec fixes only /join/{code}.
 export const routes: RouteObject[] = [
   {
     element: <AppShell />,
     children: [
       { path: '/', element: <Landing /> },
-      { path: '/join/:code', ...screen('JOIN (invite entry)', { sub: true }) },
+      { path: '/join/:code', ...screen('AUTH-001') },
       { path: '/auth/complete', ...screen('AUTH-COMPLETE (temporary)') },
       { path: '/restore', ...screen('AUTH-004', { sub: true }) },
       {
@@ -57,52 +65,75 @@ export const routes: RouteObject[] = [
             element: <RequireOnboarded />,
             children: [
               { path: '/start', ...screen('AUTH-003') },
-              { path: '/clubs/new', ...screen('/clubs/new', { sub: true }) },
-              { path: '/clubs/join', ...screen('/clubs/join', { sub: true }) },
-              {
-                path: '/clubs/search',
-                ...screen('/clubs/search', { sub: true }),
-              },
-              { path: '/calendar', ...screen('/calendar') },
-              { path: '/me/*', ...screen('/me/...') },
+              ...subScreens([
+                ['/clubs/new', 'CLUB-001'],
+                ['/clubs/join', 'CLUB-002'],
+                ['/clubs/search', 'CLUB-003'],
+                ['/me/profile', 'MY-002'],
+                ['/me/membership', 'MY-003'],
+                ['/me/withdrawal', 'MY-004'],
+              ]),
+              { path: '/calendar', ...screen('SCHD-001') },
+              { path: '/me', ...screen('MY-001') },
               {
                 path: '/clubs/:clubId',
                 element: <RequireClubMember />,
                 children: [
                   { index: true, ...screen('HOME-001') },
-                  { path: 'info', ...screen('CLUB-101', { sub: true }) },
-                  { path: 'members', ...screen('CLUB-102', { sub: true }) },
                   { path: 'performances', ...screen('PERF-001') },
-                  ...[
-                    'songs',
-                    'teams',
-                    'setlist',
-                    'schedules',
-                    'members',
-                    'auditions',
-                  ].map((p) => ({
-                    path: `performances/:performanceId/${p}`,
-                    ...screen(
-                      `/clubs/:clubId/performances/:performanceId/${p}`,
-                      { sub: true },
-                    ),
-                  })),
+                  ...subScreens([
+                    ['info', 'CLUB-101'],
+                    ['members', 'CLUB-102'],
+                    ['members/:membershipId', 'CLUB-103'],
+                    ['leave', 'CLUB-108'],
+                    [PERF, 'PERF-003'],
+                    [`${PERF}/members`, 'PMEM-001'],
+                    [`${PERF}/teams`, 'TEAM-001'],
+                    [`${PERF}/teams/apply`, 'TEAM-004'],
+                    [`${PERF}/teams/:teamId`, 'TEAM-002'],
+                    [`${PERF}/songs`, 'SONG-001'],
+                    [`${PERF}/songs/new`, 'SONG-002'],
+                    [`${PERF}/songs/:songId`, 'SONG-003'],
+                    [`${PERF}/setlist`, 'SET-001'],
+                    [`${PERF}/auditions/mine`, 'AUDI-004'],
+                    [`${PERF}/availability`, 'AVAIL-001'],
+                    [`${PERF}/availability/common`, 'AVAIL-002'],
+                    [`${PERF}/schedules`, 'SCHD-001'],
+                    [`${PERF}/schedules/:scheduleId`, 'SCHD-002'],
+                  ]),
                   {
                     element: <RequireClubAdmin />,
-                    children: [
-                      {
-                        path: 'join-requests',
-                        ...screen('CLUB-103', { sub: true }),
-                      },
-                    ],
+                    children: subScreens([
+                      ['join-requests', 'CLUB-104'],
+                      ['members/new', 'CLUB-105'],
+                      ['join-code', 'CLUB-106'],
+                      ['parts', 'CLUB-107'],
+                      ['performances/new', 'PERF-002'],
+                      [`${PERF}/policy`, 'PERF-004'],
+                      [`${PERF}/status`, 'PERF-005'],
+                      [`${PERF}/edit`, 'PERF-006'],
+                      [`${PERF}/teams/new`, 'TEAM-003'],
+                      [`${PERF}/teams/review`, 'TEAM-005'],
+                      [`${PERF}/songs/status`, 'SONG-005'],
+                      [`${PERF}/songs/:songId/players`, 'SONG-004'],
+                      [`${PERF}/auditions`, 'AUDI-001'],
+                      [`${PERF}/auditions/new`, 'AUDI-002'],
+                      [`${PERF}/auditions/:auditionId/result`, 'AUDI-003'],
+                      [`${PERF}/schedules/new`, 'SCHD-003'],
+                      [`${PERF}/schedules/:scheduleId/edit`, 'SCHD-003'],
+                    ]),
                   },
                 ],
               },
               {
                 element: <RequireSuperAdmin />,
-                children: [
-                  { path: '/admin/*', ...screen('/admin/...', { sub: true }) },
-                ],
+                children: subScreens([
+                  ['/admin', 'SADM-001'],
+                  ['/admin/clubs', 'SADM-002'],
+                  ['/admin/clubs/:clubId', 'SADM-003'],
+                  ['/admin/users', 'SADM-004'],
+                  ['/admin/audit-logs', 'SADM-005'],
+                ]),
               },
             ],
           },

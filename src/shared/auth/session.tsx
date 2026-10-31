@@ -19,17 +19,22 @@ const SessionContext = createContext<Session>({
   memberships: [],
 })
 
-const ACTIVE_STATUSES = ['ACTIVE', 'ON_LEAVE']
+// G-05: graduated members keep read access.
+const CLUB_ACCESS_STATUSES = ['ACTIVE', 'ON_LEAVE', 'GRADUATED']
+// ON_LEAVE has the same rights as ACTIVE; graduating removes the admin role.
+const CLUB_ADMIN_STATUSES = ['ACTIVE', 'ON_LEAVE']
 
 export const isClubMember = (s: Session, clubId: string) =>
   s.memberships.some(
-    (m) => m.clubId === clubId && ACTIVE_STATUSES.includes(m.status),
+    (m) => m.clubId === clubId && CLUB_ACCESS_STATUSES.includes(m.status),
   )
 
 export const isClubAdmin = (s: Session, clubId: string) =>
   s.memberships.some(
     (m) =>
-      m.clubId === clubId && m.role === 'CLUB_ADMIN' && m.status === 'ACTIVE',
+      m.clubId === clubId &&
+      m.role === 'CLUB_ADMIN' &&
+      CLUB_ADMIN_STATUSES.includes(m.status),
   )
 
 export function SessionProvider({ children }: { children: ReactNode }) {
