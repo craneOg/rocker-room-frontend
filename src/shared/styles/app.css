@@ -1,0 +1,211 @@
+/* App-wide layout. Colors, spacing and radius come from Montage theme tokens. */
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--semantic-background-neutral-primary);
+  color: var(--semantic-foreground-neutral-strong);
+}
+
+/* ---- App shell (COM-001) ---- */
+
+.shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.shell-bare {
+  min-height: 100dvh;
+}
+
+.topbar {
+  padding-top: env(safe-area-inset-top, 0px);
+  border-bottom: 1px solid var(--semantic-line-neutral-tertiary);
+  background: var(--semantic-background-neutral-primary);
+}
+
+/* Only the main region scrolls. */
+.main {
+  grid-row: 2;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.main-inner {
+  width: 100%;
+  max-width: 768px;
+  margin: 0 auto;
+  padding: var(--spacing-16);
+  box-sizing: border-box;
+}
+
+.tabbar {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  border-top: 1px solid var(--semantic-line-neutral-tertiary);
+  background: var(--semantic-background-neutral-primary);
+}
+
+.sidenav {
+  display: none;
+}
+
+@media (min-width: 1200px) {
+  .shell {
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+
+  .topbar,
+  .tabbar {
+    display: none;
+  }
+
+  .sidenav {
+    grid-row: 1;
+    grid-column: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-8);
+    padding: var(--spacing-24) var(--spacing-16);
+    border-right: 1px solid var(--semantic-line-neutral-tertiary);
+    overflow-y: auto;
+  }
+
+  .main {
+    grid-row: 1;
+    grid-column: 2;
+  }
+
+  .main-inner {
+    max-width: 1200px;
+    padding: var(--spacing-24) var(--spacing-32);
+  }
+}
+
+.sidenav-brand {
+  padding: 0 var(--spacing-8) var(--spacing-16);
+}
+
+.sidenav-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.sidenav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-12);
+  min-height: 44px;
+  padding: 0 var(--spacing-12);
+  border-radius: var(--radius-8, 8px);
+  color: var(--semantic-foreground-neutral-secondary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.sidenav-item svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+
+.sidenav-item.is-active {
+  background: var(--semantic-background-neutral-secondary);
+  color: var(--semantic-foreground-neutral-strong);
+  font-weight: 700;
+}
+
+.sidenav-footer {
+  margin-top: auto;
+  padding: var(--spacing-8);
+}
+
+.attribution {
+  margin-top: var(--spacing-32);
+  padding-top: var(--spacing-16);
+  color: var(--semantic-foreground-neutral-tertiary);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* ---- Common feedback pieces (COM-003) ---- */
+
+.helper-slot {
+  min-height: 18px; /* fixed height: input state changes never move content below */
+}
+
+.warning-list {
+  margin: var(--spacing-4) 0 0;
+  padding-left: var(--spacing-16);
+  list-style: disc;
+}
+
+.dialog-items {
+  margin: var(--spacing-8) 0 0;
+  padding: var(--spacing-12) var(--spacing-12) var(--spacing-12)
+    var(--spacing-24);
+  border-radius: 8px;
+  background: var(--semantic-background-neutral-secondary);
+  list-style: disc;
+  font-size: 14px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-8);
+  margin-top: var(--spacing-16);
+}
+
+.reason-counter {
+  margin: var(--spacing-4) 0 0;
+  text-align: right;
+  font-size: 12px;
+  color: var(--semantic-foreground-neutral-tertiary);
+}
+
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
+}
+
+.skeleton-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+}
+
+.page-loading,
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-8);
+  min-height: 40dvh;
+}
+
+/* ---- Badge emphasis (status is never color-only) ---- */
+
+.badge-strike {
+  text-decoration: line-through;
+}
+
+.badge-bold {
+  font-weight: 700;
+}
+
+.badge-border {
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
+  font-weight: 700;
+}
