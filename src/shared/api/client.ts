@@ -12,6 +12,9 @@ export type RequestOptions = {
 
 export type ApiEnvelope<T> = { data: T; meta?: unknown }
 
+/** Only `expired` ends the session; an ApiError is a temporary failure of the renewal itself. */
+type RenewalResult = 'renewed' | 'expired' | ApiError
+
 type ClientHooks = {
   /** Called once when token renewal fails for a user who had been signed in. */
   onSessionExpired: () => void
@@ -20,7 +23,7 @@ type ClientHooks = {
 const baseUrl: string = import.meta.env.VITE_API_BASE_URL ?? ''
 let hooks: ClientHooks = { onSessionExpired: () => {} }
 let signedIn = false
-let renewal: Promise<boolean> | null = null
+let renewal: Promise<RenewalResult> | null = null
 
 export function configureClient(next: ClientHooks) {
   hooks = next
@@ -77,10 +80,14 @@ async function readJson(res: Response): Promise<unknown> {
 }
 
 /** Single-flight: concurrent 401s share one renewal request. */
-function renewToken(): Promise<boolean> {
+function renewToken(): Promise<RenewalResult> {
   renewal ??= send(API_PATHS.tokenRenewal, { method: 'POST' })
-    .then((res) => res.ok)
-    .catch(() => false)
+    .then(async (res) => {
+      if (res.ok) return 'renewed' as const
+      if (res.status === 401) return 'expired' as const
+      return parseErrorBody(res.status, await readJson(res))
+    })
+    .catch((e: ApiError) => e)
     .finally(() => {
       renewal = null
     })
@@ -93,7 +100,9 @@ export async function request<T>(
 ): Promise<ApiEnvelope<T>> {
   let res = await send(path, opts)
   if (res.status === 401 && path !== API_PATHS.tokenRenewal) {
-    if (await renewToken()) {
+    const renewed = await renewToken()
+    if (renewed instanceof ApiError) throw renewed
+    if (renewed === 'renewed') {
       res = await send(path, opts)
     }
     if (res.status === 401) {

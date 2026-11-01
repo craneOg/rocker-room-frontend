@@ -242,6 +242,18 @@ describe('route guards', () => {
     expect(await findScreen('CLUB-104')).toBeTruthy()
   })
 
+  it('does not link to a saved club the user has left', async () => {
+    mockApi({ me: user, memberships: [active('1')] })
+    localStorage.setItem('lastClubId', '9')
+    renderAt('/start')
+    await findScreen('AUTH-003')
+    const links = [...document.querySelectorAll('.sidenav a')]
+    expect(links.length).toBeGreaterThan(0)
+    expect(links.some((a) => a.getAttribute('href')?.includes('/9'))).toBe(
+      false,
+    )
+  })
+
   it('keeps /admin for Super Admin only', async () => {
     mockApi({ me: user })
     const router = renderAt('/admin/users')

@@ -24,7 +24,7 @@ import {
   useNavigate,
   useParams,
 } from 'react-router'
-import { useSession } from '../shared/auth/session'
+import { isClubMember, useSession } from '../shared/auth/session'
 import { readLastClubId } from '../shared/lib/lastClub'
 import { COPY } from '../shared/ui/copy'
 import { notFoundStore, warningsStore } from '../shared/ui/feedbackBus'
@@ -44,7 +44,11 @@ type NavItem = {
 
 function useNavItems(): NavItem[] {
   const params = useParams()
-  const clubId = params.clubId ?? readLastClubId()
+  const session = useSession()
+  const lastClubId = readLastClubId()
+  const clubId =
+    params.clubId ??
+    (lastClubId && isClubMember(session, lastClubId) ? lastClubId : null)
   const clubBase = clubId ? `/clubs/${clubId}` : null
   return [
     {
