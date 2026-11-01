@@ -16,7 +16,8 @@ registerFeedback({ navigate: (path) => void router.navigate(path) })
 configureClient({
   onSessionExpired: () => {
     feedback.toast(COPY.loginAgain, 'negative')
-    queryClient.clear()
+    // reset, not clear: the mounted session query must refetch and report anonymous.
+    void queryClient.resetQueries()
     feedback.navigate('/')
   },
 })
