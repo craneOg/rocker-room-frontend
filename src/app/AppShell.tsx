@@ -141,7 +141,6 @@ export function AppShell() {
     return (
       <div className="shell-bare">
         <main className="main-inner">
-        <main className="main-inner">
           {session.status === 'error' ? (
             <EmptyState
               description={COPY.unknownError}
@@ -154,7 +153,6 @@ export function AppShell() {
             content
           )}
           <footer className="attribution">{COPY.attribution}</footer>
-        </main>
         </main>
       </div>
     )

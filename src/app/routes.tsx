@@ -1,10 +1,7 @@
 import type { RouteObject } from 'react-router'
 import { Navigate } from 'react-router'
 import { readLastClubId } from '../shared/lib/lastClub'
-import { AuthComplete } from '../features/auth/AuthComplete'
 import { LoginScreen } from '../features/auth/LoginScreen'
-import { Onboarding } from '../features/auth/Onboarding'
-import { Start } from '../features/auth/Start'
 import { isClubMember, useSession } from '../shared/auth/session'
 import { NotFoundView, PageLoading } from '../shared/ui/StateViews'
 import { AppShell } from './AppShell'
@@ -54,13 +51,22 @@ const subScreens = (entries: [path: string, screenId: string][]) =>
 
 const PERF = 'performances/:performanceId'
 
+// Route-level code splitting: new screens use `lazy` like these.
 // Screen IDs follow APPX-002. Paths are this app's own decision: the spec fixes only /join/{code}.
 export const routes: RouteObject[] = [
   // Outside AppShell: the shell swaps its layout when the session changes, which would remount
   // this screen mid-exchange and replay the single-use exchange.
-  { path: '/auth/complete', element: <AuthComplete /> },
+  {
+    path: '/auth/complete',
+    HydrateFallback: PageLoading,
+    lazy: async () => {
+      const { AuthComplete } = await import('../features/auth/AuthComplete')
+      return { Component: AuthComplete }
+    },
+  },
   {
     element: <AppShell />,
+    HydrateFallback: PageLoading,
     children: [
       { path: '/', element: <Landing /> },
       // The invite code is ignored for now (CLUB-002 / CLUB-12 preview are not built).
@@ -69,11 +75,23 @@ export const routes: RouteObject[] = [
       {
         element: <RequireAuth />,
         children: [
-          { path: '/onboarding', element: <Onboarding /> },
+          {
+            path: '/onboarding',
+            lazy: async () => {
+              const { Onboarding } = await import('../features/auth/Onboarding')
+              return { Component: Onboarding }
+            },
+          },
           {
             element: <RequireOnboarded />,
             children: [
-              { path: '/start', element: <Start /> },
+              {
+                path: '/start',
+                lazy: async () => {
+                  const { Start } = await import('../features/auth/Start')
+                  return { Component: Start }
+                },
+              },
               ...subScreens([
                 ['/clubs/new', 'CLUB-001'],
                 ['/clubs/join', 'CLUB-002'],

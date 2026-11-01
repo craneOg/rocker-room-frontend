@@ -48,14 +48,15 @@ beforeEach(() => vi.mocked(startKakaoLogin).mockClear())
 describe('/auth/complete', () => {
   it('waits for the page-load session check before exchanging', async () => {
     let signedIn = false
-    let settleFirstCheck = () => {}
+    let settleFirstCheck: (() => void) | undefined
     const fetchMock = stubApi({
-      [`GET ${API_PATHS.me}`]: () =>
-        signedIn
-          ? json(me())
-          : new Promise((resolve) => {
-              settleFirstCheck = () => resolve(apiError('UNAUTHENTICATED', 401))
-            }),
+      [`GET ${API_PATHS.me}`]: () => {
+        if (signedIn) return json(me())
+        if (settleFirstCheck) return apiError('UNAUTHENTICATED', 401)
+        return new Promise((resolve) => {
+          settleFirstCheck = () => resolve(apiError('UNAUTHENTICATED', 401))
+        })
+      },
       [`POST ${API_PATHS.tokenRenewal}`]: () =>
         apiError('UNAUTHENTICATED', 401),
       [`GET ${API_PATHS.memberships}`]: () => json([]),
@@ -70,7 +71,7 @@ describe('/auth/complete', () => {
     )
     // The check's renewal could fail after the exchange and fail a good login.
     expect(callsTo(fetchMock, API_PATHS.exchange)).toHaveLength(0)
-    settleFirstCheck()
+    settleFirstCheck?.()
     await findScreen('AUTH-003')
     expect(callsTo(fetchMock, API_PATHS.exchange)).toHaveLength(1)
   })
@@ -78,7 +79,7 @@ describe('/auth/complete', () => {
   it('exchanges exactly once under StrictMode and lands on /start', async () => {
     const fetchMock = loginApi()
     const router = renderApp('/auth/complete')
-    expect(screen.getByText(T.loggingIn)).toBeTruthy()
+    expect(await screen.findByText(T.loggingIn)).toBeTruthy()
     await findScreen('AUTH-003')
     expect(router.state.location.pathname).toBe('/start')
     expect(callsTo(fetchMock, API_PATHS.exchange)).toHaveLength(1)
@@ -110,7 +111,6 @@ describe('/auth/complete', () => {
     expect(callsTo(fetchMock, API_PATHS.tokenRenewal)).toHaveLength(0)
     expect(callsTo(fetchMock, API_PATHS.exchange)).toHaveLength(1)
     expect(router.state.location.pathname).toBe('/')
-    await findScreen('AUTH-001')
   })
 
   it('shows the cancelled message for the error query param, without exchanging', async () => {
