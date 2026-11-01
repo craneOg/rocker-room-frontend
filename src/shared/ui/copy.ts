@@ -29,6 +29,7 @@ export const COPY = {
   // Not in the design doc (assumed): generic failures.
   unknownError: '잠시 후 다시 시도해 주세요',
   networkError: '네트워크 연결을 확인해 주세요',
+  serviceName: '록커룸', // temporary service name
   themeLabel: '화면 모드',
   attribution: '디자인 시스템: Montage by Wantedlab (MIT)',
 } as const

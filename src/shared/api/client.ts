@@ -8,6 +8,8 @@ export type RequestOptions = {
   body?: unknown
   query?: Record<string, string | number | boolean | undefined>
   signal?: AbortSignal
+  /** A 401 is the final answer (no token renewal), e.g. an invalid login exchange. */
+  skipRenewal?: boolean
 }
 
 export type ApiEnvelope<T> = { data: T; meta?: unknown }
@@ -21,6 +23,9 @@ const baseUrl: string = import.meta.env.VITE_API_BASE_URL ?? ''
 let hooks: ClientHooks = { onSessionExpired: () => {} }
 let signedIn = false
 let renewal: Promise<boolean> | null = null
+
+/** Absolute URL for a full-page navigation to the API (respects VITE_API_BASE_URL). */
+export const apiUrl = (path: string) => baseUrl + path
 
 export function configureClient(next: ClientHooks) {
   hooks = next
@@ -92,7 +97,11 @@ export async function request<T>(
   opts: RequestOptions = {},
 ): Promise<ApiEnvelope<T>> {
   let res = await send(path, opts)
-  if (res.status === 401 && path !== API_PATHS.tokenRenewal) {
+  if (
+    res.status === 401 &&
+    !opts.skipRenewal &&
+    path !== API_PATHS.tokenRenewal
+  ) {
     if (await renewToken()) {
       res = await send(path, opts)
     }

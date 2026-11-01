@@ -1,6 +1,10 @@
 import type { RouteObject } from 'react-router'
 import { Navigate } from 'react-router'
 import { readLastClubId } from '../shared/lib/lastClub'
+import { AuthComplete } from '../features/auth/AuthComplete'
+import { LoginScreen } from '../features/auth/LoginScreen'
+import { Onboarding } from '../features/auth/Onboarding'
+import { Start } from '../features/auth/Start'
 import { isClubMember, useSession } from '../shared/auth/session'
 import { NotFoundView, PageLoading } from '../shared/ui/StateViews'
 import { AppShell } from './AppShell'
@@ -23,16 +27,18 @@ const screen = (
   handle: { title: screenId, ...handle },
 })
 
-/** `/`: login screen, or the last club's home, or the start screen. */
+/** `/`: login screen, or the last (else first) club's home, or the start screen. */
 function Landing() {
   const session = useSession()
   if (session.status === 'loading') return <PageLoading />
-  if (session.status === 'anonymous') return <Placeholder screenId="AUTH-001" />
+  if (session.status === 'anonymous') return <LoginScreen />
   if (session.me?.onboardingRequired)
     return <Navigate to="/onboarding" replace />
   const last = readLastClubId()
   if (last && isClubMember(session, last))
     return <Navigate to={`/clubs/${last}`} replace />
+  const first = session.memberships.find((m) => isClubMember(session, m.clubId))
+  if (first) return <Navigate to={`/clubs/${first.clubId}`} replace />
   return <Navigate to="/start" replace />
 }
 
@@ -50,21 +56,24 @@ const PERF = 'performances/:performanceId'
 
 // Screen IDs follow APPX-002. Paths are this app's own decision: the spec fixes only /join/{code}.
 export const routes: RouteObject[] = [
+  // Outside AppShell: the shell swaps its layout when the session changes, which would remount
+  // this screen mid-exchange and replay the single-use exchange.
+  { path: '/auth/complete', element: <AuthComplete /> },
   {
     element: <AppShell />,
     children: [
       { path: '/', element: <Landing /> },
-      { path: '/join/:code', ...screen('AUTH-001') },
-      { path: '/auth/complete', ...screen('AUTH-COMPLETE (temporary)') },
+      // The invite code is ignored for now (CLUB-002 / CLUB-12 preview are not built).
+      { path: '/join/:code', element: <LoginScreen /> },
       { path: '/restore', ...screen('AUTH-004', { sub: true }) },
       {
         element: <RequireAuth />,
         children: [
-          { path: '/onboarding', ...screen('AUTH-002') },
+          { path: '/onboarding', element: <Onboarding /> },
           {
             element: <RequireOnboarded />,
             children: [
-              { path: '/start', ...screen('AUTH-003') },
+              { path: '/start', element: <Start /> },
               ...subScreens([
                 ['/clubs/new', 'CLUB-001'],
                 ['/clubs/join', 'CLUB-002'],

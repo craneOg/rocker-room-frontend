@@ -130,6 +130,24 @@ describe('route guards', () => {
     expect(router.state.location.pathname).toBe('/clubs/5')
   })
 
+  it('opens the first accessible club from / when there is no valid last club', async () => {
+    mockApi({
+      me: user,
+      memberships: [active('3', 'MEMBER', 'PENDING'), active('7')],
+    })
+    localStorage.setItem('lastClubId', '99')
+    const router = renderAt('/')
+    expect(await findScreen('HOME-001')).toBeTruthy()
+    expect(router.state.location.pathname).toBe('/clubs/7')
+  })
+
+  it('keeps /start reachable for club members', async () => {
+    mockApi({ me: user, memberships: [active('7')] })
+    const router = renderAt('/start')
+    expect(await findScreen('AUTH-003')).toBeTruthy()
+    expect(router.state.location.pathname).toBe('/start')
+  })
+
   it('stores the last club ID when a club screen opens', async () => {
     mockApi({ me: user, memberships: [active('9')] })
     renderAt('/clubs/9')
