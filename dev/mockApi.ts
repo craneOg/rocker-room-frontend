@@ -135,6 +135,7 @@ export function createMockApi() {
 
     if (method === 'GET' && path === '/api/v1/auth/kakao/authorize') {
       const failed = state.outcome === 'cancelled'
+      if (failed) state.outcome = 'ok' // exchange is skipped, so reset here
       res.writeHead(302, {
         Location: failed
           ? '/auth/complete?error=access_denied'

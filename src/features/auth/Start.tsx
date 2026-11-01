@@ -30,6 +30,13 @@ export function Start() {
       action: 'accept' | 'decline' | 'cancel-request'
     }) => respondToMembership(v.m, v.action),
     onSuccess: async (_, { m, action }) => {
+      // The server already accepted: a failed refetch must not hide that from the guards.
+      if (action === 'accept')
+        queryClient.setQueryData<Membership[]>(['me', 'memberships'], (list) =>
+          list?.map((x) =>
+            x.membershipId === m.membershipId ? { ...x, status: 'ACTIVE' } : x,
+          ),
+        )
       await queryClient.invalidateQueries({ queryKey: ['me', 'memberships'] })
       if (action === 'accept') {
         feedback.toast(T.accepted)

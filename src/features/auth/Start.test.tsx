@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { API_PATHS, membershipActionPath } from '../../shared/api/assumptions'
 import {
+  apiError,
   callsTo,
   findScreen,
   json,
@@ -58,8 +59,12 @@ const me = {
   isSuperAdmin: false,
 }
 
-function openStart(initial = [invite, expired, pending, rejected]) {
+function openStart(
+  initial = [invite, expired, pending, rejected],
+  failRefetchAfterAccept = false,
+) {
   let memberships: object[] = initial
+  let accepted = false
   const act = (
     m: { clubId: string; membershipId: string },
     action: 'accept' | 'decline' | 'cancel-request',
@@ -74,11 +79,14 @@ function openStart(initial = [invite, expired, pending, rejected]) {
   }
   const fetchMock = stubApi({
     [`GET ${API_PATHS.me}`]: () => json(me),
-    [`GET ${API_PATHS.memberships}`]: () => json(memberships),
-    [`POST ${act(invite, 'accept')}`]: apply('m1', (m) => ({
-      ...m,
-      status: 'ACTIVE',
-    })),
+    [`GET ${API_PATHS.memberships}`]: () =>
+      failRefetchAfterAccept && accepted
+        ? apiError('UNKNOWN', 500)
+        : json(memberships),
+    [`POST ${act(invite, 'accept')}`]: () => {
+      accepted = true
+      return apply('m1', (m) => ({ ...m, status: 'ACTIVE' }))()
+    },
     [`POST ${act(invite, 'decline')}`]: apply('m1', () => null),
     [`POST ${act(pending, 'cancel-request')}`]: apply('m3', () => null),
   })
@@ -121,6 +129,16 @@ describe('AUTH-003', () => {
     expect(
       c.getByRole('button', { name: T.decline }).hasAttribute('disabled'),
     ).toBe(true)
+  })
+
+  it('opens the club home even if the refetch after accepting fails', async () => {
+    const { router } = openStart([invite], true)
+    await findScreen('AUTH-003')
+    fireEvent.click(
+      within(card('한빛 밴드 동아리')).getByRole('button', { name: T.accept }),
+    )
+    await findScreen('HOME-001')
+    expect(router.state.location.pathname).toBe('/clubs/c1')
   })
 
   it('accepts an invite, toasts, and opens the club home', async () => {

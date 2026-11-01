@@ -100,7 +100,8 @@ export function Onboarding() {
       data-screen-id="AUTH-002"
       onSubmit={(e) => {
         e.preventDefault()
-        if (nameValid && available) save.mutate({ name: trimmed, handle })
+        if (nameValid && available && !save.isPending)
+          save.mutate({ name: trimmed, handle })
       }}
     >
       <header className="onboarding-top">
@@ -145,6 +146,7 @@ export function Onboarding() {
           onChange={(e) => {
             setName(e.target.value)
             setNameTouched(true)
+            save.reset()
           }}
         />
       </FormField>
@@ -163,7 +165,10 @@ export function Onboarding() {
           spellCheck={false}
           status={handleError ? 'negative' : 'normal'}
           leadingContent={<TextFieldContent variant="text">@</TextFieldContent>}
-          onChange={(e) => setHandle(e.target.value)}
+          onChange={(e) => {
+            setHandle(e.target.value)
+            save.reset()
+          }}
         />
       </FormField>
 

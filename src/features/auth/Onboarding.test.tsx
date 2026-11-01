@@ -46,6 +46,62 @@ function openOnboarding(extra: Record<string, Route> = {}) {
 }
 
 describe('AUTH-002', () => {
+  it('saves once when submitted again while saving', async () => {
+    let finish = (_: Response) => {}
+    const { fetchMock } = openOnboarding({
+      [`GET ${API_PATHS.handleAvailability}`]: () => json({ available: true }),
+      [`PATCH ${API_PATHS.me}`]: () =>
+        new Promise<Response>((resolve) => {
+          finish = resolve
+        }),
+    })
+    await findScreen('AUTH-002')
+    type(handleInput(), 'rocker_01')
+    await waitFor(() =>
+      expect((submit() as HTMLButtonElement).disabled).toBe(false),
+    )
+    const form = document.querySelector('form') as HTMLFormElement
+    fireEvent.submit(form)
+    await waitFor(() =>
+      expect(callsTo(fetchMock, API_PATHS.me).length).toBeGreaterThan(1),
+    )
+    fireEvent.submit(form)
+    await new Promise((r) => setTimeout(r))
+    const patches = callsTo(fetchMock, API_PATHS.me).filter(
+      ([, init]) => init?.method === 'PATCH',
+    )
+    expect(patches).toHaveLength(1)
+    finish(json(user({ handle: 'rocker_01', onboardingRequired: false })))
+  })
+
+  it('clears a server field error once the input changes', async () => {
+    openOnboarding({
+      [`GET ${API_PATHS.handleAvailability}`]: () => json({ available: true }),
+      [`PATCH ${API_PATHS.me}`]: () =>
+        new Response(
+          JSON.stringify({
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: 'x',
+              details: [{ field: 'handle', message: 'server says no' }],
+            },
+          }),
+          { status: 400 },
+        ),
+    })
+    await findScreen('AUTH-002')
+    type(handleInput(), 'rocker_01')
+    await waitFor(() =>
+      expect((submit() as HTMLButtonElement).disabled).toBe(false),
+    )
+    fireEvent.click(submit())
+    expect(await screen.findByText('* server says no')).toBeTruthy()
+    type(handleInput(), 'rocker_02')
+    await waitFor(() =>
+      expect(screen.queryByText('* server says no')).toBeNull(),
+    )
+  })
+
   it('prefills the name and shows the first letter in the photo placeholder', async () => {
     openOnboarding()
     await findScreen('AUTH-002')

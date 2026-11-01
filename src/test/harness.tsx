@@ -5,6 +5,7 @@ import { StrictMode } from 'react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { routes } from '../app/routes'
+import { API_PATHS } from '../shared/api/assumptions'
 import { SessionProvider } from '../shared/auth/session'
 import { createCaches } from '../shared/api/handlers'
 import { FeedbackHost } from '../shared/ui/FeedbackHost'
@@ -23,7 +24,12 @@ export type Route = (
 export function stubApi(table: Record<string, Route>) {
   const fetchMock = vi.fn((url: string, init?: RequestInit) => {
     const path = url.split('?')[0] ?? ''
-    const route = table[`${init?.method ?? 'GET'} ${path}`]
+    // Like the real server: without a session, renewal answers 401.
+    const route =
+      table[`${init?.method ?? 'GET'} ${path}`] ??
+      (path === API_PATHS.tokenRenewal
+        ? () => apiError('UNAUTHENTICATED', 401)
+        : undefined)
     return Promise.resolve(
       route ? route(url, init) : apiError('NOT_FOUND', 404),
     )
