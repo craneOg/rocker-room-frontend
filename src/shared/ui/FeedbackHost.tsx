@@ -37,8 +37,10 @@ export function FeedbackHost() {
 
   const current = queue[0]
   const close = (result: 'confirm' | 'cancel') => {
-    current?.resolve(result)
-    setQueue((q) => q.slice(1))
+    if (!current) return
+    current.resolve(result)
+    // An action button also fires onOpenChange: the same dialog must not close twice.
+    setQueue((q) => (q[0] === current ? q.slice(1) : q))
   }
 
   if (!current) return null

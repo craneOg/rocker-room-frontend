@@ -14,6 +14,7 @@ import {
   IconPerson,
   IconPersons,
 } from '@montage-ui/icon'
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, type ReactNode } from 'react'
 import {
   NavLink,
@@ -27,7 +28,7 @@ import { useSession } from '../shared/auth/session'
 import { readLastClubId } from '../shared/lib/lastClub'
 import { COPY } from '../shared/ui/copy'
 import { notFoundStore, warningsStore } from '../shared/ui/feedbackBus'
-import { NotFoundView } from '../shared/ui/StateViews'
+import { EmptyState, NotFoundView } from '../shared/ui/StateViews'
 import { WarningBanner } from '../shared/ui/WarningBanner'
 import type { RouteHandle } from './routes'
 
@@ -111,6 +112,7 @@ function ThemeToggle() {
 
 export function AppShell() {
   const session = useSession()
+  const queryClient = useQueryClient()
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const matches = useMatches()
@@ -137,7 +139,19 @@ export function AppShell() {
   if (session.status !== 'authenticated') {
     return (
       <div className="shell-bare">
-        <main className="main-inner">{content}</main>
+        <main className="main-inner">
+          {session.status === 'error' ? (
+            <EmptyState
+              description={COPY.unknownError}
+              actionLabel={COPY.retry}
+              onAction={() =>
+                void queryClient.refetchQueries({ queryKey: ['me'] })
+              }
+            />
+          ) : (
+            content
+          )}
+        </main>
       </div>
     )
   }

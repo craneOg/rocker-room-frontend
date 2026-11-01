@@ -31,6 +31,11 @@ export function ReasonModal({
   onClose,
 }: Props) {
   const [reason, setReason] = useState('')
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) setReason('')
+  }
   const trimmed = reason.trim()
   return (
     <Modal open={open} onOpenChange={(o) => !o && onClose()}>
