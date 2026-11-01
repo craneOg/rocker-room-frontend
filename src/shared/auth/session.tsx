@@ -7,9 +7,11 @@ import {
   type Membership,
 } from '../../features/auth/api'
 import { setSignedIn } from '../api/client'
+import { isApiError } from '../api/errors'
 
 export type Session = {
-  status: 'loading' | 'anonymous' | 'authenticated'
+  /** `error`: /me or the memberships failed for a reason other than authentication. */
+  status: 'loading' | 'anonymous' | 'authenticated' | 'error'
   me?: Me
   memberships: Membership[]
 }
@@ -43,7 +45,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     queryFn: getMe,
     staleTime: 60_000,
   })
-  const signedIn = meQuery.isSuccess
+  // Only a 401 ends the session: a failed refetch keeps the data it already has.
+  const unauthenticated =
+    isApiError(meQuery.error) && meQuery.error.status === 401
+  const signedIn = meQuery.data !== undefined && !unauthenticated
   const membershipsQuery = useQuery({
     queryKey: ['me', 'memberships'],
     queryFn: getMemberships,
@@ -52,17 +57,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => setSignedIn(signedIn), [signedIn])
 
-  const session: Session = meQuery.isPending
-    ? { status: 'loading', memberships: [] }
-    : signedIn
-      ? membershipsQuery.isPending
-        ? { status: 'loading', me: meQuery.data, memberships: [] }
-        : {
-            status: 'authenticated',
-            me: meQuery.data,
-            memberships: membershipsQuery.data ?? [],
-          }
-      : { status: 'anonymous', memberships: [] }
+  const session: Session = !signedIn
+    ? unauthenticated
+      ? { status: 'anonymous', memberships: [] }
+      : { status: meQuery.isError ? 'error' : 'loading', memberships: [] }
+    : membershipsQuery.data
+      ? {
+          status: 'authenticated',
+          me: meQuery.data,
+          memberships: membershipsQuery.data,
+        }
+      : {
+          status: membershipsQuery.isError ? 'error' : 'loading',
+          me: meQuery.data,
+          memberships: [],
+        }
 
   return <SessionContext value={session}>{children}</SessionContext>
 }

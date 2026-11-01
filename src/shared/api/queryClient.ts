@@ -7,7 +7,8 @@ export function createQueryClient(): QueryClient {
     ...createCaches(() => client),
     defaultOptions: {
       queries: {
-        retry: (count, error) => !isApiError(error) && count < 2,
+        retry: (count, error) =>
+          isApiError(error, 'NETWORK_ERROR') && count < 2,
         refetchOnWindowFocus: false,
       },
     },

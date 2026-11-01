@@ -1,6 +1,12 @@
 import { ThemeProvider } from '@montage-ui/core'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { API_PATHS } from '../shared/api/assumptions'
@@ -54,7 +60,7 @@ function renderAt(path: string) {
       </QueryClientProvider>
     </ThemeProvider>,
   )
-  return router
+  return Object.assign(router, { queryClient })
 }
 
 async function findScreen(id: string) {
@@ -92,6 +98,59 @@ beforeEach(() => localStorage.clear())
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
+})
+
+describe('session failures', () => {
+  const ok = (data: unknown) =>
+    new Response(JSON.stringify({ data }), { status: 200 })
+  const serverError = () =>
+    new Response(
+      JSON.stringify({ error: { code: 'INTERNAL_ERROR', message: 'x' } }),
+      { status: 500 },
+    )
+  const stub = (me: () => Response, memberships: () => Response) =>
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        Promise.resolve(url.endsWith(API_PATHS.me) ? me() : memberships()),
+      ),
+    )
+
+  it('offers a retry instead of the login screen when /me fails', async () => {
+    let healthy = false
+    stub(
+      () => (healthy ? ok(user) : serverError()),
+      () => ok([active('5')]),
+    )
+    localStorage.setItem('lastClubId', '5')
+    renderAt('/')
+    const retry = await screen.findByText(COPY.retry)
+    expect(document.querySelector('[data-screen-id="AUTH-001"]')).toBeNull()
+    healthy = true
+    fireEvent.click(retry)
+    expect(await findScreen('HOME-001')).toBeTruthy()
+  })
+
+  it('does not treat a failed membership load as having no clubs', async () => {
+    stub(() => ok(user), serverError)
+    renderAt('/clubs/5')
+    expect(await screen.findByText(COPY.retry)).toBeTruthy()
+    expect(screen.queryByText(COPY.notFoundTitle)).toBeNull()
+  })
+
+  it('keeps the session when a background /me refetch fails', async () => {
+    let healthy = true
+    stub(
+      () => (healthy ? ok(user) : serverError()),
+      () => ok([active('5')]),
+    )
+    const queryClient = renderAt('/clubs/5').queryClient
+    await findScreen('HOME-001')
+    healthy = false
+    await queryClient.refetchQueries({ queryKey: ['me'] }).catch(() => {})
+    await new Promise((r) => setTimeout(r))
+    expect(document.querySelector('[data-screen-id="HOME-001"]')).toBeTruthy()
+  })
 })
 
 describe('route guards', () => {
