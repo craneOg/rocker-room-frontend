@@ -130,6 +130,28 @@ describe('401 handling', () => {
     expect(onSessionExpired).toHaveBeenCalledTimes(1)
   })
 
+  it('keeps the session when renewal fails for a temporary reason', async () => {
+    setSignedIn(true)
+    fetchMock.mockImplementation((url) =>
+      Promise.resolve(
+        isRenewal(url)
+          ? json(500, { error: { code: 'INTERNAL_ERROR', message: 'x' } })
+          : unauthenticated(),
+      ),
+    )
+    await expect(api.get('/api/v1/x')).rejects.toMatchObject({ status: 500 })
+
+    fetchMock.mockImplementation((url) =>
+      isRenewal(url)
+        ? Promise.reject(new TypeError('offline'))
+        : Promise.resolve(unauthenticated()),
+    )
+    await expect(api.get('/api/v1/x')).rejects.toMatchObject({
+      code: 'NETWORK_ERROR',
+    })
+    expect(onSessionExpired).not.toHaveBeenCalled()
+  })
+
   it('stays silent on a first visit', async () => {
     fetchMock.mockImplementation(() => Promise.resolve(unauthenticated()))
     await expect(api.get('/me')).rejects.toMatchObject({
