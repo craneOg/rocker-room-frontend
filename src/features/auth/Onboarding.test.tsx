@@ -47,7 +47,7 @@ function openOnboarding(extra: Record<string, Route> = {}) {
 
 describe('AUTH-002', () => {
   it('saves once when submitted again while saving', async () => {
-    let finish = (_: Response) => {}
+    let finish: (r: Response) => void = () => {}
     const { fetchMock } = openOnboarding({
       [`GET ${API_PATHS.handleAvailability}`]: () => json({ available: true }),
       [`PATCH ${API_PATHS.me}`]: () =>
@@ -100,6 +100,53 @@ describe('AUTH-002', () => {
     await waitFor(() =>
       expect(screen.queryByText('* server says no')).toBeNull(),
     )
+  })
+
+  it('does not reset mutation state while save is pending', async () => {
+    // Changing input during a pending save must not call save.reset(),
+    // which would clear isPending and allow a duplicate submit.
+    let finish: (r: Response) => void = () => {}
+    const { fetchMock } = openOnboarding({
+      [`GET ${API_PATHS.handleAvailability}`]: () => json({ available: true }),
+      [`PATCH ${API_PATHS.me}`]: () =>
+        new Promise<Response>((resolve) => {
+          finish = resolve
+        }),
+    })
+    await findScreen('AUTH-002')
+    type(handleInput(), 'rocker_01')
+    await waitFor(() =>
+      expect((submit() as HTMLButtonElement).disabled).toBe(false),
+    )
+
+    // Submit, then immediately change name and handle while still pending.
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement)
+    // Confirm the PATCH is in flight.
+    await waitFor(() =>
+      expect(
+        callsTo(fetchMock, API_PATHS.me).filter(
+          ([, init]) => init?.method === 'PATCH',
+        ),
+      ).toHaveLength(1),
+    )
+
+    const nameInput = screen.getByDisplayValue('명혜성')
+    type(nameInput, '변경된이름')
+    type(handleInput(), 'rocker_02')
+    // Allow any microtasks to settle.
+    await new Promise((r) => setTimeout(r))
+
+    // Try submitting again — the isPending guard must still be in effect.
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement)
+    await new Promise((r) => setTimeout(r))
+
+    // Still exactly one PATCH — reset() was not called during pending.
+    const patches = callsTo(fetchMock, API_PATHS.me).filter(
+      ([, init]) => init?.method === 'PATCH',
+    )
+    expect(patches).toHaveLength(1)
+
+    finish(new Response(null, { status: 204 }))
   })
 
   it('prefills the name and shows the first letter in the photo placeholder', async () => {

@@ -146,7 +146,9 @@ export function Onboarding() {
           onChange={(e) => {
             setName(e.target.value)
             setNameTouched(true)
-            save.reset()
+            // Only reset on error: resetting while isPending would re-enable
+            // the submit button mid-flight and allow a duplicate save.
+            if (save.isError) save.reset()
           }}
         />
       </FormField>
@@ -167,7 +169,8 @@ export function Onboarding() {
           leadingContent={<TextFieldContent variant="text">@</TextFieldContent>}
           onChange={(e) => {
             setHandle(e.target.value)
-            save.reset()
+            // Same guard as the name field: preserve isPending during a save.
+            if (save.isError) save.reset()
           }}
         />
       </FormField>
