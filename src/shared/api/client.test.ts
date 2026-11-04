@@ -171,4 +171,48 @@ describe('401 handling', () => {
     expect(callsTo('/a')).toHaveLength(2)
     expect(callsTo(API_PATHS.tokenRenewal)).toHaveLength(1)
   })
+
+  it('reuses a just-completed renewal for a late-arriving 401 without renewing again', async () => {
+    // Scenario: request A and B fire concurrently (Promise.all).
+    // Both initially get 401. The shared renewal succeeds.
+    // Then a *third* standalone request C gets a 401 immediately after.
+    // Because the previous renewal already incremented the generation,
+    // C should retry once directly — no second renewal call.
+    let renewed = 0
+    fetchMock.mockImplementation((url) => {
+      if (isRenewal(url)) {
+        renewed++
+        return Promise.resolve(json(200, { data: null }))
+      }
+      // All requests return 401 so we can observe retry behaviour.
+      return Promise.resolve(unauthenticated())
+    })
+
+    // A+B: both get 401 → one renewal → both retry (still 401) → errors.
+    setSignedIn(true)
+    await expect(
+      Promise.all([api.get('/a'), api.get('/b')]),
+    ).rejects.toMatchObject({ code: 'UNAUTHENTICATED' })
+    expect(renewed).toBe(1)
+    expect(callsTo(API_PATHS.tokenRenewal)).toHaveLength(1)
+
+    // Now make C succeed on retry.
+    fetchMock.mockImplementation((url) => {
+      if (isRenewal(url)) {
+        renewed++
+        return Promise.resolve(json(200, { data: null }))
+      }
+      // The first call to /c returns 401; subsequent calls succeed.
+      return callsTo('/c').length > 0
+        ? Promise.resolve(json(200, { data: 'ok' }))
+        : Promise.resolve(unauthenticated())
+    })
+
+    // C gets a 401 — renewal already happened, so it retries without renewing.
+    const result = await api.get('/c')
+    expect(result).toBe('ok')
+    // Still only 1 renewal total (the generation guards against a second one).
+    expect(callsTo(API_PATHS.tokenRenewal)).toHaveLength(1)
+    expect(renewed).toBe(1)
+  })
 })

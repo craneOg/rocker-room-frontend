@@ -26,6 +26,10 @@ const baseUrl: string = import.meta.env.VITE_API_BASE_URL ?? ''
 let hooks: ClientHooks = { onSessionExpired: () => {} }
 let signedIn = false
 let renewal: Promise<RenewalResult> | null = null
+// Incremented each time token renewal succeeds. A late-arriving 401 whose
+// request was sent before the last renewal can retry directly without
+// starting another renewal.
+let renewalGeneration = 0
 
 /** Absolute URL for a full-page navigation to the API (respects VITE_API_BASE_URL). */
 export const apiUrl = (path: string) => baseUrl + path
@@ -88,7 +92,10 @@ async function readJson(res: Response): Promise<unknown> {
 function renewToken(): Promise<RenewalResult> {
   renewal ??= send(API_PATHS.tokenRenewal, { method: 'POST' })
     .then(async (res) => {
-      if (res.ok) return 'renewed' as const
+      if (res.ok) {
+        renewalGeneration++
+        return 'renewed' as const
+      }
       if (res.status === 401) return 'expired' as const
       return parseErrorBody(res.status, await readJson(res))
     })
@@ -103,16 +110,25 @@ export async function request<T>(
   path: string,
   opts: RequestOptions = {},
 ): Promise<ApiEnvelope<T>> {
+  // Snapshot the generation before the first send so we can detect whether a
+  // renewal already completed by the time our 401 comes back.
+  const genBefore = renewalGeneration
   let res = await send(path, opts)
   if (
     res.status === 401 &&
     !opts.skipRenewal &&
     path !== API_PATHS.tokenRenewal
   ) {
-    const renewed = await renewToken()
-    if (renewed instanceof ApiError) throw renewed
-    if (renewed === 'renewed') {
+    if (renewalGeneration > genBefore) {
+      // A renewal already completed while this request was in-flight.
+      // Reuse that result — retry once without triggering another renewal.
       res = await send(path, opts)
+    } else {
+      const renewed = await renewToken()
+      if (renewed instanceof ApiError) throw renewed
+      if (renewed === 'renewed') {
+        res = await send(path, opts)
+      }
     }
     if (res.status === 401) {
       if (signedIn) {
