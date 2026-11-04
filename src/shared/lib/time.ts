@@ -25,3 +25,15 @@ export function formatKstDay(iso: string): string {
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? ''
   return `${get('month')}.${get('day')}(${get('weekday')})`
 }
+
+/** ISO-8601 -> "YYYY.MM.DD" in KST (e.g. "2026.09.01"). */
+export function formatKstYmd(iso: string): string {
+  const parts = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: KST,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(iso))
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? ''
+  return `${get('year')}.${get('month')}.${get('day')}`
+}

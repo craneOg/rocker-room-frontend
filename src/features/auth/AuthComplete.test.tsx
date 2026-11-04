@@ -35,6 +35,13 @@ function loginApi(opts: { restore?: boolean; me?: object } = {}) {
     [`GET ${API_PATHS.me}`]: () =>
       signedIn ? json(opts.me ?? me()) : apiError('UNAUTHENTICATED', 401),
     [`GET ${API_PATHS.memberships}`]: () => json([]),
+    [`GET ${API_PATHS.recoveryInfo}`]: () =>
+      json({
+        withdrawnAt: '2026-09-01T12:00:00+09:00',
+        expiresAt: '2026-11-30T12:00:00+09:00',
+        name: '송예림',
+        profileImageUrl: null,
+      }),
     [`POST ${API_PATHS.exchange}`]: () => {
       signedIn = true
       return json({ restoreRequired: opts.restore ?? false })

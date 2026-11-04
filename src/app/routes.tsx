@@ -71,7 +71,14 @@ export const routes: RouteObject[] = [
       { path: '/', element: <Landing /> },
       // The invite code is ignored for now (CLUB-002 / CLUB-12 preview are not built).
       { path: '/join/:code', element: <LoginScreen /> },
-      { path: '/restore', ...screen('AUTH-004', { sub: true }) },
+      {
+        path: '/restore',
+        lazy: async () => {
+          const { RestoreScreen } =
+            await import('../features/auth/RestoreScreen')
+          return { Component: RestoreScreen }
+        },
+      },
       {
         element: <RequireAuth />,
         children: [

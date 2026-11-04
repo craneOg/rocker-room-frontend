@@ -100,4 +100,22 @@ export const AUTH_COPY = {
   myId: (handle: string) => `내 ID: @${handle}`,
   copyId: 'ID 복사',
   idCopied: 'ID를 복사했어요',
+
+  // AUTH-004
+  restoreTitle: '다시 오셨네요',
+  restoreSubtitle: (withdrawnDay: string, expiresDay: string) =>
+    `${withdrawnDay}에 탈퇴한 계정이에요. ${expiresDay}까지는 이전 프로필로 돌아갈 수 있어요.`,
+  restoreInfoTitle: '되찾는 정보: 프로필 사진 · 이름',
+  restoreNotes: [
+    '사용자 ID는 다시 정해야 해요(이전 ID는 다른 사람이 쓰고 있을 수 있어요)',
+    '동아리 소속과 역할은 돌아오지 않아요. 동아리에는 다시 가입 신청해 주세요',
+    "지난 공연 기록은 '탈퇴한 사용자'로 남아 있어요",
+  ],
+  restoreAction: '이전 프로필로 돌아가기',
+  startNewAction: '새로 시작하기',
+  startNewConfirmTitle: '새로 시작할까요?',
+  startNewConfirmDescription:
+    '이전 이름과 사진은 바로 지워지고 되찾을 수 없어요.',
+  startNewConfirm: '새로 시작',
+  restoreWelcome: '다시 오신 걸 환영해요',
 } as const

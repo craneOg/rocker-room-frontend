@@ -69,6 +69,12 @@ const initialState = () => ({
     },
   ] as Membership[],
   outcome: 'ok' as Outcome,
+  recovery: {
+    withdrawnAt: '2026-09-01T12:00:00+09:00',
+    expiresAt: '2026-11-30T12:00:00+09:00',
+    name: '송예림',
+    profileImageUrl: null,
+  },
 })
 
 const COOKIE_EXCHANGE = 'loginExchange'
@@ -197,6 +203,22 @@ export function createMockApi() {
       const handle = url.searchParams.get('handle') ?? ''
       await new Promise((r) => setTimeout(r, 300)) // lets the "checking" state show
       return ok(res, { available: !TAKEN_HANDLES.includes(handle) })
+    }
+
+    if (path === '/api/v1/auth/recovery-info' && method === 'GET') {
+      return ok(res, state.recovery)
+    }
+
+    if (path === '/api/v1/auth/restore' && method === 'POST') {
+      state.user.name = state.recovery.name
+      state.user.onboardingRequired = true
+      return ok(res, { success: true })
+    }
+
+    if (path === '/api/v1/auth/start-new' && method === 'POST') {
+      state.user.name = '새사용자'
+      state.user.onboardingRequired = true
+      return ok(res, { success: true })
     }
 
     const action =

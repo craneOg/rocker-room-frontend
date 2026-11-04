@@ -58,3 +58,17 @@ export const respondToMembership = (
   m: Pick<Membership, 'clubId' | 'membershipId'>,
   action: 'accept' | 'decline' | 'cancel-request',
 ) => api.post<void>(membershipActionPath(m.clubId, m.membershipId, action))
+
+export type RecoveryInfo = {
+  withdrawnAt: string
+  expiresAt: string
+  name: string
+  profileImageUrl?: string | null
+}
+
+export const getRecoveryInfo = () =>
+  api.get<RecoveryInfo>(API_PATHS.recoveryInfo)
+export const restoreProfile = () =>
+  api.post<{ success: boolean }>(API_PATHS.restore)
+export const startNewAccount = () =>
+  api.post<{ success: boolean }>(API_PATHS.startNew)

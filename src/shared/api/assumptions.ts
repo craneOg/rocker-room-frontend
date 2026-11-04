@@ -10,6 +10,10 @@ export const API_PATHS = {
   // Not in the API table (AUTH-14, path unknown).
   logout: '/api/v1/auth/logout',
   handleAvailability: '/api/v1/users/handle-availability',
+  // AUTH-004: Recovery choice (paths unknown, runbook 임시 가정).
+  recoveryInfo: '/api/v1/auth/recovery-info',
+  restore: '/api/v1/auth/restore',
+  startNew: '/api/v1/auth/start-new',
 } as const
 
 // API-026/027/028 (`membershipId` comes from the memberships list).
