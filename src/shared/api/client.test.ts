@@ -190,9 +190,9 @@ describe('401 handling', () => {
 
     // A+B: both get 401 → one renewal → both retry (still 401) → errors.
     setSignedIn(true)
-    await expect(Promise.all([api.get('/a'), api.get('/b')])).rejects.toMatchObject(
-      { code: 'UNAUTHENTICATED' },
-    )
+    await expect(
+      Promise.all([api.get('/a'), api.get('/b')]),
+    ).rejects.toMatchObject({ code: 'UNAUTHENTICATED' })
     expect(renewed).toBe(1)
     expect(callsTo(API_PATHS.tokenRenewal)).toHaveLength(1)
 
