@@ -16,6 +16,13 @@ type Membership = {
 
 type Outcome = 'ok' | 'cancelled' | 'forbidden' | 'restore'
 
+type RecoveryMock = {
+  withdrawnAt: string
+  expiresAt: string
+  name: string
+  profileImageUrl: string | null
+}
+
 const DAY = 86_400_000
 const TAKEN_HANDLES = ['admin', 'rocker', 'drummer_kim']
 const ago = (days: number) => new Date(Date.now() - days * DAY).toISOString()
@@ -74,7 +81,7 @@ const initialState = () => ({
     expiresAt: '2026-11-30T12:00:00+09:00',
     name: '송예림',
     profileImageUrl: null,
-  },
+  } as RecoveryMock | null,
 })
 
 const COOKIE_EXCHANGE = 'loginExchange'
@@ -206,18 +213,25 @@ export function createMockApi() {
     }
 
     if (path === '/api/v1/auth/recovery-info' && method === 'GET') {
+      if (!state.recovery) return fail(res, 404, 'NOT_FOUND')
       return ok(res, state.recovery)
     }
 
     if (path === '/api/v1/auth/restore' && method === 'POST') {
+      if (!state.recovery) return fail(res, 404, 'NOT_FOUND')
+      if (Date.parse(state.recovery.expiresAt) <= Date.now()) {
+        return fail(res, 400, 'RECOVERY_EXPIRED')
+      }
       state.user.name = state.recovery.name
       state.user.onboardingRequired = true
+      state.recovery = null
       return ok(res, { success: true })
     }
 
     if (path === '/api/v1/auth/start-new' && method === 'POST') {
       state.user.name = '새사용자'
       state.user.onboardingRequired = true
+      state.recovery = null
       return ok(res, { success: true })
     }
 

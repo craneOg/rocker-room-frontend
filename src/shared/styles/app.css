@@ -462,6 +462,12 @@ body {
   min-height: 40dvh;
 }
 
+.restore-error-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
 .restore-profile {
   display: flex;
   flex-direction: column;

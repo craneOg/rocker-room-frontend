@@ -158,4 +158,62 @@ describe('AUTH-004 RestoreScreen', () => {
     expect(await screen.findByText(T.restoreTitle)).toBeTruthy()
     expect(screen.getByText('송예림')).toBeTruthy()
   })
+
+  it('logs out from error screen and navigates to / on 나가기', async () => {
+    let loggedOut = false
+    const { fetchMock, router } = openRestore({
+      [`GET ${API_PATHS.me}`]: () =>
+        loggedOut ? apiError('UNAUTHENTICATED', 401) : json(user),
+      [`GET ${API_PATHS.recoveryInfo}`]: () => apiError('UNKNOWN', 500),
+      [`POST ${API_PATHS.logout}`]: () => {
+        loggedOut = true
+        return new Response(null, { status: 204 })
+      },
+    })
+    expect(await screen.findByText('다시 시도')).toBeTruthy()
+    expect(screen.getByRole('button', { name: T.leave })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: T.leave }))
+
+    await waitFor(() => {
+      expect(callsTo(fetchMock, API_PATHS.logout)).toHaveLength(1)
+    })
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/')
+    })
+  })
+
+  it('does not navigate or show welcome toast when restore returns success: false', async () => {
+    const { fetchMock, router } = openRestore({
+      [`POST ${API_PATHS.restore}`]: () => json({ success: false }),
+    })
+    await findScreen('AUTH-004')
+    await screen.findByText(T.restoreTitle)
+
+    fireEvent.click(screen.getByRole('button', { name: T.restoreAction }))
+
+    await waitFor(() => {
+      expect(callsTo(fetchMock, API_PATHS.restore)).toHaveLength(1)
+    })
+    // Pathname stays on /restore, and welcome toast is NOT shown
+    expect(router.state.location.pathname).toBe('/restore')
+    expect(screen.queryByText(T.restoreWelcome)).toBeNull()
+  })
+
+  it('does not navigate when start-new returns success: false', async () => {
+    const { fetchMock, router } = openRestore({
+      [`POST ${API_PATHS.startNew}`]: () => json({ success: false }),
+    })
+    await findScreen('AUTH-004')
+    await screen.findByText(T.restoreTitle)
+
+    fireEvent.click(screen.getByRole('button', { name: T.startNewAction }))
+    expect(await screen.findByText(T.startNewConfirmTitle)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: T.startNewConfirm }))
+
+    await waitFor(() => {
+      expect(callsTo(fetchMock, API_PATHS.startNew)).toHaveLength(1)
+    })
+    expect(router.state.location.pathname).toBe('/restore')
+  })
 })

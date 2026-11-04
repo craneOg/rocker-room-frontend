@@ -25,7 +25,11 @@ export function RestoreScreen() {
   })
 
   const restore = useMutation({
-    mutationFn: restoreProfile,
+    mutationFn: async () => {
+      const res = await restoreProfile()
+      if (!res.success) throw new Error('RESTORE_FAILED')
+      return res
+    },
     onSuccess: async () => {
       feedback.toast(T.restoreWelcome)
       await queryClient.invalidateQueries({ queryKey: ['me'] })
@@ -34,7 +38,11 @@ export function RestoreScreen() {
   })
 
   const startNew = useMutation({
-    mutationFn: startNewAccount,
+    mutationFn: async () => {
+      const res = await startNewAccount()
+      if (!res.success) throw new Error('START_NEW_FAILED')
+      return res
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['me'] })
       navigate('/onboarding', { replace: true })
@@ -82,9 +90,20 @@ export function RestoreScreen() {
         >
           {COPY.unknownError}
         </Typography>
-        <Button size="medium" onClick={() => void refetch()}>
-          {T.retry}
-        </Button>
+        <div className="restore-error-actions">
+          <Button size="medium" onClick={() => void refetch()}>
+            {T.retry}
+          </Button>
+          <Button
+            size="medium"
+            variant="outlined"
+            color="assistive"
+            disabled={leave.isPending}
+            onClick={onClose}
+          >
+            {T.leave}
+          </Button>
+        </div>
       </div>
     )
   }
