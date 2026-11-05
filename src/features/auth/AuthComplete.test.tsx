@@ -10,6 +10,7 @@ import {
   setupDom,
   stubApi,
 } from '../../test/harness'
+import { COPY } from '../../shared/ui/copy'
 import { startKakaoLogin } from './api'
 import { AUTH_COPY as T } from './copy'
 
@@ -29,12 +30,21 @@ const me = (over = {}) => ({
 })
 
 /** Anonymous until the exchange succeeds, like the real cookie flow. */
-function loginApi(opts: { restore?: boolean; me?: object } = {}) {
+function loginApi(
+  opts: { restore?: boolean; me?: object; memberships?: () => Response } = {},
+) {
   let signedIn = false
   return stubApi({
     [`GET ${API_PATHS.me}`]: () =>
       signedIn ? json(opts.me ?? me()) : apiError('UNAUTHENTICATED', 401),
-    [`GET ${API_PATHS.memberships}`]: () => json([]),
+    [`GET ${API_PATHS.memberships}`]: opts.memberships ?? (() => json([])),
+    [`GET ${API_PATHS.recoveryInfo}`]: () =>
+      json({
+        withdrawnAt: '2026-09-01T12:00:00+09:00',
+        expiresAt: '2026-11-30T12:00:00+09:00',
+        name: '송예림',
+        profileImageUrl: null,
+      }),
     [`POST ${API_PATHS.exchange}`]: () => {
       signedIn = true
       return json({ restoreRequired: opts.restore ?? false })
@@ -90,6 +100,40 @@ describe('/auth/complete', () => {
     const router = renderApp('/auth/complete')
     await findScreen('AUTH-004')
     expect(router.state.location.pathname).toBe('/restore')
+  })
+
+  it('shows the restore choice without the main menu, even if memberships fail', async () => {
+    // The global error toast animates; jsdom has no Web Animations API.
+    Object.defineProperty(Element.prototype, 'getAnimations', {
+      value: () => [],
+      configurable: true,
+    })
+    loginApi({ restore: true, memberships: () => apiError('UNKNOWN', 500) })
+    renderApp('/auth/complete')
+    expect(await screen.findByText(T.restoreTitle)).toBeTruthy()
+    // Let the failed memberships query settle: it must not swap the screen for the error view.
+    await waitFor(() =>
+      expect(screen.queryByText(COPY.unknownError)).toBeNull(),
+    )
+    await new Promise((r) => setTimeout(r, 100))
+    expect(screen.getByText(T.restoreTitle)).toBeTruthy()
+    expect(screen.queryByLabelText('주 메뉴')).toBeNull()
+  })
+
+  it('hides the main menu on /restore for a signed-in account', async () => {
+    loginApi({ restore: true })
+    renderApp('/auth/complete')
+    expect(await screen.findByText(T.restoreTitle)).toBeTruthy()
+    expect(screen.queryByLabelText('주 메뉴')).toBeNull()
+  })
+
+  it('refreshes the session after the exchange before opening /restore', async () => {
+    const fetchMock = loginApi({ restore: true })
+    renderApp('/auth/complete')
+    await findScreen('AUTH-004')
+    const urls = fetchMock.mock.calls.map(([url]) => url.split('?')[0])
+    const exchanged = urls.indexOf(API_PATHS.exchange)
+    expect(urls.slice(exchanged + 1)).toContain(API_PATHS.me)
   })
 
   it('sends a first login to /onboarding', async () => {
