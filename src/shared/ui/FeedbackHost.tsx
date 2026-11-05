@@ -28,8 +28,9 @@ export function FeedbackHost() {
 
   useEffect(() => {
     registerFeedback({
+      // Montage drops a toast whose id is on screen: keyed by message, so only repeats collapse.
       toast: (message, variant = 'normal') =>
-        toastRef.current({ id: 'feedback', content: message, variant }),
+        toastRef.current({ id: message, content: message, variant }),
       dialog: (spec) =>
         new Promise((resolve) => setQueue((q) => [...q, { spec, resolve }])),
     })

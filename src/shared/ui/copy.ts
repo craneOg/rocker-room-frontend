@@ -29,6 +29,7 @@ export const COPY = {
   // Not in the design doc (assumed): generic failures.
   unknownError: '잠시 후 다시 시도해 주세요',
   networkError: '네트워크 연결을 확인해 주세요',
+  serviceName: 'rockerroom',
   retry: '다시 시도',
   themeLabel: '화면 모드',
   attribution: '디자인 시스템: Montage by Wantedlab (MIT)',

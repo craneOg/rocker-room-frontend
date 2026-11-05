@@ -32,7 +32,7 @@ import { EmptyState, NotFoundView } from '../shared/ui/StateViews'
 import { WarningBanner } from '../shared/ui/WarningBanner'
 import type { RouteHandle } from './routes'
 
-const SERVICE_NAME = '록커룸' // temporary service name
+const SERVICE_NAME = COPY.serviceName
 
 type NavItem = {
   id: string
@@ -140,7 +140,8 @@ export function AppShell() {
     </>
   )
 
-  if (session.status !== 'authenticated') {
+  // Onboarding (AUTH-002) has no club to navigate to: no tabs or side menu.
+  if (session.status !== 'authenticated' || session.me?.onboardingRequired) {
     return (
       <div className="shell-bare">
         <main className="main-inner">
@@ -155,6 +156,7 @@ export function AppShell() {
           ) : (
             content
           )}
+          <footer className="attribution">{COPY.attribution}</footer>
         </main>
       </div>
     )

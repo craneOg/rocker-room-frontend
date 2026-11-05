@@ -8,6 +8,8 @@ export type RequestOptions = {
   body?: unknown
   query?: Record<string, string | number | boolean | undefined>
   signal?: AbortSignal
+  /** A 401 is the final answer (no token renewal), e.g. an invalid login exchange. */
+  skipRenewal?: boolean
 }
 
 export type ApiEnvelope<T> = { data: T; meta?: unknown }
@@ -28,6 +30,9 @@ let renewal: Promise<RenewalResult> | null = null
 // request was sent before the last renewal can retry directly without
 // starting another renewal.
 let renewalGeneration = 0
+
+/** Absolute URL for a full-page navigation to the API (respects VITE_API_BASE_URL). */
+export const apiUrl = (path: string) => baseUrl + path
 
 export function configureClient(next: ClientHooks) {
   hooks = next
@@ -109,7 +114,11 @@ export async function request<T>(
   // renewal already completed by the time our 401 comes back.
   const genBefore = renewalGeneration
   let res = await send(path, opts)
-  if (res.status === 401 && path !== API_PATHS.tokenRenewal) {
+  if (
+    res.status === 401 &&
+    !opts.skipRenewal &&
+    path !== API_PATHS.tokenRenewal
+  ) {
     if (renewalGeneration > genBefore) {
       // A renewal already completed while this request was in-flight.
       // Reuse that result — retry once without triggering another renewal.
