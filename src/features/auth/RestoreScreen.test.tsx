@@ -219,4 +219,96 @@ describe('AUTH-004 RestoreScreen', () => {
     expect(await screen.findByText(COPY.unknownError)).toBeTruthy()
     expect(router.state.location.pathname).toBe('/restore')
   })
+
+  describe('when the recovery cookie is gone or the account is not restorable', () => {
+    const cookieInvalid = () =>
+      new Response(
+        JSON.stringify({
+          error: {
+            code: 'UNAUTHENTICATED',
+            message: 'x',
+            details: [
+              { field: 'request', reason: 'RESTORATION_COOKIE_INVALID' },
+            ],
+          },
+        }),
+        { status: 401 },
+      )
+    const notRestorable = () =>
+      new Response(
+        JSON.stringify({ error: { code: 'NOT_RESTORABLE', message: 'x' } }),
+        { status: 409 },
+      )
+    const anonymous = {
+      [`GET ${API_PATHS.me}`]: () => apiError('UNAUTHENTICATED', 401),
+    }
+
+    it('tells the user and goes to / when the info request finds the cookie invalid', async () => {
+      const { router } = openRestore({
+        ...anonymous,
+        [`GET ${API_PATHS.recoveryInfo}`]: cookieInvalid,
+      })
+      expect(await screen.findByText(T.restoreExpired)).toBeTruthy()
+      await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+    })
+
+    it('does not start a token renewal for the recovery 401', async () => {
+      const { fetchMock } = openRestore({
+        [`GET ${API_PATHS.recoveryInfo}`]: cookieInvalid,
+      })
+      expect(await screen.findByText(T.restoreExpired)).toBeTruthy()
+      // The choice cookie is not a session, so a 401 here is final.
+      expect(callsTo(fetchMock, API_PATHS.tokenRenewal)).toHaveLength(0)
+    })
+
+    it('tells the user and goes to / when restoring finds the cookie invalid', async () => {
+      const { router } = openRestore({
+        ...anonymous,
+        [`POST ${API_PATHS.restore}`]: cookieInvalid,
+      })
+      await screen.findByText(T.restoreTitle)
+      fireEvent.click(screen.getByRole('button', { name: T.restoreAction }))
+      expect(await screen.findByText(T.restoreExpired)).toBeTruthy()
+      await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+    })
+
+    it('shows a separate message and goes to / on 409 NOT_RESTORABLE', async () => {
+      const { router } = openRestore({
+        ...anonymous,
+        [`POST ${API_PATHS.restore}`]: notRestorable,
+      })
+      await screen.findByText(T.restoreTitle)
+      fireEvent.click(screen.getByRole('button', { name: T.restoreAction }))
+      expect(await screen.findByText(T.notRestorable)).toBeTruthy()
+      await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+    })
+  })
+
+  describe('shell', () => {
+    const signedIn = {
+      [`GET ${API_PATHS.me}`]: () =>
+        json({ ...user, onboardingRequired: false }),
+    }
+
+    it('hides the main menu for a signed-in account', async () => {
+      openRestore(signedIn)
+      await screen.findByText(T.restoreTitle)
+      expect(screen.queryByLabelText('주 메뉴')).toBeNull()
+    })
+
+    it('still shows the choice when memberships fail to load', async () => {
+      // The global error toast animates; jsdom has no Web Animations API.
+      Object.defineProperty(Element.prototype, 'getAnimations', {
+        value: () => [],
+        configurable: true,
+      })
+      openRestore({
+        ...signedIn,
+        [`GET ${API_PATHS.memberships}`]: () => apiError('UNKNOWN', 500),
+      })
+      await screen.findByText(T.restoreTitle)
+      await new Promise((r) => setTimeout(r, 100))
+      expect(screen.getByText(T.restoreTitle)).toBeTruthy()
+    })
+  })
 })

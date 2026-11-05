@@ -31,11 +31,15 @@ export const AUTH_COMPLETE_PATH = '/auth/complete'
 export const AUTH_ERROR_QUERY_PARAM = 'error'
 
 // Assumed response shapes (types live in features/auth/api.ts):
-// - exchange: `{ restoreRequired: boolean }`; token fields are never read (HttpOnly cookies).
+// - exchange: `{ loginResult }`; token fields are never read (HttpOnly cookies). Confirmed by the
+//   backend: `RESTORATION_REQUIRED` means a withdrawn account (a 10-minute choice cookie is set
+//   instead of the login cookies). The other values are not known, so only this one is compared.
 // - handle availability: `{ available: boolean }`.
 // - Me: `name`, `handle` (null until onboarding), `profileImageUrl` (nullable).
 // - Membership: `membershipId`, `clubName`, `clubType` (display text), `inviteExpiresAt`
 //   (INVITED), `requestedAt` (PENDING/REJECTED); statuses INVITED / PENDING / REJECTED.
+
+export const LOGIN_RESULT_RESTORATION_REQUIRED = 'RESTORATION_REQUIRED'
 
 export const REQUESTED_WITH_HEADER = { 'X-Requested-With': 'XMLHttpRequest' }
 

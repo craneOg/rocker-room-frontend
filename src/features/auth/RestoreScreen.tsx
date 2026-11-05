@@ -1,9 +1,10 @@
 import { Button, IconButton, Loading, Typography } from '@montage-ui/core'
 import { IconClose } from '@montage-ui/icon'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { setSignedIn } from '../../shared/api/client'
-import { isApiError } from '../../shared/api/errors'
+import { isApiError, isRestorationCookieInvalid } from '../../shared/api/errors'
 import { formatKstYmd } from '../../shared/lib/time'
 import { COPY } from '../../shared/ui/copy'
 import { feedback } from '../../shared/ui/feedbackBus'
@@ -15,8 +16,19 @@ export function RestoreScreen() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
+  // Cookie gone or used (401), or nothing left to restore (409): the choice cannot continue,
+  // so say why and go back to the login screen. Returns false for any other error.
+  const leaveIfOver = (e: unknown) => {
+    const expired = isRestorationCookieInvalid(e)
+    if (!expired && !(isApiError(e) && e.status === 409)) return false
+    feedback.toast(expired ? T.restoreExpired : T.notRestorable, 'negative')
+    navigate('/', { replace: true })
+    return true
+  }
+
   const {
     data: info,
+    error,
     isLoading,
     isError,
     refetch,
@@ -24,6 +36,11 @@ export function RestoreScreen() {
     queryKey: ['recovery-info'],
     queryFn: getRecoveryInfo,
   })
+
+  useEffect(() => {
+    if (error) leaveIfOver(error)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only the error matters
+  }, [error])
 
   const restore = useMutation({
     mutationFn: async () => {
@@ -37,6 +54,7 @@ export function RestoreScreen() {
       navigate('/onboarding', { replace: true })
     },
     onError: (e) => {
+      if (leaveIfOver(e)) return
       if (!isApiError(e)) feedback.toast(COPY.unknownError, 'negative')
     },
   })
@@ -52,6 +70,7 @@ export function RestoreScreen() {
       navigate('/onboarding', { replace: true })
     },
     onError: (e) => {
+      if (leaveIfOver(e)) return
       if (!isApiError(e)) feedback.toast(COPY.unknownError, 'negative')
     },
   })

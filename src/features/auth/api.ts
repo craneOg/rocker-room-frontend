@@ -37,7 +37,7 @@ export const startKakaoLogin = () =>
 
 /** The login-exchange cookie is single-use, and a 401 here must not trigger token renewal. */
 export const exchangeLogin = () =>
-  api.post<{ restoreRequired: boolean }>(
+  api.post<{ loginResult: string }>(
     API_PATHS.exchange,
     {},
     { skipRenewal: true },
@@ -66,9 +66,11 @@ export type RecoveryInfo = {
   profileImageUrl?: string | null
 }
 
+// The recovery APIs run on the choice cookie, not a session: a 401 is final (no token renewal).
+const recoveryOpts = { skipRenewal: true }
 export const getRecoveryInfo = () =>
-  api.get<RecoveryInfo>(API_PATHS.recoveryInfo)
+  api.get<RecoveryInfo>(API_PATHS.recoveryInfo, recoveryOpts)
 export const restoreProfile = () =>
-  api.post<{ success: boolean }>(API_PATHS.restore)
+  api.post<{ success: boolean }>(API_PATHS.restore, undefined, recoveryOpts)
 export const startNewAccount = () =>
-  api.post<{ success: boolean }>(API_PATHS.startNew)
+  api.post<{ success: boolean }>(API_PATHS.startNew, undefined, recoveryOpts)

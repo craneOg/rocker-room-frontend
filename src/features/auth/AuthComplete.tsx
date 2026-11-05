@@ -2,7 +2,10 @@ import { Loading, Typography } from '@montage-ui/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router'
-import { AUTH_ERROR_QUERY_PARAM } from '../../shared/api/assumptions'
+import {
+  AUTH_ERROR_QUERY_PARAM,
+  LOGIN_RESULT_RESTORATION_REQUIRED,
+} from '../../shared/api/assumptions'
 import { isApiError } from '../../shared/api/errors'
 import { useSession } from '../../shared/auth/session'
 import { feedback } from '../../shared/ui/feedbackBus'
@@ -41,13 +44,8 @@ export function AuthComplete() {
         .fetchQuery({ queryKey: ['me'], queryFn: getMe })
         .catch(() => {})
       try {
-        const { restoreRequired } = await exchangeLogin()
-        if (restoreRequired) {
-          // /restore is outside RequireAuth: refresh the session so a 401 cached from the
-          // page-load check does not leave it signed out (and its expiry hook silent).
-          await queryClient
-            .fetchQuery({ queryKey: ['me'], queryFn: getMe, staleTime: 0 })
-            .catch(() => {})
+        const { loginResult } = await exchangeLogin()
+        if (loginResult === LOGIN_RESULT_RESTORATION_REQUIRED) {
           navigate('/restore', { replace: true })
           return
         }

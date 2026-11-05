@@ -13,7 +13,12 @@ export const ERROR_CODES = [
 export type ApiErrorCode =
   (typeof ERROR_CODES)[number] | 'UNKNOWN' | 'NETWORK_ERROR'
 
-export type ErrorDetail = { field?: string; message?: string; code?: string }
+export type ErrorDetail = {
+  field?: string
+  message?: string
+  code?: string
+  reason?: string
+}
 
 export class ApiError extends Error {
   readonly status: number
@@ -58,6 +63,7 @@ export function parseErrorBody(status: number, body: unknown): ApiError {
         field: typeof d.field === 'string' ? d.field : undefined,
         message: typeof d.message === 'string' ? d.message : undefined,
         code: typeof d.code === 'string' ? d.code : undefined,
+        reason: typeof d.reason === 'string' ? d.reason : undefined,
       }))
     : []
   return new ApiError({
@@ -73,6 +79,14 @@ export function parseErrorBody(status: number, body: unknown): ApiError {
 
 export function isApiError(e: unknown, code?: ApiErrorCode): e is ApiError {
   return e instanceof ApiError && (code === undefined || e.code === code)
+}
+
+/** 401 of the recovery APIs (131-133): the choice cookie is missing, expired or already used. */
+export function isRestorationCookieInvalid(e: unknown): boolean {
+  return (
+    isApiError(e, 'UNAUTHENTICATED') &&
+    e.details.some((d) => d.reason === 'RESTORATION_COOKIE_INVALID')
+  )
 }
 
 /** VALIDATION_ERROR details -> `{fieldName: message}` for input helper text. */
