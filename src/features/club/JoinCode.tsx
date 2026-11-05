@@ -13,9 +13,14 @@ import {
 import { CLUB_COPY as T } from './copy'
 
 /** CLUB-002: join a club with the code an admin handed out (path A). */
-export function JoinCode() {
-  const [input, setInput] = useState('')
-  const [code, setCode] = useState<string | null>(null)
+export function JoinCode({ initialCode = '' }: { initialCode?: string }) {
+  const start = normalizeJoinCode(initialCode)
+  const [input, setInput] = useState(start)
+  // A link whose code can never match is as invalid as an unknown code (CLUB-002 1).
+  const [code, setCode] = useState<string | null>(
+    JOIN_CODE_PATTERN.test(start) ? start : null,
+  )
+  const [badLink, setBadLink] = useState(start !== '' && code === null)
   const valid = JOIN_CODE_PATTERN.test(input)
 
   const preview = useQuery({
@@ -26,6 +31,7 @@ export function JoinCode() {
     gcTime: 0,
   })
   const join = useJoinRequest()
+  const invalid = badLink || preview.data === null
 
   return (
     <div className="start" data-screen-id="CLUB-002">
@@ -42,7 +48,7 @@ export function JoinCode() {
       >
         <FormField
           label={T.codeLabel}
-          error={preview.data === null ? T.codeInvalid : undefined}
+          error={invalid ? T.codeInvalid : undefined}
         >
           <TextField
             value={input}
@@ -51,10 +57,11 @@ export function JoinCode() {
             autoCapitalize="characters"
             autoComplete="off"
             spellCheck={false}
-            status={preview.data === null ? 'negative' : 'normal'}
+            status={invalid ? 'negative' : 'normal'}
             onChange={(e) => {
               setInput(normalizeJoinCode(e.target.value))
               setCode(null)
+              setBadLink(false)
             }}
           />
         </FormField>
