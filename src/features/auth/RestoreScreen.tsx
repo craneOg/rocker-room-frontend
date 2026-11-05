@@ -3,6 +3,7 @@ import { IconClose } from '@montage-ui/icon'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
 import { setSignedIn } from '../../shared/api/client'
+import { isApiError } from '../../shared/api/errors'
 import { formatKstYmd } from '../../shared/lib/time'
 import { COPY } from '../../shared/ui/copy'
 import { feedback } from '../../shared/ui/feedbackBus'
@@ -35,6 +36,9 @@ export function RestoreScreen() {
       await queryClient.invalidateQueries({ queryKey: ['me'] })
       navigate('/onboarding', { replace: true })
     },
+    onError: (e) => {
+      if (!isApiError(e)) feedback.toast(COPY.unknownError, 'negative')
+    },
   })
 
   const startNew = useMutation({
@@ -46,6 +50,9 @@ export function RestoreScreen() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['me'] })
       navigate('/onboarding', { replace: true })
+    },
+    onError: (e) => {
+      if (!isApiError(e)) feedback.toast(COPY.unknownError, 'negative')
     },
   })
 

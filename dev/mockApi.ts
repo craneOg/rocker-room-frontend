@@ -77,8 +77,8 @@ const initialState = () => ({
   ] as Membership[],
   outcome: 'ok' as Outcome,
   recovery: {
-    withdrawnAt: '2026-09-01T12:00:00+09:00',
-    expiresAt: '2026-11-30T12:00:00+09:00',
+    withdrawnAt: ago(30),
+    expiresAt: inDays(60),
     name: '송예림',
     profileImageUrl: null,
   } as RecoveryMock | null,

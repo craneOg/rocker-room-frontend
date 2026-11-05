@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { API_PATHS } from '../../shared/api/assumptions'
+import { COPY } from '../../shared/ui/copy'
 import {
   apiError,
   callsTo,
@@ -195,7 +196,8 @@ describe('AUTH-004 RestoreScreen', () => {
     await waitFor(() => {
       expect(callsTo(fetchMock, API_PATHS.restore)).toHaveLength(1)
     })
-    // Pathname stays on /restore, and welcome toast is NOT shown
+    // Wait for the failure toast so the mutation has settled before asserting
+    expect(await screen.findByText(COPY.unknownError)).toBeTruthy()
     expect(router.state.location.pathname).toBe('/restore')
     expect(screen.queryByText(T.restoreWelcome)).toBeNull()
   })
@@ -214,6 +216,7 @@ describe('AUTH-004 RestoreScreen', () => {
     await waitFor(() => {
       expect(callsTo(fetchMock, API_PATHS.startNew)).toHaveLength(1)
     })
+    expect(await screen.findByText(COPY.unknownError)).toBeTruthy()
     expect(router.state.location.pathname).toBe('/restore')
   })
 })
