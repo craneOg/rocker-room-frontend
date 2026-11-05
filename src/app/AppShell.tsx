@@ -140,12 +140,17 @@ export function AppShell() {
     </>
   )
 
-  // Onboarding (AUTH-002) has no club to navigate to: no tabs or side menu.
-  if (session.status !== 'authenticated' || session.me?.onboardingRequired) {
+  // Onboarding (AUTH-002) has no club to navigate to: no tabs or side menu. Neither does
+  // the restore choice (AUTH-004), and it must render even if memberships fail to load.
+  const bare =
+    pathname === '/restore' ||
+    session.status !== 'authenticated' ||
+    session.me?.onboardingRequired
+  if (bare) {
     return (
       <div className="shell-bare">
         <main className="main-inner">
-          {session.status === 'error' ? (
+          {session.status === 'error' && pathname !== '/restore' ? (
             <EmptyState
               description={COPY.unknownError}
               actionLabel={COPY.retry}
