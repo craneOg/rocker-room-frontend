@@ -99,10 +99,23 @@ export const routes: RouteObject[] = [
                   return { Component: Start }
                 },
               },
+              {
+                path: '/clubs/join',
+                lazy: async () => {
+                  const { JoinCode } = await import('../features/club/JoinCode')
+                  return { Component: JoinCode }
+                },
+              },
+              {
+                path: '/clubs/search',
+                lazy: async () => {
+                  const { ClubSearch } =
+                    await import('../features/club/ClubSearch')
+                  return { Component: ClubSearch }
+                },
+              },
               ...subScreens([
                 ['/clubs/new', 'CLUB-001'],
-                ['/clubs/join', 'CLUB-002'],
-                ['/clubs/search', 'CLUB-003'],
                 ['/me/profile', 'MY-002'],
                 ['/me/membership', 'MY-003'],
                 ['/me/withdrawal', 'MY-004'],
