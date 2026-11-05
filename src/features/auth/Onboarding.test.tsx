@@ -102,6 +102,69 @@ describe('AUTH-002', () => {
     )
   })
 
+  it('does not show a server field error for a value edited while saving', async () => {
+    let finish: (r: Response) => void = () => {}
+    const { fetchMock } = openOnboarding({
+      [`GET ${API_PATHS.handleAvailability}`]: () => json({ available: true }),
+      [`PATCH ${API_PATHS.me}`]: () =>
+        new Promise<Response>((resolve) => {
+          finish = resolve
+        }),
+    })
+    await findScreen('AUTH-002')
+    type(handleInput(), 'rocker_01')
+    await waitFor(() =>
+      expect((submit() as HTMLButtonElement).disabled).toBe(false),
+    )
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement)
+    await waitFor(() =>
+      expect(
+        callsTo(fetchMock, API_PATHS.me).filter(
+          ([, init]) => init?.method === 'PATCH',
+        ),
+      ).toHaveLength(1),
+    )
+
+    type(handleInput(), 'rocker_02')
+    finish(
+      new Response(
+        JSON.stringify({
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'x',
+            details: [{ field: 'handle', message: 'server says no' }],
+          },
+        }),
+        { status: 400 },
+      ),
+    )
+    await new Promise((r) => setTimeout(r, 50))
+
+    expect(screen.queryByText('* server says no')).toBeNull()
+  })
+
+  it('leaves onboarding from the saved profile even if the /me refetch fails', async () => {
+    let saved = false
+    const { router } = openOnboarding({
+      [`GET ${API_PATHS.handleAvailability}`]: () => json({ available: true }),
+      [`GET ${API_PATHS.me}`]: () =>
+        saved ? apiError('UNKNOWN', 500) : json(user()),
+      [`PATCH ${API_PATHS.me}`]: () => {
+        saved = true
+        return json(user({ handle: 'rocker_01', onboardingRequired: false }))
+      },
+    })
+    await findScreen('AUTH-002')
+    type(handleInput(), 'rocker_01')
+    await waitFor(() =>
+      expect((submit() as HTMLButtonElement).disabled).toBe(false),
+    )
+
+    fireEvent.click(submit())
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/start'))
+  })
+
   it('does not reset mutation state while save is pending', async () => {
     // Changing input during a pending save must not call save.reset(),
     // which would clear isPending and allow a duplicate submit.

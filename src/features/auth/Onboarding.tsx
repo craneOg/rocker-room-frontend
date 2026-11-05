@@ -62,7 +62,12 @@ export function Onboarding() {
 
   const save = useMutation({
     mutationFn: saveProfile,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['me'] }),
+    // Seed the cache with the saved profile first: if the refetch then fails, the
+    // session still sees onboardingRequired: false and leaves this screen.
+    onSuccess: (saved) => {
+      queryClient.setQueryData(['me'], saved)
+      return queryClient.invalidateQueries({ queryKey: ['me'] })
+    },
   })
   const leave = useMutation({
     mutationFn: logout,
@@ -72,7 +77,12 @@ export function Onboarding() {
       await queryClient.resetQueries()
     },
   })
-  const serverErrors = fieldErrors(save.error)
+  // Show a server field error only while the field still holds the value that was submitted.
+  const submitted = fieldErrors(save.error)
+  const serverErrors = {
+    name: save.variables?.name === trimmed ? submitted.name : undefined,
+    handle: save.variables?.handle === handle ? submitted.handle : undefined,
+  }
 
   const onClose = async () => {
     const choice = await feedback.dialog({
