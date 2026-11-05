@@ -99,6 +99,15 @@ describe('/auth/complete', () => {
     expect(router.state.location.pathname).toBe('/restore')
   })
 
+  it('refreshes the session after the exchange before opening /restore', async () => {
+    const fetchMock = loginApi({ restore: true })
+    renderApp('/auth/complete')
+    await findScreen('AUTH-004')
+    const urls = fetchMock.mock.calls.map(([url]) => url.split('?')[0])
+    const exchanged = urls.indexOf(API_PATHS.exchange)
+    expect(urls.slice(exchanged + 1)).toContain(API_PATHS.me)
+  })
+
   it('sends a first login to /onboarding', async () => {
     loginApi({ me: me({ onboardingRequired: true, handle: null }) })
     const router = renderApp('/auth/complete')

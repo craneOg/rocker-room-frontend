@@ -43,6 +43,11 @@ export function AuthComplete() {
       try {
         const { restoreRequired } = await exchangeLogin()
         if (restoreRequired) {
+          // /restore is outside RequireAuth: refresh the session so a 401 cached from the
+          // page-load check does not leave it signed out (and its expiry hook silent).
+          await queryClient
+            .fetchQuery({ queryKey: ['me'], queryFn: getMe, staleTime: 0 })
+            .catch(() => {})
           navigate('/restore', { replace: true })
           return
         }
