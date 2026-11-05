@@ -25,7 +25,7 @@ describe('App', () => {
       expired ? apiError('UNAUTHENTICATED', 401) : json(data)
     stubApi({
       [`GET ${API_PATHS.me}`]: authed(me),
-      [`GET ${API_PATHS.memberships}`]: authed([]),
+      [`GET ${API_PATHS.memberships}`]: authed({ items: [] }),
       [`POST ${API_PATHS.tokenRenewal}`]: () =>
         apiError('UNAUTHENTICATED', 401),
       'GET /api/v1/anything': () => apiError('UNAUTHENTICATED', 401),

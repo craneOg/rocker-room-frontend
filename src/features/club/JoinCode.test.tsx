@@ -41,7 +41,7 @@ const preview = (status: string | null = null) => ({
 function openJoin(extra: Record<string, Route> = {}) {
   const fetchMock = stubApi({
     [`GET ${API_PATHS.me}`]: () => json(user),
-    [`GET ${API_PATHS.memberships}`]: () => json([]),
+    [`GET ${API_PATHS.memberships}`]: () => json({ items: [] }),
     [`POST ${RESOLVE}`]: () => json(preview()),
     ['POST /api/v1/clubs/10/join-requests']: () => json({}, 201),
     ...extra,

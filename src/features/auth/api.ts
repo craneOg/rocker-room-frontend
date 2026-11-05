@@ -12,24 +12,35 @@ export type Me = {
   profileImageUrl: string | null
 }
 
+/** API-010 item (only the fields the app reads). */
 export type Membership = {
-  membershipId: string
+  /** The membership ID: the `membershipId` / `requestId` of API-026/027/028. */
+  id: string
   clubId: string
-  clubName: string
-  /** Display text, e.g. "밴드 동아리". */
-  clubType: string
-  /** ERD: CLUB_ADMIN / MEMBER */
+  club: {
+    id: string
+    name: string
+    /** API example: "BAND". Shown through CLUB_TYPE_LABEL. */
+    clubType: string
+    status: 'ACTIVE' | 'INACTIVE'
+    profileImageUrl: string | null
+    themeColor: string | null
+  }
+  /** CLUB_ADMIN / MEMBER */
   role: 'CLUB_ADMIN' | 'MEMBER'
-  /** ERD: PENDING / INVITED / REJECTED / ACTIVE / ON_LEAVE / ... */
+  /** PENDING / INVITED / REJECTED / DECLINED / ACTIVE / ON_LEAVE / GRADUATED / WITHDRAWN */
   status: string
   /** INVITED only. */
-  inviteExpiresAt?: string
-  /** PENDING / REJECTED only. */
-  requestedAt?: string
+  invitationExpiresAt: string | null
+  /** PENDING only (the latest application time). */
+  requestedAt: string | null
 }
 
 export const getMe = () => api.get<Me>(API_PATHS.me)
-export const getMemberships = () => api.get<Membership[]>(API_PATHS.memberships)
+// ponytail: first page only (the server default is 100, its maximum); page through if a user can
+// belong to more clubs than that.
+export const getMemberships = async () =>
+  (await api.get<{ items: Membership[] }>(API_PATHS.memberships)).items
 
 /** Full-page navigation: the fixed authorize path only, nothing taken from the URL. */
 export const startKakaoLogin = () =>
@@ -55,9 +66,9 @@ export const saveProfile = (profile: { name: string; handle: string }) =>
   api.patch<Me>(API_PATHS.me, profile)
 
 export const respondToMembership = (
-  m: Pick<Membership, 'clubId' | 'membershipId'>,
-  action: 'accept' | 'decline' | 'cancel-request',
-) => api.post<void>(membershipActionPath(m.clubId, m.membershipId, action))
+  m: Pick<Membership, 'clubId' | 'id'>,
+  action: 'accept' | 'decline' | 'cancel',
+) => api.post<void>(membershipActionPath(m.clubId, m.id, action))
 
 export type RecoveryInfo = {
   withdrawnAt: string

@@ -48,7 +48,7 @@ const page = (items: unknown[], pageNo: number, totalPages: number) =>
 function openSearch(extra: Record<string, Route> = {}) {
   const fetchMock = stubApi({
     [`GET ${API_PATHS.me}`]: () => json(user),
-    [`GET ${API_PATHS.memberships}`]: () => json([]),
+    [`GET ${API_PATHS.memberships}`]: () => json({ items: [] }),
     [`GET ${SEARCH}`]: () => page([item('10', 'Crane Band')], 0, 1),
     ['POST /api/v1/clubs/10/join-requests']: () => json({}, 201),
     ...extra,

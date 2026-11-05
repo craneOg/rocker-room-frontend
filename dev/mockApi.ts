@@ -4,15 +4,30 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 // Paths and shapes mirror src/shared/api/assumptions.ts. Never imported by src/.
 
 type Membership = {
-  membershipId: string
+  id: string
   clubId: string
-  clubName: string
-  clubType: string
+  club: {
+    id: string
+    name: string
+    clubType: string
+    status: 'ACTIVE' | 'INACTIVE'
+    profileImageUrl: null
+    themeColor: null
+  }
   role: 'CLUB_ADMIN' | 'MEMBER'
   status: 'INVITED' | 'PENDING' | 'REJECTED' | 'ACTIVE'
-  inviteExpiresAt?: string
-  requestedAt?: string
+  invitationExpiresAt: string | null
+  requestedAt: string | null
 }
+
+const clubOf = (id: string, name: string): Membership['club'] => ({
+  id,
+  name,
+  clubType: 'BAND',
+  status: 'ACTIVE',
+  profileImageUrl: null,
+  themeColor: null,
+})
 
 type Outcome = 'ok' | 'cancelled' | 'forbidden' | 'restore'
 
@@ -39,40 +54,40 @@ const initialState = () => ({
   },
   memberships: [
     {
-      membershipId: 'm1',
+      id: 'm1',
       clubId: 'c1',
-      clubName: '한빛 밴드 동아리',
-      clubType: '밴드 동아리',
+      club: clubOf('c1', '한빛 밴드 동아리'),
       role: 'MEMBER',
       status: 'INVITED',
-      inviteExpiresAt: inDays(5),
+      invitationExpiresAt: inDays(5),
+      requestedAt: null,
     },
     {
-      membershipId: 'm2',
+      id: 'm2',
       clubId: 'c2',
-      clubName: '지난 학기 합주단',
-      clubType: '밴드 동아리',
+      club: clubOf('c2', '지난 학기 합주단'),
       role: 'MEMBER',
       status: 'INVITED',
-      inviteExpiresAt: ago(2),
+      invitationExpiresAt: ago(2),
+      requestedAt: null,
     },
     {
-      membershipId: 'm3',
+      id: 'm3',
       clubId: 'c3',
-      clubName: '서울 인디 밴드',
-      clubType: '밴드 동아리',
+      club: clubOf('c3', '서울 인디 밴드'),
       role: 'MEMBER',
       status: 'PENDING',
+      invitationExpiresAt: null,
       requestedAt: ago(3),
     },
     {
-      membershipId: 'm4',
+      id: 'm4',
       clubId: 'c4',
-      clubName: '홍대 합주단',
-      clubType: '밴드 동아리',
+      club: clubOf('c4', '홍대 합주단'),
       role: 'MEMBER',
       status: 'REJECTED',
-      requestedAt: ago(8),
+      invitationExpiresAt: null,
+      requestedAt: null,
     },
   ] as Membership[],
   outcome: 'ok' as Outcome,
@@ -304,7 +319,7 @@ export function createMockApi() {
       return ok(res, state.user)
     }
     if (path === '/api/v1/me/memberships' && method === 'GET')
-      return ok(res, state.memberships)
+      return ok(res, { items: state.memberships })
 
     if (path === '/api/v1/users/handle-availability' && method === 'GET') {
       const handle = url.searchParams.get('handle') ?? ''
@@ -347,31 +362,34 @@ export function createMockApi() {
         return fail(res, 409, 'DUPLICATE')
       state.memberships = state.memberships.filter((m) => m.clubId !== club.id)
       state.memberships.push({
-        membershipId: `m${Date.now()}`,
+        id: `m${Date.now()}`,
         clubId: club.id,
-        clubName: club.name,
-        clubType: '동아리',
+        club: clubOf(club.id, club.name),
         role: 'MEMBER',
         status: 'PENDING',
+        invitationExpiresAt: null,
         requestedAt: new Date().toISOString(),
       })
       return send(res, 201, { data: { status: 'PENDING', approvedAt: null } })
     }
 
+    // API-026/027 (invite) and API-028 (cancel a join request).
     const action =
-      /^\/api\/v1\/clubs\/([^/]+)\/members\/([^/]+)\/(accept|decline|cancel-request)$/.exec(
+      /^\/api\/v1\/clubs\/([^/]+)\/(?:memberships\/([^/]+)\/(accept|decline)|join-requests\/([^/]+)\/(cancel))$/.exec(
         path,
       )
     if (action && method === 'POST') {
-      const [, clubId, membershipId, what] = action
+      const clubId = action[1]
+      const id = action[2] ?? action[4]
+      const what = action[3] ?? action[5]
       const m = state.memberships.find(
-        (x) => x.clubId === clubId && x.membershipId === membershipId,
+        (x) => x.clubId === clubId && x.id === id,
       )
       if (!m) return fail(res, 404, 'NOT_FOUND')
       const invited = m.status === 'INVITED'
-      if (what === 'cancel-request' ? m.status !== 'PENDING' : !invited)
+      if (what === 'cancel' ? m.status !== 'PENDING' : !invited)
         return fail(res, 409, 'STATE_CONFLICT')
-      if (invited && Date.parse(m.inviteExpiresAt ?? '') <= Date.now())
+      if (invited && Date.parse(m.invitationExpiresAt ?? '') <= Date.now())
         return fail(res, 409, 'STATE_CONFLICT')
       if (what === 'accept') m.status = 'ACTIVE'
       else state.memberships = state.memberships.filter((x) => x !== m)

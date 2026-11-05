@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, Navigate } from 'react-router'
 import { isClubMember, useSession } from '../../shared/auth/session'
+import { CLUB_TYPE_LABEL } from '../club/copy'
 import { formatKstDay } from '../../shared/lib/time'
 import { COPY } from '../../shared/ui/copy'
 import { Badge } from '../../shared/ui/Badge'
@@ -27,19 +28,17 @@ export function Start() {
   const respond = useMutation({
     mutationFn: (v: {
       m: Membership
-      action: 'accept' | 'decline' | 'cancel-request'
+      action: 'accept' | 'decline' | 'cancel'
     }) => respondToMembership(v.m, v.action),
     onSuccess: async (_, { m, action }) => {
       // The server already applied this: a failed refetch must not leave the old card (or hide the accept from the guards).
       if (action === 'accept')
         queryClient.setQueryData<Membership[]>(['me', 'memberships'], (list) =>
-          list?.map((x) =>
-            x.membershipId === m.membershipId ? { ...x, status: 'ACTIVE' } : x,
-          ),
+          list?.map((x) => (x.id === m.id ? { ...x, status: 'ACTIVE' } : x)),
         )
       else
         queryClient.setQueryData<Membership[]>(['me', 'memberships'], (list) =>
-          list?.filter((x) => x.membershipId !== m.membershipId),
+          list?.filter((x) => x.id !== m.id),
         )
       await queryClient.invalidateQueries({ queryKey: ['me', 'memberships'] })
       if (action === 'accept') {
@@ -51,13 +50,10 @@ export function Start() {
     },
   })
 
-  const confirmThen = async (
-    m: Membership,
-    action: 'decline' | 'cancel-request',
-  ) => {
+  const confirmThen = async (m: Membership, action: 'decline' | 'cancel') => {
     const decline = action === 'decline'
     const choice = await feedback.dialog({
-      title: (decline ? T.declineTitle : T.cancelTitle)(m.clubName),
+      title: (decline ? T.declineTitle : T.cancelTitle)(m.club.name),
       description: decline ? T.declineDescription : T.cancelDescription,
       cancelLabel: decline ? COPY.cancel : T.close,
       confirmLabel: decline ? T.decline : T.cancelRequest,
@@ -99,19 +95,19 @@ export function Start() {
             {T.invites}
           </Typography>
           {invites.map((m) => {
-            const expiresAt = m.inviteExpiresAt
+            const expiresAt = m.invitationExpiresAt
             const expired = expiresAt ? Date.parse(expiresAt) <= now : false
             return (
-              <article key={m.membershipId} className="start-card">
+              <article key={m.id} className="start-card">
                 <div className="start-card-text">
                   <Typography
                     variant="caption1"
                     color="semantic.foreground.neutral.tertiary"
                   >
-                    {m.clubType}
+                    {CLUB_TYPE_LABEL[m.club.clubType] ?? m.club.clubType}
                   </Typography>
                   <Typography variant="body1" weight="bold">
-                    {m.clubName}
+                    {m.club.name}
                   </Typography>
                   <Typography
                     variant="caption1"
@@ -157,13 +153,13 @@ export function Start() {
           {applications.map((m) =>
             m.status === 'REJECTED' ? (
               <article
-                key={m.membershipId}
+                key={m.id}
                 className="start-card start-card-rejected"
                 role="status"
               >
                 <div className="start-card-text">
                   <Typography variant="body1" weight="bold">
-                    {m.clubName}
+                    {m.club.name}
                   </Typography>
                   <Typography
                     variant="caption1"
@@ -174,10 +170,10 @@ export function Start() {
                 </div>
               </article>
             ) : (
-              <article key={m.membershipId} className="start-card">
+              <article key={m.id} className="start-card">
                 <div className="start-card-text">
                   <Typography variant="body1" weight="bold">
-                    {m.clubName}
+                    {m.club.name}
                   </Typography>
                   <div>
                     <Badge kind="membership" value="PENDING" />
@@ -197,7 +193,7 @@ export function Start() {
                     variant="outlined"
                     color="assistive"
                     disabled={respond.isPending}
-                    onClick={() => void confirmThen(m, 'cancel-request')}
+                    onClick={() => void confirmThen(m, 'cancel')}
                   >
                     {T.cancelRequest}
                   </Button>

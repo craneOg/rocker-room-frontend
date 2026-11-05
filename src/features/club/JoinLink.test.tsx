@@ -42,7 +42,7 @@ const preview = {
 const loggedIn = (extra: Record<string, Route> = {}, onboarding = false) =>
   stubApi({
     [`GET ${API_PATHS.me}`]: () => json(user(onboarding)),
-    [`GET ${API_PATHS.memberships}`]: () => json([]),
+    [`GET ${API_PATHS.memberships}`]: () => json({ items: [] }),
     [`POST ${RESOLVE}`]: () => json(preview),
     ...extra,
   })
