@@ -61,10 +61,10 @@ const me = {
 
 function openStart(
   initial = [invite, expired, pending, rejected],
-  failRefetchAfterAccept = false,
+  failRefetchAfterAction = false,
 ) {
   let memberships: object[] = initial
-  let accepted = false
+  let acted = false
   const act = (
     m: { clubId: string; membershipId: string },
     action: 'accept' | 'decline' | 'cancel-request',
@@ -80,15 +80,21 @@ function openStart(
   const fetchMock = stubApi({
     [`GET ${API_PATHS.me}`]: () => json(me),
     [`GET ${API_PATHS.memberships}`]: () =>
-      failRefetchAfterAccept && accepted
+      failRefetchAfterAction && acted
         ? apiError('UNKNOWN', 500)
         : json(memberships),
     [`POST ${act(invite, 'accept')}`]: () => {
-      accepted = true
+      acted = true
       return apply('m1', (m) => ({ ...m, status: 'ACTIVE' }))()
     },
-    [`POST ${act(invite, 'decline')}`]: apply('m1', () => null),
-    [`POST ${act(pending, 'cancel-request')}`]: apply('m3', () => null),
+    [`POST ${act(invite, 'decline')}`]: () => {
+      acted = true
+      return apply('m1', () => null)()
+    },
+    [`POST ${act(pending, 'cancel-request')}`]: () => {
+      acted = true
+      return apply('m3', () => null)()
+    },
   })
   return { fetchMock, router: renderApp('/start') }
 }
@@ -184,6 +190,23 @@ describe('AUTH-003', () => {
     expect(callsTo(fetchMock, declinePath)).toHaveLength(1)
     expect(router.state.location.pathname).toBe('/start')
   })
+
+  it.each([
+    ['한빛 밴드 동아리', T.decline, T.decline, T.declined],
+    ['서울 인디 밴드', T.cancelRequest, T.cancelRequest, T.requestCancelled],
+  ])(
+    'drops the %s card even if the refetch after the action fails',
+    async (club, open, confirm, toast) => {
+      openStart([invite, pending], true)
+      await findScreen('AUTH-003')
+      fireEvent.click(within(card(club)).getByRole('button', { name: open }))
+      const dialog = await screen.findByRole('alertdialog')
+      fireEvent.click(within(dialog).getByRole('button', { name: confirm }))
+      // The toast follows the (failed) refetch, so the card check below runs after it settled.
+      expect(await screen.findByText(toast)).toBeTruthy()
+      expect(screen.queryByText(club)).toBeNull()
+    },
+  )
 
   it('cancels a pending application after the 3-1 confirmation', async () => {
     const { fetchMock, router } = openStart()
