@@ -1,10 +1,13 @@
-import { Avatar, ContentBadge, Typography } from '@montage-ui/core'
+import { Avatar, Button, ContentBadge, Typography } from '@montage-ui/core'
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { isClubAdmin, useSession } from '../../shared/auth/session'
 import { ErrorState, ListSkeleton } from '../../shared/ui/StateViews'
 import { getClub, getMember, listMembers } from './api'
 import { CLUB_TYPE_LABEL, MEMBER_COPY as T } from './copy'
+import { ClubEditModal } from './ClubEditModal'
+import { MANAGE_COPY as M } from './manageCopy'
 import { memberName } from './MemberBits'
 
 const KEY = 'club-info'
@@ -28,12 +31,13 @@ function MenuRow({
   )
 }
 
-/** CLUB-101: club info and the sub-menu. Editing (1-1) and the pending badge are not built yet. */
+/** CLUB-101: club info, officers' edit sheet (1-1) and the sub-menu. The pending badge is not built yet. */
 export function ClubOverview() {
   const { clubId = '' } = useParams()
   const session = useSession()
   const admin = isClubAdmin(session, clubId)
   const own = session.memberships.find((m) => m.clubId === clubId)
+  const [editing, setEditing] = useState(false)
 
   const club = useQuery({
     queryKey: [KEY, clubId, 'club'],
@@ -109,7 +113,20 @@ export function ClubOverview() {
             {c.status === 'INACTIVE' ? T.inactive : T.statusActive}
           </Typography>
         </div>
+        {admin ? (
+          <Button
+            size="small"
+            variant="outlined"
+            color="assistive"
+            onClick={() => setEditing(true)}
+          >
+            {M.edit}
+          </Button>
+        ) : null}
       </section>
+      {editing ? (
+        <ClubEditModal club={c} onClose={() => setEditing(false)} />
+      ) : null}
 
       <nav className="menu-list">
         <MenuRow

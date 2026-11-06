@@ -8,8 +8,10 @@ import {
   ErrorState,
   ListSkeleton,
 } from '../../shared/ui/StateViews'
-import { listMembers, listParts, type MemberFilter } from './api'
+import { listMembers, listParts, type Member, type MemberFilter } from './api'
+import { BulkBar } from './BulkActions'
 import { MEMBER_COPY as T, STATUS_CHIPS } from './copy'
+import { MANAGE_COPY as M } from './manageCopy'
 import { MemberAvatar, MemberBadges, memberName } from './MemberBits'
 
 const MAX_PART_CHIPS = 3
@@ -39,7 +41,7 @@ function FilterChip({
   )
 }
 
-/** CLUB-102: searchable, filterable member list. Select mode and bulk actions (4) are not built yet. */
+/** CLUB-102: searchable, filterable member list; officers get select mode and bulk actions (4). */
 export function MemberList() {
   const { clubId = '' } = useParams()
   const session = useSession()
@@ -51,6 +53,19 @@ export function MemberList() {
   const [memberType, setMemberType] = useState<string>()
   const [partIds, setPartIds] = useState<string[]>([])
   const q = useDeferredValue(input.trim())
+  // Select mode (officers): id -> member, kept across filter changes and pages.
+  const [selecting, setSelecting] = useState(false)
+  const [selected, setSelected] = useState<Map<string, Member>>(new Map())
+  const exitSelect = () => {
+    setSelecting(false)
+    setSelected(new Map())
+  }
+  const toggleSelected = (m: Member) =>
+    setSelected((cur) => {
+      const next = new Map(cur)
+      if (!next.delete(m.id)) next.set(m.id, m)
+      return next
+    })
 
   const parts = useQuery({
     queryKey: ['club-parts', clubId],
@@ -132,6 +147,18 @@ export function MemberList() {
         ))}
       </div>
 
+      {admin ? (
+        <Button
+          size="small"
+          variant="outlined"
+          color="assistive"
+          aria-pressed={selecting}
+          onClick={() => (selecting ? exitSelect() : setSelecting(true))}
+        >
+          {selecting ? M.selectDone : M.select}
+        </Button>
+      ) : null}
+
       {members.isPending ? <ListSkeleton /> : null}
       {members.isError ? (
         <ErrorState onRetry={() => void members.refetch()} />
@@ -141,7 +168,15 @@ export function MemberList() {
       ) : null}
       <ul className="member-list">
         {items.map((m) => (
-          <li key={m.id}>
+          <li key={m.id} className={selecting ? 'select-row' : undefined}>
+            {selecting ? (
+              <input
+                type="checkbox"
+                aria-label={M.selectRow(memberName(m))}
+                checked={selected.has(m.id)}
+                onChange={() => toggleSelected(m)}
+              />
+            ) : null}
             <Link
               to={`/clubs/${clubId}/members/${m.id}`}
               className="member-row"
@@ -187,6 +222,13 @@ export function MemberList() {
         >
           {T.loadMore}
         </Button>
+      ) : null}
+      {selecting ? (
+        <BulkBar
+          clubId={clubId}
+          selected={[...selected.values()]}
+          onDone={exitSelect}
+        />
       ) : null}
     </div>
   )

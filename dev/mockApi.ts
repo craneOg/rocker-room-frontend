@@ -160,6 +160,9 @@ type MockMember = {
   partIds: string[]
 }
 
+// Editable club type (API-016); name and description are edited in place on CLUBS.
+const clubMeta = { clubType: 'BAND' }
+
 const NAMES = ['명혜성', '송예림', '정규채', '김도윤', '이서연', '박지호']
 const MEMBERS: MockMember[] = Array.from({ length: 30 }, (_, i) => ({
   id: `u${i + 1}`,
@@ -435,7 +438,7 @@ export function createMockApi() {
           id: club.id,
           name: club.name,
           description: club.description,
-          clubType: 'BAND',
+          clubType: clubMeta.clubType,
           status: 'ACTIVE',
           isSearchable: true,
           profileImageUrl: null,
@@ -501,6 +504,266 @@ export function createMockApi() {
         totalElements: hits.length,
         totalPages: Math.ceil(hits.length / size),
       })
+    }
+
+    // CLUB-101 1-1 / 102 4 / 103 writes (officers of c10). State lives in MEMBERS / PARTS / CLUBS.
+    const writeRoute =
+      /^\/api\/v1\/clubs\/c10(?:\/memberships\/(bulk|[^/]+)(?:\/(role|parts|member-type|take-leave|graduate|resume|withdraw|withdraw-preview))?)?$/.exec(
+        path,
+      )
+    if (
+      writeRoute &&
+      (method !== 'GET' || writeRoute[2] === 'withdraw-preview')
+    ) {
+      const own = state.memberships.find(
+        (m) => m.clubId === 'c10' && m.status === 'ACTIVE',
+      )
+      if (own?.role !== 'CLUB_ADMIN') return fail(res, 403, 'FORBIDDEN')
+      const rule = (reason: string) =>
+        send(res, 422, {
+          error: {
+            code: 'RULE_VIOLATION',
+            message: reason,
+            details: [{ reason }],
+          },
+        })
+      const admins = () =>
+        MEMBERS.filter(
+          (m) =>
+            m.role === 'CLUB_ADMIN' &&
+            (m.status === 'ACTIVE' || m.status === 'ON_LEAVE'),
+        )
+      const [, target, action] = writeRoute
+      const club = CLUBS.find((c) => c.id === 'c10')
+      if (!target && method === 'PATCH' && club) {
+        const body = await readBody(req)
+        if (typeof body.name === 'string') {
+          const name = body.name.trim()
+          if (name.length < 1 || name.length > 100)
+            return fail(res, 400, 'VALIDATION_ERROR')
+          if (
+            CLUBS.some(
+              (c) =>
+                c.id !== club.id && c.name.toLowerCase() === name.toLowerCase(),
+            )
+          )
+            return send(res, 409, {
+              error: {
+                code: 'DUPLICATE',
+                message: 'DUPLICATE',
+                details: [{ reason: 'CLUB_NAME_TAKEN' }],
+              },
+            })
+          club.name = name
+        }
+        if ('description' in body)
+          club.description =
+            typeof body.description === 'string' ? body.description : ''
+        if (
+          typeof body.clubType === 'string' &&
+          body.clubType !== clubMeta.clubType
+        ) {
+          if (
+            typeof body.clubTypeChangeReason !== 'string' ||
+            !body.clubTypeChangeReason
+          )
+            return fail(res, 400, 'VALIDATION_ERROR')
+          clubMeta.clubType = body.clubType
+        }
+        return ok(res, {
+          id: club.id,
+          name: club.name,
+          clubType: clubMeta.clubType,
+        })
+      }
+      if (target === 'bulk' && method === 'POST') {
+        const body = await readBody(req)
+        const ids = Array.isArray(body.membershipIds)
+          ? (body.membershipIds as string[])
+          : []
+        const params = (body.params ?? {}) as Record<string, unknown>
+        if (body.action === 'CHANGE_PARTS' && params.mode === 'ADD') {
+          const partIds = Array.isArray(params.partIds)
+            ? (params.partIds as string[])
+            : []
+          if (PARTS.some((p) => partIds.includes(p.id) && !p.isActive))
+            return rule('PART_INACTIVE')
+        }
+        const succeeded: { membershipId: string; skipped: boolean }[] = []
+        const failed: { membershipId: string; reason: string }[] = []
+        for (const id of ids) {
+          const m = MEMBERS.find((x) => x.id === id)
+          if (!m) failed.push({ membershipId: id, reason: 'NOT_FOUND' })
+          else if (!['ACTIVE', 'ON_LEAVE', 'GRADUATED'].includes(m.status))
+            failed.push({
+              membershipId: id,
+              reason: 'INVALID_MEMBERSHIP_STATUS',
+            })
+          else if (body.action === 'CHANGE_STATUS') {
+            const next = params.status
+            if (
+              next === 'GRADUATED' &&
+              m.role === 'CLUB_ADMIN' &&
+              admins().length < 2
+            )
+              failed.push({ membershipId: id, reason: 'LAST_ADMIN' })
+            else if (next === m.status)
+              failed.push({
+                membershipId: id,
+                reason: 'INVALID_MEMBERSHIP_STATUS',
+              })
+            else {
+              if (next === 'GRADUATED') m.role = 'MEMBER'
+              m.status = next as MockMember['status']
+              succeeded.push({ membershipId: id, skipped: false })
+            }
+          } else if (body.action === 'CHANGE_PARTS') {
+            const partIds = Array.isArray(params.partIds)
+              ? (params.partIds as string[])
+              : []
+            m.partIds =
+              params.mode === 'ADD'
+                ? [...new Set([...m.partIds, ...partIds])]
+                : m.partIds.filter((x) => !partIds.includes(x))
+            succeeded.push({ membershipId: id, skipped: false })
+          }
+        }
+        return ok(res, {
+          succeeded,
+          failed,
+          summary: {
+            requested: ids.length,
+            succeeded: succeeded.length,
+            failed: failed.length,
+            skipped: 0,
+          },
+        })
+      }
+      const m = MEMBERS.find((x) => x.id === target)
+      if (!m) return fail(res, 404, 'NOT_FOUND')
+      const body = await readBody(req)
+      const live = ['ACTIVE', 'ON_LEAVE', 'GRADUATED'].includes(m.status)
+      if (action === 'role' && method === 'PUT') {
+        if (body.role === 'CLUB_ADMIN') {
+          if (
+            m.memberType !== 'REGULAR' ||
+            !['ACTIVE', 'ON_LEAVE'].includes(m.status)
+          )
+            return rule('ADMIN_TARGET_NOT_ELIGIBLE')
+          m.role = 'CLUB_ADMIN'
+        } else {
+          if (m.role === 'CLUB_ADMIN' && admins().length < 2)
+            return rule('LAST_ADMIN')
+          m.role = 'MEMBER'
+        }
+        return ok(res, memberView(m, true))
+      }
+      if (action === 'parts' && method === 'PUT') {
+        const partIds = Array.isArray(body.partIds)
+          ? (body.partIds as string[])
+          : []
+        if (
+          PARTS.some(
+            (p) =>
+              partIds.includes(p.id) &&
+              !p.isActive &&
+              !m.partIds.includes(p.id),
+          )
+        )
+          return rule('PART_INACTIVE')
+        m.partIds = partIds
+        return ok(res, memberView(m, true))
+      }
+      if (
+        (action === 'take-leave' ||
+          action === 'graduate' ||
+          action === 'resume') &&
+        method === 'POST'
+      ) {
+        const next = {
+          'take-leave': 'ON_LEAVE',
+          graduate: 'GRADUATED',
+          resume: 'ACTIVE',
+        }[action] as MockMember['status']
+        if (!live || m.status === next) return fail(res, 409, 'STATE_CONFLICT')
+        if (next === 'GRADUATED' && m.role === 'CLUB_ADMIN') {
+          if (admins().length < 2) return rule('LAST_ADMIN')
+          m.role = 'MEMBER'
+        }
+        m.status = next
+        return ok(res, memberView(m, true))
+      }
+      if (action === 'member-type' && method === 'PUT') {
+        if (!live || m.memberType === body.memberType)
+          return fail(res, 409, 'STATE_CONFLICT')
+        if (typeof body.reason !== 'string' || !body.reason)
+          return fail(res, 400, 'VALIDATION_ERROR')
+        if (body.memberType === 'GUEST') {
+          if (m.role === 'CLUB_ADMIN') return rule('ADMIN_CANNOT_BE_GUEST')
+          if (m.joinSource !== 'DIRECT_ADD') return rule('NOT_DIRECTLY_ADDED')
+        }
+        m.memberType = body.memberType === 'GUEST' ? 'GUEST' : 'REGULAR'
+        return ok(res, memberView(m, true))
+      }
+      if (action === 'withdraw-preview' && method === 'GET') {
+        const successor = MEMBERS.find(
+          (x) =>
+            x.id !== m.id &&
+            x.status === 'ACTIVE' &&
+            x.memberType === 'REGULAR',
+        )
+        return ok(res, {
+          target: {
+            membershipId: m.id,
+            displayName: m.displayName ?? m.userName,
+            role: m.role,
+          },
+          succession:
+            m.role === 'CLUB_ADMIN' && admins().length < 2 && successor
+              ? {
+                  type: 'DESIGNATED_OR_EARLIEST',
+                  candidateMembershipId: successor.id,
+                  candidateName: successor.displayName ?? successor.userName,
+                }
+              : null,
+          performanceImpacts: [
+            {
+              performanceId: 'f1',
+              performanceName: '정기 공연',
+              participationStatus: 'APPROVED',
+              isTeamLeader: true,
+              teamName: '1팀',
+            },
+          ],
+          teamLeaderCandidates: [
+            {
+              performanceId: 'f1',
+              performanceName: '정기 공연',
+              teamId: 't1',
+              teamName: '1팀',
+              candidates: MEMBERS.filter(
+                (x) => x.id !== m.id && x.status === 'ACTIVE',
+              )
+                .slice(0, 2)
+                .map((x) => ({
+                  membershipId: x.id,
+                  displayName: x.displayName ?? x.userName,
+                })),
+            },
+          ],
+          warnings: [],
+        })
+      }
+      if (action === 'withdraw' && method === 'POST') {
+        if (!live) return fail(res, 409, 'STATE_CONFLICT')
+        m.status = 'WITHDRAWN'
+        m.role = 'MEMBER'
+        return ok(res, {
+          resource: memberView(m, true),
+          warnings: [],
+          effects: {},
+        })
+      }
     }
 
     const joinRequest = /^\/api\/v1\/clubs\/([^/]+)\/join-requests$/.exec(path)
