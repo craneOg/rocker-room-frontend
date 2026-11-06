@@ -54,6 +54,22 @@ export function EmptyState({
   )
 }
 
+/** A failed read: message plus retry (wording not fixed in COM-003; assumed). */
+export function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <FallbackView>
+      <FallbackViewContent>
+        <FallbackViewText description={COPY.unknownError} />
+        <FallbackViewActionArea variant="single">
+          <FallbackViewActionAreaButton onClick={onRetry}>
+            {COPY.retry}
+          </FallbackViewActionAreaButton>
+        </FallbackViewActionArea>
+      </FallbackViewContent>
+    </FallbackView>
+  )
+}
+
 /** COM-003 #12: skeleton with the same row structure as the list it stands in for. */
 export function ListSkeleton({ rows = 4 }: { rows?: number }) {
   return (

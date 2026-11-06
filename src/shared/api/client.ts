@@ -5,6 +5,7 @@ type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 export type RequestOptions = {
   method?: Method
+  /** A FormData body is sent as multipart (the browser sets the Content-Type with its boundary). */
   body?: unknown
   query?: Record<string, string | number | boolean | undefined>
   signal?: AbortSignal
@@ -59,14 +60,19 @@ function buildUrl(path: string, query: RequestOptions['query']) {
 async function send(path: string, opts: RequestOptions): Promise<Response> {
   const method = opts.method ?? 'GET'
   const headers: Record<string, string> = { Accept: 'application/json' }
-  if (opts.body !== undefined) headers['Content-Type'] = 'application/json'
+  const multipart = opts.body instanceof FormData
+  if (opts.body !== undefined && !multipart)
+    headers['Content-Type'] = 'application/json'
   if (isStateChanging(method)) Object.assign(headers, REQUESTED_WITH_HEADER)
   try {
     return await fetch(buildUrl(path, opts.query), {
       method,
       headers,
       credentials: 'include',
-      body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+      body:
+        opts.body === undefined || multipart
+          ? (opts.body as FormData | undefined)
+          : JSON.stringify(opts.body),
       signal: opts.signal,
     })
   } catch (e) {

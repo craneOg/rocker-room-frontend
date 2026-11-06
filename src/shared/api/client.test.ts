@@ -74,6 +74,19 @@ describe('response parsing', () => {
   })
 })
 
+describe('multipart body', () => {
+  it('sends FormData as is, without a JSON Content-Type', async () => {
+    fetchMock.mockResolvedValueOnce(json(201, { data: null }))
+    const form = new FormData()
+    form.append('file', new File(['x'], 'a.png'))
+    await api.post('/up', form)
+    const [call] = fetchMock.mock.calls
+    expect(call![1]?.body).toBe(form)
+    expect(headersOf(call!).has('Content-Type')).toBe(false)
+    expect(headersOf(call!).has('X-Requested-With')).toBe(true)
+  })
+})
+
 describe('X-Requested-With', () => {
   it('is attached to state-changing requests only', async () => {
     fetchMock.mockImplementation(() =>
