@@ -119,7 +119,7 @@ describe('MY-001 MyInfo', () => {
     )
   })
 
-  it('shows the service admin row only to a super admin', async () => {
+  it('hides the service admin row from a regular user', async () => {
     openMy()
     await findScreen('MY-001')
     expect(screen.queryByText(T.admin)).toBeNull()
