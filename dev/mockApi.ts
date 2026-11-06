@@ -39,6 +39,8 @@ type RecoveryMock = {
 }
 
 const DAY = 86_400_000
+const PREVIEW_PNG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
 const TAKEN_HANDLES = ['admin', 'rocker', 'drummer_kim']
 const ago = (days: number) => new Date(Date.now() - days * DAY).toISOString()
 const inDays = (days: number) => ago(-days)
@@ -48,7 +50,8 @@ const initialState = () => ({
     id: '1',
     name: '명혜성',
     handle: null as string | null,
-    profileImageUrl: null,
+    profileImageUrl: null as string | null,
+    profileImagePublic: true,
     onboardingRequired: true,
     isSuperAdmin: false,
   },
@@ -316,18 +319,65 @@ export function createMockApi() {
 
     if (path === '/api/v1/me' && method === 'GET') return ok(res, state.user)
     if (path === '/api/v1/me' && method === 'PATCH') {
-      const { name, handle } = await readBody(req)
+      // API-008 is partial; onboarding (AUTH-002) still sends both name and handle.
+      const { name, handle, profileImageUrl, profileImagePublic } =
+        await readBody(req)
       if (
-        typeof name !== 'string' ||
-        name.length < 1 ||
-        name.length > 50 ||
-        typeof handle !== 'string' ||
-        !/^[a-z0-9_]{5,30}$/.test(handle)
+        (name !== undefined &&
+          (typeof name !== 'string' || name.length < 1 || name.length > 50)) ||
+        (handle !== undefined &&
+          (typeof handle !== 'string' || !/^[a-z0-9_]{5,30}$/.test(handle))) ||
+        (profileImagePublic !== undefined &&
+          typeof profileImagePublic !== 'boolean') ||
+        (state.user.handle === null && (name === undefined || !handle))
       )
         return fail(res, 400, 'VALIDATION_ERROR')
-      if (TAKEN_HANDLES.includes(handle)) return fail(res, 409, 'DUPLICATE')
-      Object.assign(state.user, { name, handle, onboardingRequired: false })
+      if (
+        typeof handle === 'string' &&
+        handle !== state.user.handle &&
+        TAKEN_HANDLES.includes(handle)
+      )
+        return send(res, 409, {
+          error: {
+            code: 'DUPLICATE',
+            message: 'DUPLICATE',
+            details: [{ reason: 'HANDLE_TAKEN' }],
+          },
+        })
+      if (typeof profileImageUrl === 'string') {
+        // The key must come from API-129 (mock keys start with tmp/users/1/).
+        if (!profileImageUrl.startsWith('tmp/users/1/'))
+          return send(res, 404, {
+            error: {
+              code: 'NOT_FOUND',
+              message: 'NOT_FOUND',
+              details: [{ reason: 'IMAGE_KEY_NOT_FOUND' }],
+            },
+          })
+        state.user.profileImageUrl = PREVIEW_PNG
+      } else if (profileImageUrl === null) state.user.profileImageUrl = null
+      if (typeof name === 'string') state.user.name = name
+      if (typeof handle === 'string') state.user.handle = handle
+      if (typeof profileImagePublic === 'boolean')
+        state.user.profileImagePublic = profileImagePublic
+      state.user.onboardingRequired = false
       return ok(res, state.user)
+    }
+
+    // API-129: the mock only checks for a multipart body; the preview is a 1x1 PNG.
+    if (path === '/api/v1/me/profile-image' && method === 'POST') {
+      if (
+        !(req.headers['content-type'] ?? '').startsWith('multipart/form-data')
+      )
+        return fail(res, 415, 'UNSUPPORTED_MEDIA_TYPE')
+      req.resume() // the body is not read
+      return send(res, 201, {
+        data: {
+          imageKey: `tmp/users/1/${Date.now()}.png`,
+          previewUrl: PREVIEW_PNG,
+          purpose: 'USER_PROFILE',
+        },
+      })
     }
     if (path === '/api/v1/me/memberships' && method === 'GET')
       return ok(res, { items: state.memberships })

@@ -74,6 +74,25 @@ describe('AUTH-002', () => {
     finish(json(user({ handle: 'rocker_01', onboardingRequired: false })))
   })
 
+  it('shows the taken message and stays when the save answers 409 DUPLICATE', async () => {
+    const { router } = openOnboarding({
+      [`GET ${API_PATHS.handleAvailability}`]: () => json({ available: true }),
+      [`PATCH ${API_PATHS.me}`]: () => apiError('DUPLICATE', 409),
+    })
+    await findScreen('AUTH-002')
+    type(handleInput(), 'rocker_01')
+    await waitFor(() =>
+      expect((submit() as HTMLButtonElement).disabled).toBe(false),
+    )
+    fireEvent.click(submit())
+    expect(await screen.findByText(`* ${T.handleTaken}`)).toBeTruthy()
+    expect(router.state.location.pathname).toBe('/onboarding')
+    type(handleInput(), 'rocker_02')
+    await waitFor(() =>
+      expect(screen.queryByText(`* ${T.handleTaken}`)).toBeNull(),
+    )
+  })
+
   it('clears a server field error once the input changes', async () => {
     openOnboarding({
       [`GET ${API_PATHS.handleAvailability}`]: () => json({ available: true }),

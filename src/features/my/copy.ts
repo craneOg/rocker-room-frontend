@@ -1,4 +1,4 @@
-// MY-001 copy (screen spec 2026.10, section 13).
+// MY-001/MY-002 copy (screen spec 2026.10, section 13; MY-002 reuses AUTH-002 wording).
 export const MY_COPY = {
   title: '내 정보',
   copyId: 'ID 복사',
@@ -18,4 +18,18 @@ export const MY_COPY = {
   withdraw: '서비스 탈퇴',
   version: (v: string) => `앱 버전 ${v}`,
   admin: '서비스 관리',
+  // MY-002
+  profileTitle: '프로필 수정',
+  changePhoto: '사진 변경',
+  addPhoto: '사진 등록',
+  defaultPhoto: '기본 이미지로',
+  showPhoto: '다른 멤버에게 내 사진 보이기',
+  handleChangeNotice: 'ID를 바꾸면 이전 ID는 바로 다른 사람이 쓸 수 있어요.',
+  fileTooLargeTitle: '파일 용량 초과',
+  fileTooLarge: '첨부 가능한 최대 용량은 2MB입니다. 다른 파일을 선택해 주세요.',
+  unsupportedTitle: '지원하지 않는 파일 형식',
+  unsupported: 'jpg, jpeg, png, webp 파일만 올릴 수 있어요.',
+  uploading: '사진을 올리고 있어요.',
+  imageExpired: '사진이 만료됐어요. 다시 올려 주세요.',
+  save: '저장',
 } as const
