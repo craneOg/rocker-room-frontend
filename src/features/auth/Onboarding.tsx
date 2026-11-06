@@ -1,5 +1,6 @@
 import {
   Button,
+  Checkbox,
   IconButton,
   TextField,
   TextFieldContent,
@@ -7,7 +8,7 @@ import {
 } from '@montage-ui/core'
 import { IconClose } from '@montage-ui/icon'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Navigate } from 'react-router'
 import { setSignedIn } from '../../shared/api/client'
 import { ApiError, fieldErrors } from '../../shared/api/errors'
@@ -24,9 +25,15 @@ import { isNameValid, useHandleAvailability } from './useHandleAvailability'
 export function Onboarding() {
   const { me } = useSession()
   const queryClient = useQueryClient()
+  const termsId = useId()
+  const privacyId = useId()
   const [name, setName] = useState(me?.name ?? '')
   const [nameTouched, setNameTouched] = useState(false)
   const [handle, setHandle] = useState('')
+  // Consent is client-side only: the server stores no consent time (D-1), so it never enters the request.
+  const [agreedTerms, setAgreedTerms] = useState(false)
+  const [agreedPrivacy, setAgreedPrivacy] = useState(false)
+  const agreed = agreedTerms && agreedPrivacy
 
   const trimmed = name.trim()
   const nameValid = isNameValid(trimmed)
@@ -89,7 +96,7 @@ export function Onboarding() {
       data-screen-id="AUTH-002"
       onSubmit={(e) => {
         e.preventDefault()
-        if (nameValid && available && !save.isPending)
+        if (nameValid && available && agreed && !save.isPending)
           save.mutate({ name: trimmed, handle })
       }}
     >
@@ -164,12 +171,39 @@ export function Onboarding() {
         />
       </FormField>
 
+      {/* Terms links have no target yet: plain text (same as AUTH-001 and MY). */}
+      <div className="onboarding-terms">
+        {/* The label points at the checkbox button by id: Montage also renders a hidden input, which a wrapping label would pick instead. */}
+        <div>
+          <Checkbox
+            id={termsId}
+            aria-label={T.agreeTerms}
+            checked={agreedTerms}
+            onCheckedChange={setAgreedTerms}
+          />
+          <label htmlFor={termsId}>
+            <Typography variant="body2">{T.agreeTerms}</Typography>
+          </label>
+        </div>
+        <div>
+          <Checkbox
+            id={privacyId}
+            aria-label={T.agreePrivacy}
+            checked={agreedPrivacy}
+            onCheckedChange={setAgreedPrivacy}
+          />
+          <label htmlFor={privacyId}>
+            <Typography variant="body2">{T.agreePrivacy}</Typography>
+          </label>
+        </div>
+      </div>
+
       <Button
         type="submit"
         size="large"
         fullWidth
         loading={save.isPending}
-        disabled={!nameValid || !available}
+        disabled={!nameValid || !available || !agreed}
       >
         {T.submit}
       </Button>

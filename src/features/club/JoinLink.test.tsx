@@ -112,6 +112,8 @@ describe('/join/{code} invite link', () => {
 
     await findScreen('AUTH-002')
     expect(readPendingInvite()).toBe('ABCD234XYZ')
+    fireEvent.click(screen.getByRole('checkbox', { name: AUTH.agreeTerms }))
+    fireEvent.click(screen.getByRole('checkbox', { name: AUTH.agreePrivacy }))
     fireEvent.change(screen.getByPlaceholderText(AUTH.handlePlaceholder), {
       target: { value: 'yerim' },
     })
