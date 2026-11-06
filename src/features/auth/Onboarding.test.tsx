@@ -27,6 +27,10 @@ setupDom()
 
 const handleInput = () => screen.getByPlaceholderText(T.handlePlaceholder)
 const submit = () => screen.getByRole('button', { name: T.submit })
+const agree = () => {
+  fireEvent.click(screen.getByRole('checkbox', { name: T.agreeTerms }))
+  fireEvent.click(screen.getByRole('checkbox', { name: T.agreePrivacy }))
+}
 const type = (el: HTMLElement, value: string) =>
   fireEvent.change(el, { target: { value } })
 
@@ -56,6 +60,7 @@ describe('AUTH-002', () => {
         }),
     })
     await findScreen('AUTH-002')
+    agree()
     type(handleInput(), 'rocker_01')
     await waitFor(() =>
       expect((submit() as HTMLButtonElement).disabled).toBe(false),
@@ -80,6 +85,7 @@ describe('AUTH-002', () => {
       [`PATCH ${API_PATHS.me}`]: () => apiError('DUPLICATE', 409),
     })
     await findScreen('AUTH-002')
+    agree()
     type(handleInput(), 'rocker_01')
     await waitFor(() =>
       expect((submit() as HTMLButtonElement).disabled).toBe(false),
@@ -109,6 +115,7 @@ describe('AUTH-002', () => {
         ),
     })
     await findScreen('AUTH-002')
+    agree()
     type(handleInput(), 'rocker_01')
     await waitFor(() =>
       expect((submit() as HTMLButtonElement).disabled).toBe(false),
@@ -131,6 +138,7 @@ describe('AUTH-002', () => {
         }),
     })
     await findScreen('AUTH-002')
+    agree()
     type(handleInput(), 'rocker_01')
     await waitFor(() =>
       expect((submit() as HTMLButtonElement).disabled).toBe(false),
@@ -174,6 +182,7 @@ describe('AUTH-002', () => {
       },
     })
     await findScreen('AUTH-002')
+    agree()
     type(handleInput(), 'rocker_01')
     await waitFor(() =>
       expect((submit() as HTMLButtonElement).disabled).toBe(false),
@@ -196,6 +205,7 @@ describe('AUTH-002', () => {
         }),
     })
     await findScreen('AUTH-002')
+    agree()
     type(handleInput(), 'rocker_01')
     await waitFor(() =>
       expect((submit() as HTMLButtonElement).disabled).toBe(false),
@@ -272,6 +282,7 @@ describe('AUTH-002', () => {
       [`GET ${API_PATHS.handleAvailability}`]: () => json({ available: true }),
     })
     await findScreen('AUTH-002')
+    agree()
     type(handleInput(), 'rocker_01')
     expect(screen.getByText(T.handleChecking)).toBeTruthy()
     expect(submit().hasAttribute('disabled')).toBe(true)
@@ -288,6 +299,56 @@ describe('AUTH-002', () => {
       name: '명혜성',
       handle: 'rocker_01',
     })
+  })
+
+  it('keeps 시작하기 disabled until both terms are checked', async () => {
+    const { fetchMock } = openOnboarding({
+      [`GET ${API_PATHS.handleAvailability}`]: () => json({ available: true }),
+    })
+    await findScreen('AUTH-002')
+    type(handleInput(), 'rocker_01')
+    expect(await screen.findByText(T.handleAvailable)).toBeTruthy()
+    const terms = () => screen.getByRole('checkbox', { name: T.agreeTerms })
+    const privacy = () => screen.getByRole('checkbox', { name: T.agreePrivacy })
+    expect(submit().hasAttribute('disabled')).toBe(true)
+
+    fireEvent.click(terms())
+    await waitFor(() =>
+      expect(terms().getAttribute('aria-checked')).toBe('true'),
+    )
+    expect(submit().hasAttribute('disabled')).toBe(true)
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement)
+    await new Promise((r) => setTimeout(r))
+    expect(
+      callsTo(fetchMock, API_PATHS.me).filter(([, i]) => i?.method === 'PATCH'),
+    ).toHaveLength(0)
+
+    fireEvent.click(privacy())
+    await waitFor(() => expect(submit().hasAttribute('disabled')).toBe(false))
+
+    fireEvent.click(terms())
+    await waitFor(() => expect(submit().hasAttribute('disabled')).toBe(true))
+  })
+
+  it('does not send consent fields in the save request', async () => {
+    const { fetchMock } = openOnboarding({
+      [`GET ${API_PATHS.handleAvailability}`]: () => json({ available: true }),
+    })
+    await findScreen('AUTH-002')
+    agree()
+    type(handleInput(), 'rocker_01')
+    await waitFor(() =>
+      expect((submit() as HTMLButtonElement).disabled).toBe(false),
+    )
+    fireEvent.click(submit())
+    await findScreen('AUTH-003')
+    const [, init] = callsTo(fetchMock, API_PATHS.me).find(
+      ([, i]) => i?.method === 'PATCH',
+    )!
+    expect(Object.keys(JSON.parse(String(init?.body)))).toEqual([
+      'name',
+      'handle',
+    ])
   })
 
   it('keeps 시작하기 disabled for a taken handle', async () => {
@@ -311,6 +372,7 @@ describe('AUTH-002', () => {
     })
     await findScreen('AUTH-002')
 
+    agree()
     type(handleInput(), 'abcde')
     await waitFor(() => expect(pending.abcde).toBeTruthy())
     type(handleInput(), 'abcdef')
