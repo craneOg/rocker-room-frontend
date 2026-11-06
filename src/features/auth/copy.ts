@@ -61,6 +61,8 @@ export const AUTH_COPY = {
   handleTaken: '이미 사용 중인 ID예요.',
   handleAvailable: '사용할 수 있는 ID예요.',
   handleError: '영어 소문자, 숫자, _만 5~30자로 입력해 주세요.',
+  agreeTerms: '(필수) 이용약관에 동의합니다',
+  agreePrivacy: '(필수) 개인정보 처리방침에 동의합니다',
   submit: '시작하기',
   leaveTitle: '가입을 그만둘까요?',
   leaveDescription: '다음에 로그인하면 이 화면부터 다시 시작해요.',

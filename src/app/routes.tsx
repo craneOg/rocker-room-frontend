@@ -125,17 +125,38 @@ export const routes: RouteObject[] = [
               },
               ...subScreens([
                 ['/clubs/new', 'CLUB-001'],
-                ['/me/profile', 'MY-002'],
                 ['/me/membership', 'MY-003'],
                 ['/me/withdrawal', 'MY-004'],
               ]),
+              {
+                path: '/me/profile',
+                handle: { title: 'MY-002', sub: true },
+                lazy: async () => {
+                  const { MyProfile } = await import('../features/my/MyProfile')
+                  return { Component: MyProfile }
+                },
+              },
               { path: '/calendar', ...screen('SCHD-001') },
-              { path: '/me', ...screen('MY-001') },
+              {
+                path: '/me',
+                handle: { title: 'MY-001' },
+                lazy: async () => {
+                  const { MyInfo } = await import('../features/my/MyInfo')
+                  return { Component: MyInfo }
+                },
+              },
               {
                 path: '/clubs/:clubId',
                 element: <RequireClubMember />,
                 children: [
-                  { index: true, ...screen('HOME-001') },
+                  {
+                    index: true,
+                    handle: { title: 'HOME-001' },
+                    lazy: async () => {
+                      const { Home } = await import('../features/home/Home')
+                      return { Component: Home }
+                    },
+                  },
                   { path: 'performances', ...screen('PERF-001') },
                   {
                     path: 'info',

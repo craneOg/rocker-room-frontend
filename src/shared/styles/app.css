@@ -381,6 +381,18 @@ body {
   gap: var(--spacing-12);
 }
 
+.onboarding-terms {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-12);
+}
+
+.onboarding-terms > div {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
 .profile-photo {
   display: flex;
   align-items: center;
@@ -573,4 +585,48 @@ body {
 
 .menu-row-danger {
   color: var(--semantic-foreground-negative-primary);
+}
+
+.home-scroll {
+  display: flex;
+  gap: var(--spacing-12);
+  overflow-x: auto;
+  padding-bottom: var(--spacing-4);
+}
+
+.home-perf-card {
+  flex: none;
+  width: 240px;
+}
+
+.home-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--spacing-8);
+}
+
+.home-tile {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.home-tile.is-zero {
+  opacity: 0.5;
+}
+
+.home-check {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+}
+
+.home-check summary {
+  cursor: pointer;
+}
+
+.home-check-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+  margin-top: var(--spacing-8);
 }
