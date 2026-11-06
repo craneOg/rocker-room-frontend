@@ -89,6 +89,15 @@ const initialState = () => ({
       invitationExpiresAt: null,
       requestedAt: null,
     },
+    {
+      id: 'm5',
+      clubId: 'c10',
+      club: clubOf('c10', '크레인 밴드'),
+      role: 'CLUB_ADMIN',
+      status: 'ACTIVE',
+      invitationExpiresAt: null,
+      requestedAt: null,
+    },
   ] as Membership[],
   outcome: 'ok' as Outcome,
   recovery: {
@@ -128,6 +137,63 @@ const preview = (c: (typeof CLUBS)[number], memberships: Membership[]) => ({
       m.clubId === c.id && ['INVITED', 'PENDING', 'ACTIVE'].includes(m.status),
   ),
 })
+
+// Club info and members (API-015/020/021/033) for club c10, where the mock user is an officer.
+const PARTS = [
+  { id: 'p1', name: '보컬', displayOrder: 1, isActive: true },
+  { id: 'p2', name: '기타', displayOrder: 2, isActive: true },
+  { id: 'p3', name: '베이스', displayOrder: 3, isActive: true },
+  { id: 'p4', name: '드럼', displayOrder: 4, isActive: true },
+  { id: 'p5', name: '건반', displayOrder: 5, isActive: false },
+]
+
+type MockMember = {
+  id: string
+  userName: string
+  displayName: string | null
+  handle: string
+  memberType: 'REGULAR' | 'GUEST'
+  role: 'CLUB_ADMIN' | 'MEMBER'
+  status: 'ACTIVE' | 'ON_LEAVE' | 'GRADUATED' | 'WITHDRAWN'
+  joinSource: string
+  approvedAt: string
+  partIds: string[]
+}
+
+const NAMES = ['명혜성', '송예림', '정규채', '김도윤', '이서연', '박지호']
+const MEMBERS: MockMember[] = Array.from({ length: 30 }, (_, i) => ({
+  id: `u${i + 1}`,
+  userName: i < NAMES.length ? (NAMES[i] ?? '') : `멤버${i + 1}`,
+  displayName: i % 4 === 0 ? `별명${i + 1}` : null,
+  handle: `member_${i + 1}`,
+  memberType: i % 7 === 6 ? 'GUEST' : 'REGULAR',
+  role: i === 0 || i === 1 ? 'CLUB_ADMIN' : 'MEMBER',
+  status: i % 9 === 8 ? 'GRADUATED' : i % 8 === 7 ? 'ON_LEAVE' : 'ACTIVE',
+  joinSource: i === 0 ? 'CLUB_CREATE' : i % 2 ? 'JOIN_CODE' : 'SEARCH',
+  approvedAt: ago(60 - i),
+  partIds: ['p1', 'p2', 'p3', 'p4', 'p5'].slice(0, (i % 5) + 1),
+}))
+
+const memberView = (m: MockMember, admin: boolean) => {
+  const publicView = {
+    id: m.id,
+    displayName: m.displayName,
+    userName: m.userName,
+    memberType: m.memberType,
+    role: m.role,
+    profileImageUrl: null,
+    parts: PARTS.filter((p) => m.partIds.includes(p.id)),
+  }
+  return admin
+    ? {
+        ...publicView,
+        handle: m.handle,
+        status: m.status,
+        joinSource: m.joinSource,
+        approvedAt: m.approvedAt,
+      }
+    : publicView
+}
 
 const COOKIE_EXCHANGE = 'loginExchange'
 const COOKIE_SESSION = 'mockSession'
@@ -351,6 +417,92 @@ export function createMockApi() {
         totalPages: Math.ceil(hits.length / size),
       })
     }
+    // CLUB-101..103 reads. Only club c10 has data; any other club is 404.
+    const clubRoute =
+      /^\/api\/v1\/clubs\/([^/]+)(?:\/(memberships|parts))?(?:\/([^/]+))?$/.exec(
+        path,
+      )
+    if (clubRoute && method === 'GET' && clubRoute[1] !== 'search') {
+      const [, clubId, sub, memberId] = clubRoute
+      const club = CLUBS.find((c) => c.id === clubId)
+      const own = state.memberships.find(
+        (m) => m.clubId === clubId && m.status === 'ACTIVE',
+      )
+      if (!club || !own || clubId !== 'c10') return fail(res, 404, 'NOT_FOUND')
+      const admin = own.role === 'CLUB_ADMIN'
+      if (!sub)
+        return ok(res, {
+          id: club.id,
+          name: club.name,
+          description: club.description,
+          clubType: 'BAND',
+          status: 'ACTIVE',
+          isSearchable: true,
+          profileImageUrl: null,
+          themeColor: '#1A2B3C',
+          createdAt: ago(90),
+          updatedAt: ago(2),
+        })
+      if (sub === 'parts')
+        return ok(res, {
+          items: PARTS.map((p) => ({
+            ...p,
+            memberCount: MEMBERS.filter((m) => m.partIds.includes(p.id)).length,
+          })),
+        })
+      if (memberId) {
+        const m = MEMBERS.find((x) => x.id === memberId)
+        if (!m || (!admin && m.status === 'WITHDRAWN'))
+          return fail(res, 404, 'NOT_FOUND')
+        return ok(res, {
+          ...memberView(m, admin),
+          performances: [
+            {
+              id: 'f1',
+              title: '정기 공연',
+              status: 'ACTIVE',
+              participationStatus: 'APPROVED',
+            },
+            {
+              id: 'f2',
+              title: '신입생 환영 공연',
+              status: 'FINISHED',
+              participationStatus: 'WITHDRAWN',
+            },
+          ],
+        })
+      }
+      const q = url.searchParams
+      const statusParam = q.get('status')
+      if (statusParam && !admin) return fail(res, 403, 'FORBIDDEN')
+      const statuses = (statusParam ?? 'ACTIVE').split(',')
+      const name = (q.get('q') ?? '').trim()
+      const partIds = (q.get('partId') ?? '').split(',').filter(Boolean)
+      const hits = MEMBERS.filter(
+        (m) =>
+          (admin ? statuses.includes(m.status) : m.status !== 'WITHDRAWN') &&
+          (!name || `${m.displayName ?? ''}${m.userName}`.includes(name)) &&
+          (!q.get('role') || m.role === q.get('role')) &&
+          (!q.get('memberType') || m.memberType === q.get('memberType')) &&
+          (partIds.length === 0 ||
+            m.partIds.some((id) => partIds.includes(id))),
+      ).sort(
+        (a, b) =>
+          Number(b.role === 'CLUB_ADMIN') - Number(a.role === 'CLUB_ADMIN'),
+      )
+      const size = Number(q.get('size') ?? 20)
+      const page = Number(q.get('page') ?? 0)
+      return ok(res, {
+        items: hits
+          .slice(page * size, (page + 1) * size)
+          .map((m) => memberView(m, admin)),
+        page,
+        size,
+        totalElements: hits.length,
+        totalPages: Math.ceil(hits.length / size),
+      })
+    }
+
     const joinRequest = /^\/api\/v1\/clubs\/([^/]+)\/join-requests$/.exec(path)
     if (joinRequest && method === 'POST') {
       const club = CLUBS.find((c) => c.id === joinRequest[1])

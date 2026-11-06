@@ -81,3 +81,99 @@ export const normalizeJoinCode = (raw: string) =>
   raw.replace(/\s+/g, '').toUpperCase()
 
 export const JOIN_CODE_PATTERN = /^[A-Z2-9]{10}$/
+
+// API-015 / 020 / 021 / 033 (Notion API spec). IDs are strings, times ISO-8601 +09:00.
+export type ClubDetail = ClubSummary & {
+  status: 'ACTIVE' | 'INACTIVE'
+  isSearchable: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export const getClub = (clubId: string) =>
+  api.get<ClubDetail>(`/api/v1/clubs/${clubId}`)
+
+export type MemberPart = {
+  id: string
+  name: string
+  displayOrder: number
+  /** false: shown as "(사용 중지)" (C-12). */
+  isActive: boolean
+}
+
+/**
+ * Item of API-020 / response of API-021. Regular members get the public subset: `status`,
+ * `handle`, `joinSource` and `approvedAt` are absent for them (D-4), so they are optional.
+ */
+export type Member = {
+  id: string
+  displayName: string | null
+  /** Service name; "탈퇴한 사용자" for a withdrawn user. */
+  userName: string
+  /** REGULAR / GUEST */
+  memberType: string
+  role: 'CLUB_ADMIN' | 'MEMBER'
+  profileImageUrl: string | null
+  parts: MemberPart[]
+  handle?: string | null
+  /** ACTIVE / ON_LEAVE / GRADUATED / WITHDRAWN, officers only. */
+  status?: string
+  joinSource?: string
+  approvedAt?: string | null
+}
+
+export type MemberListPage = {
+  items: Member[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
+export type MemberFilter = {
+  q?: string
+  /** Officers only: a regular member sending it gets 403. */
+  status?: string[]
+  role?: 'CLUB_ADMIN'
+  memberType?: string
+  partIds?: string[]
+}
+
+export const MEMBER_PAGE_SIZE = 20
+
+export const listMembers = (
+  clubId: string,
+  filter: MemberFilter,
+  page: number,
+  signal?: AbortSignal,
+  size = MEMBER_PAGE_SIZE,
+) =>
+  api.get<MemberListPage>(`/api/v1/clubs/${clubId}/memberships`, {
+    query: {
+      q: filter.q || undefined,
+      status: filter.status?.join(','),
+      role: filter.role,
+      memberType: filter.memberType,
+      partId: filter.partIds?.length ? filter.partIds.join(',') : undefined,
+      page,
+      size,
+    },
+    signal,
+  })
+
+export type MemberPerformance = {
+  id: string
+  title: string
+  status: 'DRAFT' | 'ACTIVE' | 'LOCKED' | 'FINISHED' | 'CANCELED'
+  participationStatus: 'APPLIED' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN'
+}
+
+export type MemberDetail = Member & { performances: MemberPerformance[] }
+
+export const getMember = (clubId: string, membershipId: string) =>
+  api.get<MemberDetail>(`/api/v1/clubs/${clubId}/memberships/${membershipId}`)
+
+export type ClubPart = MemberPart & { memberCount: number }
+
+export const listParts = async (clubId: string) =>
+  (await api.get<{ items: ClubPart[] }>(`/api/v1/clubs/${clubId}/parts`)).items

@@ -516,3 +516,61 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+.club-profile,
+.member-profile {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-16);
+}
+
+.club-profile-badges,
+.member-row-name,
+.member-row-parts,
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
+.club-color {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--semantic-line-neutral-tertiary);
+}
+
+.menu-list,
+.member-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.menu-row,
+.member-row,
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-12);
+  padding: var(--spacing-12) 0;
+  border-bottom: 1px solid var(--semantic-line-neutral-tertiary);
+  color: inherit;
+  text-decoration: none;
+}
+
+.member-row {
+  justify-content: flex-start;
+}
+
+.menu-row-extra {
+  color: var(--semantic-foreground-neutral-secondary);
+}
+
+.menu-row-danger {
+  color: var(--semantic-foreground-negative-primary);
+}
