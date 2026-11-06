@@ -84,6 +84,36 @@ const initialState = () => ({
   } as RecoveryMock | null,
 })
 
+// Clubs for the join screens (API-012/013/014). Code ABCD234XYZ joins "크레인 밴드".
+const CLUBS = [
+  ['c10', '크레인 밴드', 'ABCD234XYZ', '신촌 기반 밴드 동아리입니다.'],
+  ['c1', '한빛 밴드 동아리', 'HANBIT2345', '초대를 받은 동아리 (INVITED).'],
+  ['c3', '서울 인디 밴드', 'SEOULINDI2', '이미 가입 신청한 동아리 (PENDING).'],
+  ...Array.from({ length: 25 }, (_, i) => [
+    `c2${i}`,
+    `합주단 ${i + 1}호`,
+    `HAPJU${String(i + 1).padStart(5, '2')}`,
+    '검색 결과 더 보기 확인용',
+  ]),
+].map(([id, name, code, description]) => ({ id, name, code, description }))
+
+const preview = (c: (typeof CLUBS)[number], memberships: Membership[]) => ({
+  club: {
+    id: c.id,
+    name: c.name,
+    description: c.description,
+    clubType: 'CLUB',
+    profileImageUrl: null,
+    themeColor: null,
+  },
+  existingMembershipStatus:
+    memberships.find((m) => m.clubId === c.id)?.status ?? null,
+  canApply: !memberships.some(
+    (m) =>
+      m.clubId === c.id && ['INVITED', 'PENDING', 'ACTIVE'].includes(m.status),
+  ),
+})
+
 const COOKIE_EXCHANGE = 'loginExchange'
 const COOKIE_SESSION = 'mockSession'
 // The 10-minute recovery-choice cookie that a withdrawn account gets instead of a session.
@@ -280,6 +310,52 @@ export function createMockApi() {
       const handle = url.searchParams.get('handle') ?? ''
       await new Promise((r) => setTimeout(r, 300)) // lets the "checking" state show
       return ok(res, { available: !TAKEN_HANDLES.includes(handle) })
+    }
+
+    if (path === '/api/v1/clubs/join-code/resolve' && method === 'POST') {
+      const { joinCode } = await readBody(req)
+      const club = CLUBS.find((c) => c.code === joinCode)
+      return club
+        ? ok(res, preview(club, state.memberships))
+        : fail(res, 404, 'NOT_FOUND')
+    }
+    if (path === '/api/v1/clubs/search' && method === 'GET') {
+      const q = (url.searchParams.get('q') ?? '').trim()
+      if (q.length < 2 || q.length > 100)
+        return fail(res, 400, 'VALIDATION_ERROR')
+      const size = Number(url.searchParams.get('size') ?? 20)
+      const page = Number(url.searchParams.get('page') ?? 0)
+      const hits = CLUBS.filter((c) => c.name.includes(q))
+      return ok(res, {
+        items: hits
+          .slice(page * size, (page + 1) * size)
+          .map((c) => preview(c, state.memberships)),
+        page,
+        size,
+        totalElements: hits.length,
+        totalPages: Math.ceil(hits.length / size),
+      })
+    }
+    const joinRequest = /^\/api\/v1\/clubs\/([^/]+)\/join-requests$/.exec(path)
+    if (joinRequest && method === 'POST') {
+      const club = CLUBS.find((c) => c.id === joinRequest[1])
+      if (!club) return fail(res, 404, 'NOT_FOUND')
+      const { source, joinCode } = await readBody(req)
+      if (source === 'JOIN_CODE' ? joinCode !== club.code : source !== 'SEARCH')
+        return fail(res, 404, 'NOT_FOUND')
+      if (!preview(club, state.memberships).canApply)
+        return fail(res, 409, 'DUPLICATE')
+      state.memberships = state.memberships.filter((m) => m.clubId !== club.id)
+      state.memberships.push({
+        membershipId: `m${Date.now()}`,
+        clubId: club.id,
+        clubName: club.name,
+        clubType: '동아리',
+        role: 'MEMBER',
+        status: 'PENDING',
+        requestedAt: new Date().toISOString(),
+      })
+      return send(res, 201, { data: { status: 'PENDING', approvedAt: null } })
     }
 
     const action =

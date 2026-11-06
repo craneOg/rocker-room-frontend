@@ -1,6 +1,7 @@
 import type { RouteObject } from 'react-router'
 import { Navigate } from 'react-router'
 import { readLastClubId } from '../shared/lib/lastClub'
+import { inviteOr } from '../shared/lib/pendingInvite'
 import { LoginScreen } from '../features/auth/LoginScreen'
 import { isClubMember, useSession } from '../shared/auth/session'
 import { NotFoundView, PageLoading } from '../shared/ui/StateViews'
@@ -31,6 +32,9 @@ function Landing() {
   if (session.status === 'anonymous') return <LoginScreen />
   if (session.me?.onboardingRequired)
     return <Navigate to="/onboarding" replace />
+  // Opened an invite link before logging in: back to it.
+  const invite = inviteOr('')
+  if (invite) return <Navigate to={invite} replace />
   const last = readLastClubId()
   if (last && isClubMember(session, last))
     return <Navigate to={`/clubs/${last}`} replace />
@@ -69,8 +73,13 @@ export const routes: RouteObject[] = [
     HydrateFallback: PageLoading,
     children: [
       { path: '/', element: <Landing /> },
-      // The invite code is ignored for now (CLUB-002 / CLUB-12 preview are not built).
-      { path: '/join/:code', element: <LoginScreen /> },
+      {
+        path: '/join/:code',
+        lazy: async () => {
+          const { JoinLink } = await import('../features/club/JoinLink')
+          return { Component: JoinLink }
+        },
+      },
       {
         path: '/restore',
         lazy: async () => {
@@ -99,10 +108,23 @@ export const routes: RouteObject[] = [
                   return { Component: Start }
                 },
               },
+              {
+                path: '/clubs/join',
+                lazy: async () => {
+                  const { JoinCode } = await import('../features/club/JoinCode')
+                  return { Component: JoinCode }
+                },
+              },
+              {
+                path: '/clubs/search',
+                lazy: async () => {
+                  const { ClubSearch } =
+                    await import('../features/club/ClubSearch')
+                  return { Component: ClubSearch }
+                },
+              },
               ...subScreens([
                 ['/clubs/new', 'CLUB-001'],
-                ['/clubs/join', 'CLUB-002'],
-                ['/clubs/search', 'CLUB-003'],
                 ['/me/profile', 'MY-002'],
                 ['/me/membership', 'MY-003'],
                 ['/me/withdrawal', 'MY-004'],

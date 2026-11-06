@@ -497,3 +497,22 @@ body {
   flex-direction: column;
   gap: var(--spacing-12);
 }
+
+.club-code-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-8);
+}
+
+.club-code-row > :first-child,
+.club-search-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.club-description {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

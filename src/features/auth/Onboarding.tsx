@@ -12,6 +12,7 @@ import { Navigate } from 'react-router'
 import { setSignedIn } from '../../shared/api/client'
 import { fieldErrors } from '../../shared/api/errors'
 import { useSession } from '../../shared/auth/session'
+import { inviteOr } from '../../shared/lib/pendingInvite'
 import { COPY } from '../../shared/ui/copy'
 import { feedback } from '../../shared/ui/feedbackBus'
 import { FormField } from '../../shared/ui/FormField'
@@ -102,7 +103,8 @@ export function Onboarding() {
         : serverErrors.handle
 
   // Decided from the session, not component state: the full shell remounts this screen once saved.
-  if (me && !me.onboardingRequired) return <Navigate to="/start" replace />
+  if (me && !me.onboardingRequired)
+    return <Navigate to={inviteOr('/start')} replace />
 
   return (
     <form
