@@ -37,3 +37,26 @@ export function formatKstYmd(iso: string): string {
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? ''
   return `${get('year')}.${get('month')}.${get('day')}`
 }
+
+/** ISO-8601 -> "HH:mm" in KST. */
+export function formatKstTime(iso: string): string {
+  const parts = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: KST,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(iso))
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? ''
+  return `${get('hour')}:${get('minute')}`
+}
+
+/** "D-3" / "D-Day" / "D+2" for a KST calendar date ("YYYY-MM-DD") counted from `now`. */
+export function formatDDay(date: string, now: number): string {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: KST }).format(now)
+  const days = Math.round(
+    (Date.parse(`${date}T00:00:00+09:00`) -
+      Date.parse(`${today}T00:00:00+09:00`)) /
+      86_400_000,
+  )
+  return days === 0 ? 'D-Day' : days > 0 ? `D-${days}` : `D+${-days}`
+}
