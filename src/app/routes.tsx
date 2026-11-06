@@ -125,10 +125,17 @@ export const routes: RouteObject[] = [
               },
               ...subScreens([
                 ['/clubs/new', 'CLUB-001'],
-                ['/me/profile', 'MY-002'],
                 ['/me/membership', 'MY-003'],
                 ['/me/withdrawal', 'MY-004'],
               ]),
+              {
+                path: '/me/profile',
+                handle: { title: 'MY-002', sub: true },
+                lazy: async () => {
+                  const { MyProfile } = await import('../features/my/MyProfile')
+                  return { Component: MyProfile }
+                },
+              },
               { path: '/calendar', ...screen('SCHD-001') },
               {
                 path: '/me',

@@ -11,6 +11,8 @@ export type Me = {
   /** Null until onboarding (AUTH-002) is done. */
   handle: string | null
   profileImageUrl: string | null
+  /** API-007: show my photo to other members (default true). Optional: older fixtures omit it. */
+  profileImagePublic?: boolean
 }
 
 /** API-010 item (only the fields the app reads). */
@@ -65,6 +67,24 @@ export const checkHandle = (handle: string, signal?: AbortSignal) =>
 
 export const saveProfile = (profile: { name: string; handle: string }) =>
   api.patch<Me>(API_PATHS.me, profile)
+
+/** API-008, partial: only the changed fields. `profileImageUrl` holds an API-129 key (null = default image). */
+export type ProfilePatch = {
+  name?: string
+  handle?: string
+  profileImageUrl?: string | null
+  profileImagePublic?: boolean
+}
+export const updateProfile = (patch: ProfilePatch) =>
+  api.patch<Me>(API_PATHS.me, patch)
+
+/** API-129 response (USER_PROFILE). `imageKey` is what API-008 takes; `previewUrl` is for display. */
+export type ImageUpload = { imageKey: string; previewUrl: string }
+export const uploadProfileImage = (file: File) => {
+  const form = new FormData()
+  form.append('file', file)
+  return api.post<ImageUpload>(API_PATHS.profileImage, form)
+}
 
 export const respondToMembership = (
   m: Pick<Membership, 'clubId' | 'id'>,

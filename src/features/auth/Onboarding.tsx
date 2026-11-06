@@ -6,31 +6,19 @@ import {
   Typography,
 } from '@montage-ui/core'
 import { IconClose } from '@montage-ui/icon'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { Navigate } from 'react-router'
 import { setSignedIn } from '../../shared/api/client'
-import { fieldErrors } from '../../shared/api/errors'
+import { ApiError, fieldErrors } from '../../shared/api/errors'
 import { useSession } from '../../shared/auth/session'
 import { inviteOr } from '../../shared/lib/pendingInvite'
 import { COPY } from '../../shared/ui/copy'
 import { feedback } from '../../shared/ui/feedbackBus'
 import { FormField } from '../../shared/ui/FormField'
-import { checkHandle, logout, saveProfile } from './api'
+import { logout, saveProfile } from './api'
 import { AUTH_COPY as T } from './copy'
-
-// Screen spec and ERD v7: 5~30 (the older API table says 3, ignored).
-const HANDLE_PATTERN = /^[a-z0-9_]{5,30}$/
-const HANDLE_DEBOUNCE_MS = 400
-
-function useDebounced<V>(value: V, ms: number): V {
-  const [debounced, setDebounced] = useState(value)
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), ms)
-    return () => clearTimeout(t)
-  }, [value, ms])
-  return debounced
-}
+import { isNameValid, useHandleAvailability } from './useHandleAvailability'
 
 /** AUTH-002: name + handle. Photo upload and the action sheet are not built (image store undecided). */
 export function Onboarding() {
@@ -41,25 +29,9 @@ export function Onboarding() {
   const [handle, setHandle] = useState('')
 
   const trimmed = name.trim()
-  const nameValid = trimmed.length >= 1 && trimmed.length <= 50
-  const handleValid = HANDLE_PATTERN.test(handle)
-
-  // Keyed by the handle itself, so a late response for an old input can never show for a new one.
-  const debounced = useDebounced(handle, HANDLE_DEBOUNCE_MS)
-  const availability = useQuery({
-    queryKey: ['handle-availability', debounced],
-    queryFn: ({ signal }) => checkHandle(debounced, signal),
-    enabled: handleValid && debounced === handle,
-    staleTime: 0,
-  })
-  const checking =
-    handleValid &&
-    !availability.isError &&
-    (debounced !== handle || availability.isFetching)
-  const available =
-    handleValid && !checking && availability.data?.available === true
-  const taken =
-    handleValid && !checking && availability.data?.available === false
+  const nameValid = isNameValid(trimmed)
+  const { handleValid, checking, available, taken } =
+    useHandleAvailability(handle)
 
   const save = useMutation({
     mutationFn: saveProfile,
@@ -84,6 +56,11 @@ export function Onboarding() {
     name: save.variables?.name === trimmed ? submitted.name : undefined,
     handle: save.variables?.handle === handle ? submitted.handle : undefined,
   }
+  // AUTH-002: someone took the ID between the check and the save (409 DUPLICATE).
+  const takenOnSave =
+    save.error instanceof ApiError &&
+    save.error.code === 'DUPLICATE' &&
+    save.variables?.handle === handle
 
   const onClose = async () => {
     const choice = await feedback.dialog({
@@ -98,7 +75,7 @@ export function Onboarding() {
   const handleError =
     handle && !handleValid
       ? T.handleError
-      : taken
+      : taken || takenOnSave
         ? T.handleTaken
         : serverErrors.handle
 
