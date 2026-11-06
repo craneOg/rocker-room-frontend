@@ -158,10 +158,34 @@ export const routes: RouteObject[] = [
                     },
                   },
                   { path: 'performances', ...screen('PERF-001') },
+                  {
+                    path: 'info',
+                    handle: { title: '동아리', sub: true },
+                    lazy: async () => {
+                      const { ClubOverview } =
+                        await import('../features/club/ClubOverview')
+                      return { Component: ClubOverview }
+                    },
+                  },
+                  {
+                    path: 'members',
+                    handle: { title: '멤버', sub: true },
+                    lazy: async () => {
+                      const { MemberList } =
+                        await import('../features/club/MemberList')
+                      return { Component: MemberList }
+                    },
+                  },
+                  {
+                    path: 'members/:membershipId',
+                    handle: { title: '멤버 상세', sub: true },
+                    lazy: async () => {
+                      const { MemberDetail } =
+                        await import('../features/club/MemberDetail')
+                      return { Component: MemberDetail }
+                    },
+                  },
                   ...subScreens([
-                    ['info', 'CLUB-101'],
-                    ['members', 'CLUB-102'],
-                    ['members/:membershipId', 'CLUB-103'],
                     ['leave', 'CLUB-108'],
                     [PERF, 'PERF-003'],
                     [`${PERF}/members`, 'PMEM-001'],
