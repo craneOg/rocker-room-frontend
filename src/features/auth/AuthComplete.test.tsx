@@ -34,7 +34,7 @@ function loginApi(opts: { restore?: boolean; me?: object } = {}) {
   return stubApi({
     [`GET ${API_PATHS.me}`]: () =>
       signedIn ? json(opts.me ?? me()) : apiError('UNAUTHENTICATED', 401),
-    [`GET ${API_PATHS.memberships}`]: () => json([]),
+    [`GET ${API_PATHS.memberships}`]: () => json({ items: [] }),
     [`GET ${API_PATHS.recoveryInfo}`]: () =>
       json({
         withdrawnAt: '2026-09-01T12:00:00+09:00',
@@ -71,7 +71,7 @@ describe('/auth/complete', () => {
       },
       [`POST ${API_PATHS.tokenRenewal}`]: () =>
         apiError('UNAUTHENTICATED', 401),
-      [`GET ${API_PATHS.memberships}`]: () => json([]),
+      [`GET ${API_PATHS.memberships}`]: () => json({ items: [] }),
       [`POST ${API_PATHS.exchange}`]: () => {
         signedIn = true
         return json({ loginResult: 'LOGGED_IN' })

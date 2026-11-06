@@ -40,7 +40,7 @@ function mockApi({ me, memberships = [] }: Scenario) {
       if (url.endsWith(API_PATHS.me))
         return Promise.resolve(me ? ok(me) : unauthenticated())
       if (url.endsWith(API_PATHS.memberships))
-        return Promise.resolve(ok(memberships))
+        return Promise.resolve(ok({ items: memberships }))
       return Promise.resolve(unauthenticated())
     }),
   )
@@ -120,7 +120,7 @@ describe('session failures', () => {
     let healthy = false
     stub(
       () => (healthy ? ok(user) : serverError()),
-      () => ok([active('5')]),
+      () => ok({ items: [active('5')] }),
     )
     localStorage.setItem('lastClubId', '5')
     renderAt('/')
@@ -142,7 +142,7 @@ describe('session failures', () => {
     let healthy = true
     stub(
       () => (healthy ? ok(user) : serverError()),
-      () => ok([active('5')]),
+      () => ok({ items: [active('5')] }),
     )
     const queryClient = renderAt('/clubs/5').queryClient
     await findScreen('HOME-001')

@@ -16,12 +16,16 @@ export const API_PATHS = {
   startNew: '/api/v1/auth/start-new',
 } as const
 
-// API-026/027/028 (`membershipId` comes from the memberships list).
+// API-026/027 accept/decline an invite; API-028 cancels a join request (confirmed in the API
+// spec). `membershipId` is the `id` of the memberships list item.
 export const membershipActionPath = (
   clubId: string,
   membershipId: string,
-  action: 'accept' | 'decline' | 'cancel-request',
-) => `/api/v1/clubs/${clubId}/members/${membershipId}/${action}`
+  action: 'accept' | 'decline' | 'cancel',
+) =>
+  action === 'cancel'
+    ? `/api/v1/clubs/${clubId}/join-requests/${membershipId}/cancel`
+    : `/api/v1/clubs/${clubId}/memberships/${membershipId}/${action}`
 
 // Where the SPA lands after Kakao login (needs agreement with the backend).
 export const AUTH_COMPLETE_PATH = '/auth/complete'
@@ -36,8 +40,7 @@ export const AUTH_ERROR_QUERY_PARAM = 'error'
 //   instead of the login cookies). The other values are not known, so only this one is compared.
 // - handle availability: `{ available: boolean }`.
 // - Me: `name`, `handle` (null until onboarding), `profileImageUrl` (nullable).
-// - Membership: `membershipId`, `clubName`, `clubType` (display text), `inviteExpiresAt`
-//   (INVITED), `requestedAt` (PENDING/REJECTED); statuses INVITED / PENDING / REJECTED.
+// - Membership (API-010, confirmed): see features/auth/api.ts.
 
 // Recovery APIs (131-133), confirmed by the backend: a 401 UNAUTHENTICATED whose
 // `details[0]` is `{field: "request", reason: "RESTORATION_COOKIE_INVALID"}` means the choice

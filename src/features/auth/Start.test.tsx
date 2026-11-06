@@ -18,35 +18,43 @@ const DAY = 86_400_000
 const iso = (offsetDays: number) =>
   new Date(Date.now() + offsetDays * DAY).toISOString()
 
-const base = { role: 'MEMBER', clubType: '밴드 동아리' }
+const base = { role: 'MEMBER', invitationExpiresAt: null, requestedAt: null }
+const clubOf = (id: string, name: string) => ({
+  id,
+  name,
+  clubType: 'BAND',
+  status: 'ACTIVE',
+  profileImageUrl: null,
+  themeColor: null,
+})
 const invite = {
   ...base,
-  membershipId: 'm1',
+  id: 'm1',
   clubId: 'c1',
-  clubName: '한빛 밴드 동아리',
+  club: clubOf('c1', '한빛 밴드 동아리'),
   status: 'INVITED',
-  inviteExpiresAt: iso(5),
+  invitationExpiresAt: iso(5),
 }
 const expired = {
   ...invite,
-  membershipId: 'm2',
+  id: 'm2',
   clubId: 'c2',
-  clubName: '지난 학기 합주단',
-  inviteExpiresAt: iso(-2),
+  club: clubOf('c2', '지난 학기 합주단'),
+  invitationExpiresAt: iso(-2),
 }
 const pending = {
   ...base,
-  membershipId: 'm3',
+  id: 'm3',
   clubId: 'c3',
-  clubName: '서울 인디 밴드',
+  club: clubOf('c3', '서울 인디 밴드'),
   status: 'PENDING',
   requestedAt: iso(-3),
 }
 const rejected = {
   ...pending,
-  membershipId: 'm4',
+  id: 'm4',
   clubId: 'c4',
-  clubName: '홍대 합주단',
+  club: clubOf('c4', '홍대 합주단'),
   status: 'REJECTED',
 }
 
@@ -66,12 +74,12 @@ function openStart(
   let memberships: object[] = initial
   let acted = false
   const act = (
-    m: { clubId: string; membershipId: string },
-    action: 'accept' | 'decline' | 'cancel-request',
-  ) => membershipActionPath(m.clubId, m.membershipId, action)
+    m: { clubId: string; id: string },
+    action: 'accept' | 'decline' | 'cancel',
+  ) => membershipActionPath(m.clubId, m.id, action)
   const apply = (id: string, change: (m: object) => object | null) => () => {
     memberships = memberships.flatMap((m) =>
-      (m as { membershipId: string }).membershipId === id
+      (m as { id: string }).id === id
         ? [change(m)].filter((x) => x !== null)
         : [m],
     )
@@ -82,7 +90,7 @@ function openStart(
     [`GET ${API_PATHS.memberships}`]: () =>
       failRefetchAfterAction && acted
         ? apiError('UNKNOWN', 500)
-        : json(memberships),
+        : json({ items: memberships }),
     [`POST ${act(invite, 'accept')}`]: () => {
       acted = true
       return apply('m1', (m) => ({ ...m, status: 'ACTIVE' }))()
@@ -91,7 +99,7 @@ function openStart(
       acted = true
       return apply('m1', () => null)()
     },
-    [`POST ${act(pending, 'cancel-request')}`]: () => {
+    [`POST ${act(pending, 'cancel')}`]: () => {
       acted = true
       return apply('m3', () => null)()
     },
@@ -101,6 +109,20 @@ function openStart(
 
 const card = (club: string) =>
   screen.getByText(club).closest('article') as HTMLElement
+
+describe('AUTH-003 paths (API-026/027/028)', () => {
+  it('uses the spec paths', () => {
+    expect(membershipActionPath('10', '21', 'accept')).toBe(
+      '/api/v1/clubs/10/memberships/21/accept',
+    )
+    expect(membershipActionPath('10', '21', 'decline')).toBe(
+      '/api/v1/clubs/10/memberships/21/decline',
+    )
+    expect(membershipActionPath('10', '21', 'cancel')).toBe(
+      '/api/v1/clubs/10/join-requests/21/cancel',
+    )
+  })
+})
 
 describe('AUTH-003', () => {
   it('shows the greeting, invites, applications and the three ways to join', async () => {
@@ -226,7 +248,7 @@ describe('AUTH-003', () => {
     expect(await screen.findByText(T.requestCancelled)).toBeTruthy()
     await waitFor(() => expect(screen.queryByText('서울 인디 밴드')).toBeNull())
     expect(
-      callsTo(fetchMock, membershipActionPath('c3', 'm3', 'cancel-request')),
+      callsTo(fetchMock, membershipActionPath('c3', 'm3', 'cancel')),
     ).toHaveLength(1)
     expect(router.state.location.pathname).toBe('/start')
   })
