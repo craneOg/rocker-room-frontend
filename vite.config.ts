@@ -14,6 +14,9 @@ const mockApi = (): Plugin => ({
 
 export default defineConfig({
   plugins: [react(), mockApi()],
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? ''),
+  },
   server: { proxy: { '/api': 'http://localhost:8080' } },
   test: { environment: 'jsdom' },
 })

@@ -1,0 +1,21 @@
+// MY-001 copy (screen spec 2026.10, section 13).
+export const MY_COPY = {
+  title: '내 정보',
+  copyId: 'ID 복사',
+  idCopied: 'ID를 복사했어요',
+  editProfile: '프로필 수정',
+  profilePhoto: '프로필 사진',
+  currentClub: '현재 동아리',
+  clubInfo: '동아리 정보·멤버',
+  myMembership: '내 소속 정보',
+  myClubs: '내 동아리',
+  addClub: '동아리 만들기·가입하기',
+  settings: '설정',
+  terms: '이용약관',
+  privacy: '개인정보 처리방침',
+  logout: '로그아웃',
+  logoutTitle: '로그아웃할까요?',
+  withdraw: '서비스 탈퇴',
+  version: (v: string) => `앱 버전 ${v}`,
+  admin: '서비스 관리',
+} as const
