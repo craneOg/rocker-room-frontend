@@ -97,9 +97,9 @@ function Todos({ todos, base }: { todos: HomeTodo[]; base: string }) {
       {todos.length === 0 ? (
         <EmptyState description={T.todosEmpty} />
       ) : (
-        todos.map((t) => (
+        todos.map((t, i) => (
           <Link
-            key={`${t.type}-${t.performanceId}`}
+            key={`${t.type}-${t.performanceId}-${i}`}
             to={todoPath(base, t)}
             className="start-card start-way"
           >
