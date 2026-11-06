@@ -43,7 +43,7 @@ export const SETTINGS_COPY = {
   partNameInvalid: '1~50자로 입력해 주세요.',
   deactivate: '사용 중지',
   reactivate: '다시 사용',
-  deactivateTitle: (part: string) => `${part}를 사용 중지할까요?`,
+  deactivateTitle: (part: string) => `${part} 파트를 사용 중지할까요?`,
   deactivateDescription:
     '새로 고를 수 없게 되고, 이미 입력된 기록은 그대로 남아요.',
   // CLUB-108

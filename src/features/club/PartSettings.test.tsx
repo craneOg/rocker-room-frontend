@@ -257,6 +257,27 @@ describe('CLUB-107 PartSettings', () => {
     expect(names().slice(0, 3)).toEqual(['베이스', '보컬', '기타'])
   })
 
+  it('ignores a drop while the previous order is still saving', async () => {
+    const { fetchMock } = openScreen({
+      [`PATCH ${PARTS}/1`]: () => new Promise<Response>(() => {}),
+      [`PATCH ${PARTS}/2`]: () => json({ id: '2' }),
+    })
+    await screen.findByText('보컬')
+    clickIn('보컬', T.moveDown)
+    await waitFor(() => expect(writes(fetchMock, 'PATCH')).toHaveLength(2))
+
+    fireEvent.dragStart(screen.getByLabelText(T.dragHandle('베이스')))
+    fireEvent.drop(
+      screen.getByLabelText(T.dragHandle('기타')).closest('article')!,
+    )
+    await new Promise((r) => setTimeout(r, 50))
+    expect(writes(fetchMock, 'PATCH')).toHaveLength(2)
+  })
+
+  it('words the deactivate title without a particle that depends on the name', () => {
+    expect(T.deactivateTitle('보컬')).toBe('보컬 파트를 사용 중지할까요?')
+  })
+
   it('reloads the list when saving the order fails midway', async () => {
     const { fetchMock } = openScreen({
       [`PATCH ${PARTS}/1`]: () => json({ id: '1' }),

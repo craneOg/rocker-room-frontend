@@ -112,6 +112,7 @@ export function PartSettings() {
   const nextOrder = Math.max(-1, ...parts.data.map((p) => p.displayOrder)) + 1
 
   const move = (from: number, to: number) => {
+    if (saveOrder.isPending) return
     if (from === to || to < 0 || to >= active.length) return
     const next = reorder(active, from, to)
     const changed = next.filter(
