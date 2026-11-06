@@ -1,5 +1,6 @@
 import { API_PATHS, membershipActionPath } from '../../shared/api/assumptions'
 import { api, apiUrl } from '../../shared/api/client'
+import { isApiError } from '../../shared/api/errors'
 
 // Assumed shapes (see shared/api/assumptions.ts); IDs are strings, times ISO-8601.
 export type Me = {
@@ -66,11 +67,36 @@ export type RecoveryInfo = {
   profileImageUrl?: string | null
 }
 
+/**
+ * 409 of the recovery APIs: already restored, discarded, or past the retention period. The screen
+ * explains it itself; being no ApiError, it also stays out of the global error handler (which
+ * would add its own toast or dialog).
+ */
+export class NotRestorableError extends Error {
+  constructor() {
+    super('not restorable')
+    this.name = 'NotRestorableError'
+  }
+}
+
+const recovery = async <T>(call: Promise<T>) => {
+  try {
+    return await call
+  } catch (e) {
+    if (isApiError(e) && e.status === 409) throw new NotRestorableError()
+    throw e
+  }
+}
+
 // The recovery APIs run on the choice cookie, not a session: a 401 is final (no token renewal).
 const recoveryOpts = { skipRenewal: true }
 export const getRecoveryInfo = () =>
-  api.get<RecoveryInfo>(API_PATHS.recoveryInfo, recoveryOpts)
+  recovery(api.get<RecoveryInfo>(API_PATHS.recoveryInfo, recoveryOpts))
 export const restoreProfile = () =>
-  api.post<{ success: boolean }>(API_PATHS.restore, undefined, recoveryOpts)
+  recovery(
+    api.post<{ success: boolean }>(API_PATHS.restore, undefined, recoveryOpts),
+  )
 export const startNewAccount = () =>
-  api.post<{ success: boolean }>(API_PATHS.startNew, undefined, recoveryOpts)
+  recovery(
+    api.post<{ success: boolean }>(API_PATHS.startNew, undefined, recoveryOpts),
+  )

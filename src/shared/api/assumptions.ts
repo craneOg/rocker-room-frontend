@@ -39,6 +39,10 @@ export const AUTH_ERROR_QUERY_PARAM = 'error'
 // - Membership: `membershipId`, `clubName`, `clubType` (display text), `inviteExpiresAt`
 //   (INVITED), `requestedAt` (PENDING/REJECTED); statuses INVITED / PENDING / REJECTED.
 
+// Recovery APIs (131-133), confirmed by the backend: a 401 UNAUTHENTICATED whose
+// `details[0]` is `{field: "request", reason: "RESTORATION_COOKIE_INVALID"}` means the choice
+// cookie is missing, expired or used (see isRestorationCookieInvalid). A 409 is "not restorable".
+
 export const LOGIN_RESULT_RESTORATION_REQUIRED = 'RESTORATION_REQUIRED'
 
 export const REQUESTED_WITH_HEADER = { 'X-Requested-With': 'XMLHttpRequest' }
