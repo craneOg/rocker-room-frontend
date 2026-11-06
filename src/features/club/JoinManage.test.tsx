@@ -335,6 +335,21 @@ describe('CLUB-104 JoinManage: invites', () => {
     )
   })
 
+  it.each([
+    ['NOT_FOUND', 404, T.inviteGone],
+    ['DUPLICATE', 409, T.inviteDuplicate],
+  ])('says why a re-invite failed (%s)', async (code, status, message) => {
+    open('/clubs/10/join-requests?tab=invites', {
+      'POST /api/v1/clubs/10/memberships/invite': () => apiError(code, status),
+    })
+    fireEvent.click(
+      await waitFor(() =>
+        within(rowOf('최유나')).getByRole('button', { name: T.reinvite }),
+      ),
+    )
+    expect(await screen.findByText(message)).toBeTruthy()
+  })
+
   it('lists declined invites in a collapsed section with re-invite', async () => {
     open('/clubs/10/join-requests?tab=invites')
     const summary = await screen.findByText(T.declinedInvites(1))

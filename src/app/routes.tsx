@@ -207,6 +207,7 @@ export const routes: RouteObject[] = [
                     children: [
                       {
                         path: 'join-requests',
+                        handle: { title: '가입 관리', sub: true },
                         lazy: async () => {
                           const { JoinManage } =
                             await import('../features/club/JoinManage')
@@ -215,6 +216,7 @@ export const routes: RouteObject[] = [
                       },
                       {
                         path: 'members/new',
+                        handle: { title: '멤버 직접 추가', sub: true },
                         lazy: async () => {
                           const { MemberAdd } =
                             await import('../features/club/MemberAdd')

@@ -281,7 +281,10 @@ function InviteRow({
     // Whatever the outcome, the list shows the truth again; only a 409/404 needs its own words.
     onError: (e) => {
       if (e instanceof InviteTargetError)
-        feedback.toast(T.inviteDuplicate, 'negative')
+        feedback.toast(
+          e.reason === 'gone' ? T.inviteGone : T.inviteDuplicate,
+          'negative',
+        )
     },
     onSettled: () =>
       queryClient.invalidateQueries({ queryKey: memberKey(clubId) }),
