@@ -1,0 +1,65 @@
+// CLUB-106 / 107 / 108 copy (screen spec 2026.10, section 3).
+export const SETTINGS_COPY = {
+  retry: '다시 시도',
+  // CLUB-106
+  codeTitle: '가입 코드·공개 설정',
+  codeSection: '가입 코드',
+  copyLink: '초대 링크 복사',
+  copyCode: '코드 복사',
+  copyInvite: '초대 문구 복사',
+  regenerate: '재발급',
+  codeHint:
+    '링크를 받은 사람은 카카오로 시작한 뒤 가입 신청해요. 승인은 임원이 해요.',
+  codeOff: '가입 코드를 사용하지 않아요',
+  codeToggle: '가입 코드 사용',
+  copied: '복사했어요',
+  inviteText: (club: string, code: string, link: string) =>
+    `${club} 가입 코드는 ${code} 예요.\n${link}`,
+  regenerateTitle: '가입 코드를 새로 만들까요?',
+  regenerateDescription: '지금 코드와 초대 링크는 바로 사용할 수 없게 돼요.',
+  regenerated: '새 코드를 만들었어요',
+  disableTitle: '가입 코드를 끌까요?',
+  disableDescription:
+    '지금 코드와 초대 링크로는 더 이상 가입 신청할 수 없어요.',
+  disable: '끄기',
+  searchableToggle: '동아리 찾기 공개',
+  searchableOn: '누구나 이름으로 찾아 가입 신청할 수 있어요',
+  searchableOff: '검색에 나타나지 않아요',
+  // CLUB-107
+  partsTitle: '파트 관리',
+  partsActive: '사용 중인 파트',
+  partsEmpty: '사용 중인 파트가 없어요',
+  partsInactive: (n: number) => `사용 중지한 파트 ${n}`,
+  members: (n: number) => `${n}명`,
+  dragHandle: (name: string) => `${name} 순서 바꾸기`,
+  moveUp: '위로',
+  moveDown: '아래로',
+  rename: '이름 변경',
+  save: '저장',
+  cancel: '취소',
+  addPart: '+ 파트 추가',
+  partName: '파트 이름',
+  partNameTaken: '이미 있는 파트예요.',
+  partNameInvalid: '1~50자로 입력해 주세요.',
+  deactivate: '사용 중지',
+  reactivate: '다시 사용',
+  deactivateTitle: (part: string) => `${part}를 사용 중지할까요?`,
+  deactivateDescription:
+    '새로 고를 수 없게 되고, 이미 입력된 기록은 그대로 남아요.',
+  // CLUB-108
+  leaveTitle: '동아리 나가기',
+  leaveNotice: (club: string) =>
+    `${club}에서 나가면 이 동아리의 공연·일정을 볼 수 없어요. 지난 공연 기록은 남아요. 다시 가입하려면 가입 신청이나 초대가 필요해요.`,
+  leaveImpacts: '참여가 철회되고 팀·연주자에서 빠져요',
+  leaveSuccession: '임원 권한을 넘길 멤버',
+  leaveNoSuccessor:
+    '넘길 멤버가 없어 동아리가 비활성 상태가 되고 서비스 관리자가 복구를 돕게 돼요.',
+  leaderSuccessor: (team: string) => `${team} 팀장을 이어받을 팀원`,
+  noLeader: '팀장 없음',
+  leave: '동아리 나가기',
+  leaveConfirmTitle: (club: string) => `정말 ${club}에서 나갈까요?`,
+  leaveConfirm: '나가기',
+  leaveChangedTitle: '그사이 내용이 바뀌었어요',
+  leaveChangedDescription: '바뀐 내용을 확인한 뒤 다시 눌러 주세요.',
+  left: '동아리에서 나갔어요',
+} as const

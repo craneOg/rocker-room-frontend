@@ -141,7 +141,6 @@ export const routes: RouteObject[] = [
                     ['info', 'CLUB-101'],
                     ['members', 'CLUB-102'],
                     ['members/:membershipId', 'CLUB-103'],
-                    ['leave', 'CLUB-108'],
                     [PERF, 'PERF-003'],
                     [`${PERF}/members`, 'PMEM-001'],
                     [`${PERF}/teams`, 'TEAM-001'],
@@ -158,26 +157,53 @@ export const routes: RouteObject[] = [
                     [`${PERF}/schedules/:scheduleId`, 'SCHD-002'],
                   ]),
                   {
+                    path: 'leave',
+                    handle: { title: 'CLUB-108', sub: true },
+                    lazy: async () => {
+                      const { ClubLeave } =
+                        await import('../features/club/ClubLeave')
+                      return { Component: ClubLeave }
+                    },
+                  },
+                  {
                     element: <RequireClubAdmin />,
-                    children: subScreens([
-                      ['join-requests', 'CLUB-104'],
-                      ['members/new', 'CLUB-105'],
-                      ['join-code', 'CLUB-106'],
-                      ['parts', 'CLUB-107'],
-                      ['performances/new', 'PERF-002'],
-                      [`${PERF}/policy`, 'PERF-004'],
-                      [`${PERF}/status`, 'PERF-005'],
-                      [`${PERF}/edit`, 'PERF-006'],
-                      [`${PERF}/teams/new`, 'TEAM-003'],
-                      [`${PERF}/teams/review`, 'TEAM-005'],
-                      [`${PERF}/songs/status`, 'SONG-005'],
-                      [`${PERF}/songs/:songId/players`, 'SONG-004'],
-                      [`${PERF}/auditions`, 'AUDI-001'],
-                      [`${PERF}/auditions/new`, 'AUDI-002'],
-                      [`${PERF}/auditions/:auditionId/result`, 'AUDI-003'],
-                      [`${PERF}/schedules/new`, 'SCHD-003'],
-                      [`${PERF}/schedules/:scheduleId/edit`, 'SCHD-003'],
-                    ]),
+                    children: [
+                      {
+                        path: 'join-code',
+                        handle: { title: 'CLUB-106', sub: true },
+                        lazy: async () => {
+                          const { JoinCodeSettings } =
+                            await import('../features/club/JoinCodeSettings')
+                          return { Component: JoinCodeSettings }
+                        },
+                      },
+                      {
+                        path: 'parts',
+                        handle: { title: 'CLUB-107', sub: true },
+                        lazy: async () => {
+                          const { PartSettings } =
+                            await import('../features/club/PartSettings')
+                          return { Component: PartSettings }
+                        },
+                      },
+                      ...subScreens([
+                        ['join-requests', 'CLUB-104'],
+                        ['members/new', 'CLUB-105'],
+                        ['performances/new', 'PERF-002'],
+                        [`${PERF}/policy`, 'PERF-004'],
+                        [`${PERF}/status`, 'PERF-005'],
+                        [`${PERF}/edit`, 'PERF-006'],
+                        [`${PERF}/teams/new`, 'TEAM-003'],
+                        [`${PERF}/teams/review`, 'TEAM-005'],
+                        [`${PERF}/songs/status`, 'SONG-005'],
+                        [`${PERF}/songs/:songId/players`, 'SONG-004'],
+                        [`${PERF}/auditions`, 'AUDI-001'],
+                        [`${PERF}/auditions/new`, 'AUDI-002'],
+                        [`${PERF}/auditions/:auditionId/result`, 'AUDI-003'],
+                        [`${PERF}/schedules/new`, 'SCHD-003'],
+                        [`${PERF}/schedules/:scheduleId/edit`, 'SCHD-003'],
+                      ]),
+                    ],
                   },
                 ],
               },
