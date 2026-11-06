@@ -60,7 +60,7 @@ const initialState = () => ({
       id: 'm1',
       clubId: 'c1',
       club: clubOf('c1', '한빛 밴드 동아리'),
-      role: 'MEMBER',
+      role: 'CLUB_ADMIN',
       status: 'INVITED',
       invitationExpiresAt: inDays(5),
       requestedAt: null,
@@ -484,6 +484,45 @@ export function createMockApi() {
         ],
       })
     }
+    // API-138: admin home (5~7). API-139: home tab badge = todos (2) + pending (7).
+    if (/^\/api\/v1\/clubs\/[^/]+\/home\/admin$/.test(path) && method === 'GET')
+      return ok(res, {
+        pending: {
+          joinRequests: 2,
+          invitesWaiting: 1,
+          participationRequests: 3,
+          teamReviews: 1,
+          auditionReviews: 0,
+        },
+        performanceChecks: [
+          {
+            performanceId: 'p1',
+            performanceName: '2026 가을 공연',
+            satisfied: 4,
+            total: 6,
+            items: [
+              { checkId: 'L-01', kind: 'BLOCKER', satisfied: false, count: 2 },
+              { checkId: 'L-04', kind: 'BLOCKER', satisfied: false, count: 1 },
+              { checkId: 'L-07', kind: 'WARNING', satisfied: false, count: 1 },
+              { checkId: 'L-06', kind: 'BLOCKER', satisfied: true, count: 0 },
+            ],
+            responseRates: {
+              playability: { answered: 12, total: 19 },
+              vote: null,
+              availability: { answered: 15, total: 19 },
+            },
+          },
+        ],
+        clubStats: {
+          activeMembers: 19,
+          admins: 3,
+          graduated: 4,
+          guests: 1,
+          performances: { draft: 0, active: 1, locked: 0, finished: 2 },
+        },
+      })
+    if (/^\/api\/v1\/clubs\/[^/]+\/home\/badge$/.test(path) && method === 'GET')
+      return ok(res, { count: 9 })
     // API-135 / 136: succession notices.
     if (path === '/api/v1/me/succession-notices' && method === 'GET')
       return ok(res, { items: state.notices })

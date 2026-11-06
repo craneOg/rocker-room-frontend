@@ -12,12 +12,14 @@ import {
   stubApi,
   type Route,
 } from '../../test/harness'
-import type { HomeData, SuccessionNotice } from './api'
+import type { AdminHomeData, HomeData, SuccessionNotice } from './api'
 import { HOME_COPY as T } from './copy'
 
 setupDom()
 
 const HOME = '/api/v1/clubs/10/home'
+const ADMIN = '/api/v1/clubs/10/home/admin'
+const BADGE = '/api/v1/clubs/10/home/badge'
 const NOTICES = '/api/v1/me/succession-notices'
 const iso = (hours: number) =>
   new Date(Date.now() + hours * 3_600_000).toISOString()
@@ -204,6 +206,8 @@ describe('HOME-001 Home', () => {
       {
         [`GET ${API_PATHS.memberships}`]: () =>
           json({ items: [{ ...membership, role: 'CLUB_ADMIN' }] }),
+        // The admin area loads too; an unstubbed 404 would swap the page for "not found".
+        [`GET ${ADMIN}`]: () => apiError('UNKNOWN', 500),
       },
     )
     await findScreen('HOME-001')
@@ -328,5 +332,180 @@ describe('HOME-001 0-1 succession notices', () => {
       expect(callsTo(fetchMock, confirmPath('n5'))).toHaveLength(1),
     )
     expect(callsTo(fetchMock, confirmPath('n1'))).toHaveLength(1)
+  })
+})
+
+describe('HOME-001 5~7 admin area', () => {
+  const adminData: AdminHomeData = {
+    pending: {
+      joinRequests: 2,
+      invitesWaiting: 0,
+      participationRequests: 3,
+      teamReviews: 1,
+      auditionReviews: 0,
+    },
+    performanceChecks: [
+      {
+        performanceId: '31',
+        performanceName: '2026 가을 공연',
+        satisfied: 4,
+        total: 6,
+        items: [
+          { checkId: 'L-01', kind: 'BLOCKER', satisfied: false, count: 2 },
+          { checkId: 'L-06', kind: 'BLOCKER', satisfied: true, count: 0 },
+          { checkId: 'L-07', kind: 'WARNING', satisfied: false, count: 1 },
+        ],
+        responseRates: {
+          playability: { answered: 12, total: 19 },
+          vote: null,
+          availability: { answered: 15, total: 19 },
+        },
+      },
+    ],
+    clubStats: {
+      activeMembers: 19,
+      admins: 3,
+      graduated: 4,
+      guests: 1,
+      performances: { draft: 0, active: 1, locked: 0, finished: 2 },
+    },
+  }
+  const noPerformances: AdminHomeData = { ...adminData, performanceChecks: [] }
+
+  function openAdmin(
+    admin: AdminHomeData | Route = adminData,
+    extra: Record<string, Route> = {},
+  ) {
+    return openHome(empty, [], {
+      [`GET ${API_PATHS.memberships}`]: () =>
+        json({ items: [{ ...membership, role: 'CLUB_ADMIN' }] }),
+      [`GET ${ADMIN}`]: typeof admin === 'function' ? admin : () => json(admin),
+      ...extra,
+    })
+  }
+
+  it('does not show or fetch the admin area for a member', async () => {
+    const { fetchMock } = openHome(empty, [], {
+      [`GET ${ADMIN}`]: () => json(adminData),
+    })
+    await screen.findByText(T.todosEmpty)
+
+    expect(screen.queryByText(T.pending)).toBeNull()
+    expect(callsTo(fetchMock, ADMIN)).toHaveLength(0)
+  })
+
+  it('shows pending counts, the readiness checklist and the club stats', async () => {
+    openAdmin()
+    await screen.findByText(T.pending)
+
+    expect(screen.getByText(T.pendingJoin).nextSibling?.textContent).toBe('2건')
+    expect(screen.getByText(T.pendingInvite).nextSibling?.textContent).toBe(
+      '0건',
+    )
+    // 0건 tiles are dimmed.
+    expect(screen.getByText(T.pendingInvite).closest('.is-zero')).not.toBeNull()
+    expect(screen.getByText(T.pendingJoin).closest('.is-zero')).toBeNull()
+    expect(
+      screen.getByText(T.checksSummary('2026 가을 공연', 4, 6)),
+    ).toBeTruthy()
+    // Only open features show a response rate (vote is null).
+    expect(
+      screen.getByText(T.rate(T.ratePlayability, 12, 19)).textContent,
+    ).toContain('63%')
+    expect(screen.queryByText(new RegExp(T.rateVote))).toBeNull()
+    expect(screen.getByText(T.check['L-01']!(2))).toBeTruthy()
+    expect(screen.getByLabelText(T.checkMark.ok)).toBeTruthy()
+    expect(screen.getByLabelText(T.checkMark.warning)).toBeTruthy()
+    expect(screen.getByText(T.statsMembers).nextSibling?.textContent).toBe('19')
+  })
+
+  it('shows the empty checklist state', async () => {
+    openAdmin(noPerformances)
+    await screen.findByText(T.checksEmpty)
+  })
+
+  it.each([
+    [T.pendingJoin, '/clubs/10/join-requests'],
+    [T.pendingTeam, '/clubs/10/performances/31/teams/review'],
+    [T.check['L-01']!(2), '/clubs/10/performances/31/setlist'],
+    [
+      T.rate(T.ratePlayability, 12, 19),
+      '/clubs/10/performances/31/songs/status',
+    ],
+    [T.statsMembers, '/clubs/10/members'],
+    [T.statsActive, '/clubs/10/performances'],
+  ])('opens %s at %s', async (label, path) => {
+    const { router } = openAdmin()
+    fireEvent.click(await screen.findByText(label))
+
+    await waitFor(() => expect(router.state.location.pathname).toBe(path))
+  })
+
+  it('does not link performance tiles when no performance is running', async () => {
+    openAdmin(noPerformances)
+    await screen.findByText(T.pending)
+
+    expect(screen.getByText(T.pendingTeam).closest('a')).toBeNull()
+    expect(screen.getByText(T.pendingJoin).closest('a')).not.toBeNull()
+  })
+
+  it('shows a skeleton while loading, then the area', async () => {
+    let release: (r: Response) => void = () => {}
+    const pending = new Promise<Response>((r) => (release = r))
+    openAdmin(() => pending)
+    await screen.findByText(T.todosEmpty)
+
+    expect(screen.getAllByRole('status', { name: COPY.loading })).toHaveLength(
+      1,
+    )
+    release(json(adminData))
+    await screen.findByText(T.pending)
+    expect(screen.queryByRole('status', { name: COPY.loading })).toBeNull()
+  })
+
+  it('offers a retry when the admin data fails to load', async () => {
+    Object.defineProperty(Element.prototype, 'getAnimations', {
+      value: () => [],
+      configurable: true,
+    })
+    let healthy = false
+    openAdmin(() => (healthy ? json(adminData) : apiError('UNKNOWN', 500)))
+    const retry = await screen.findByRole('button', { name: COPY.retry })
+    healthy = true
+    fireEvent.click(retry)
+    await screen.findByText(T.pending)
+  })
+
+  it('shows the home tab badge from API-139, and hides it at 0', async () => {
+    const { fetchMock } = openHome(empty, [], {
+      [`GET ${BADGE}`]: () => json({ count: 9 }),
+    })
+    await screen.findByLabelText(T.tabBadge(9))
+    expect(callsTo(fetchMock, BADGE).length).toBeGreaterThan(0)
+  })
+
+  it('hides the badge when a later refresh fails', async () => {
+    let healthy = true
+    const { router } = openHome(empty, [], {
+      [`GET ${BADGE}`]: () =>
+        healthy ? json({ count: 9 }) : apiError('UNKNOWN', 500),
+    })
+    await screen.findByLabelText(T.tabBadge(9))
+    healthy = false
+    await router.queryClient.refetchQueries({
+      queryKey: ['home', '10', 'badge'],
+    })
+    await waitFor(() =>
+      expect(screen.queryByLabelText(T.tabBadge(9))).toBeNull(),
+    )
+  })
+
+  it('hides the badge at 0', async () => {
+    openHome(empty, [], { [`GET ${BADGE}`]: () => json({ count: 0 }) })
+    await screen.findByText(T.todosEmpty)
+    await waitFor(() =>
+      expect(document.querySelector('nav.tabbar')).toBeTruthy(),
+    )
+    expect(screen.queryByLabelText(/건 대기/)).toBeNull()
   })
 })

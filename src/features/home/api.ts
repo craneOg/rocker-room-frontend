@@ -86,3 +86,59 @@ export const getSuccessionNotices = async () =>
 /** Irreversible; confirming twice is fine (200 both times). */
 export const confirmSuccessionNotice = (id: string) =>
   api.post<unknown>(`/api/v1/me/succession-notices/${id}/confirm`)
+
+// API-138 / 139 (Notion API spec; confirmed, not yet implemented on the server).
+export type CheckItem = {
+  /** L-01 ~ L-11 */
+  checkId: string
+  /** BLOCKER blocks locking; WARNING does not. Only BLOCKER is shown in the spec example. */
+  kind: 'BLOCKER' | 'WARNING'
+  satisfied: boolean
+  count: number
+}
+
+export type ResponseRate = { answered: number; total: number }
+
+export type PerformanceCheck = {
+  performanceId: string
+  performanceName: string
+  satisfied: number
+  total: number
+  items: CheckItem[]
+  /** Null = that feature is not open. */
+  responseRates: {
+    playability: ResponseRate | null
+    vote: ResponseRate | null
+    availability: ResponseRate | null
+  }
+}
+
+export type AdminHomeData = {
+  pending: {
+    joinRequests: number
+    invitesWaiting: number
+    participationRequests: number
+    teamReviews: number
+    auditionReviews: number
+  }
+  performanceChecks: PerformanceCheck[]
+  clubStats: {
+    /** ACTIVE + ON_LEAVE. */
+    activeMembers: number
+    admins: number
+    graduated: number
+    guests: number
+    performances: {
+      draft: number
+      active: number
+      locked: number
+      finished: number
+    }
+  }
+}
+
+export const getAdminHome = (clubId: string) =>
+  api.get<AdminHomeData>(`/api/v1/clubs/${clubId}/home/admin`)
+
+export const getHomeBadge = async (clubId: string) =>
+  (await api.get<{ count: number }>(`/api/v1/clubs/${clubId}/home/badge`)).count
