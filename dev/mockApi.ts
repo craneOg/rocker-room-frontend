@@ -90,7 +90,7 @@ const initialState = () => ({
       requestedAt: null,
     },
     {
-      id: 'm5',
+      id: 'u1',
       clubId: 'c10',
       club: clubOf('c10', '크레인 밴드'),
       role: 'CLUB_ADMIN',
