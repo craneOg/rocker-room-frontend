@@ -99,6 +99,20 @@ describe('AUTH-002', () => {
     )
   })
 
+  it('toggles a consent checkbox when its text is clicked', async () => {
+    openOnboarding()
+    await findScreen('AUTH-002')
+    const box = screen.getByRole('checkbox', { name: T.agreeTerms })
+    expect(box.getAttribute('aria-checked')).toBe('false')
+    fireEvent.click(screen.getByText(T.agreeTerms))
+    expect(box.getAttribute('aria-checked')).toBe('true')
+    expect(
+      screen
+        .getByRole('checkbox', { name: T.agreePrivacy })
+        .getAttribute('aria-checked'),
+    ).toBe('false')
+  })
+
   it('clears a server field error once the input changes', async () => {
     openOnboarding({
       [`GET ${API_PATHS.handleAvailability}`]: () => json({ available: true }),
