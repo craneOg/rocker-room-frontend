@@ -484,6 +484,22 @@ describe('HOME-001 5~7 admin area', () => {
     expect(callsTo(fetchMock, BADGE).length).toBeGreaterThan(0)
   })
 
+  it('hides the badge when a later refresh fails', async () => {
+    let healthy = true
+    const { router } = openHome(empty, [], {
+      [`GET ${BADGE}`]: () =>
+        healthy ? json({ count: 9 }) : apiError('UNKNOWN', 500),
+    })
+    await screen.findByLabelText(T.tabBadge(9))
+    healthy = false
+    await router.queryClient.refetchQueries({
+      queryKey: ['home', '10', 'badge'],
+    })
+    await waitFor(() =>
+      expect(screen.queryByLabelText(T.tabBadge(9))).toBeNull(),
+    )
+  })
+
   it('hides the badge at 0', async () => {
     openHome(empty, [], { [`GET ${BADGE}`]: () => json({ count: 0 }) })
     await screen.findByText(T.todosEmpty)

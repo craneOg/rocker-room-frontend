@@ -51,11 +51,11 @@ function useHomeBadge(clubId: string | null) {
   const session = useSession()
   const { data } = useQuery({
     queryKey: ['home', clubId, 'badge'],
-    queryFn: () =>
-      getHomeBadge(clubId ?? '').catch((): number | undefined => undefined),
+    // v5 rejects an `undefined` result (the old number would linger), so a failure is `null`.
+    queryFn: () => getHomeBadge(clubId ?? '').catch((): null => null),
     enabled: clubId !== null && isClubMember(session, clubId),
   })
-  return data
+  return data ?? undefined
 }
 
 function useNavItems(): NavItem[] {
