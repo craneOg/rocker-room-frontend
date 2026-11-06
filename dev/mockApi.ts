@@ -186,7 +186,14 @@ const MEMBERS: MockMember[] = Array.from({ length: 30 }, (_, i) => ({
   memberType: i % 7 === 6 ? 'GUEST' : 'REGULAR',
   role: i === 0 || i === 1 ? 'CLUB_ADMIN' : 'MEMBER',
   status: i % 9 === 8 ? 'GRADUATED' : i % 8 === 7 ? 'ON_LEAVE' : 'ACTIVE',
-  joinSource: i === 0 ? 'CLUB_CREATE' : i % 2 ? 'JOIN_CODE' : 'SEARCH',
+  joinSource:
+    i === 0
+      ? 'CLUB_CREATE'
+      : i % 7 === 6 || i % 3 === 2
+        ? 'DIRECT_ADD'
+        : i % 2
+          ? 'JOIN_CODE'
+          : 'SEARCH',
   approvedAt: ago(60 - i),
   partIds: ['p1', 'p2', 'p3', 'p4', 'p5'].slice(0, (i % 5) + 1),
 }))
@@ -781,13 +788,15 @@ export function createMockApi() {
         m.memberType = body.memberType === 'GUEST' ? 'GUEST' : 'REGULAR'
         return ok(res, memberView(m, true))
       }
-      if (action === 'withdraw-preview' && method === 'GET') {
-        const successor = MEMBERS.find(
+      const successorOf = (from: MockMember) =>
+        MEMBERS.find(
           (x) =>
-            x.id !== m.id &&
+            x.id !== from.id &&
             x.status === 'ACTIVE' &&
             x.memberType === 'REGULAR',
         )
+      if (action === 'withdraw-preview' && method === 'GET') {
+        const successor = successorOf(m)
         return ok(res, {
           target: {
             membershipId: m.id,
@@ -832,6 +841,11 @@ export function createMockApi() {
       }
       if (action === 'withdraw' && method === 'POST') {
         if (!live) return fail(res, 409, 'STATE_CONFLICT')
+        if (m.role === 'CLUB_ADMIN' && admins().length < 2) {
+          const successor = successorOf(m)
+          if (!successor) return rule('LAST_ADMIN')
+          successor.role = 'CLUB_ADMIN'
+        }
         m.status = 'WITHDRAWN'
         m.role = 'MEMBER'
         return ok(res, {
