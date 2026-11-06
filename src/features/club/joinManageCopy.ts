@@ -1,0 +1,53 @@
+// CLUB-104 / CLUB-105 copy (screen spec 2026.10, section 3).
+export const JOIN_MANAGE_COPY = {
+  title: '가입 관리',
+  tabRequests: '가입 신청',
+  tabInvites: '보낸 초대',
+  addMember: '+ 멤버 직접 추가',
+  selectAll: '전체 선택',
+  selectOne: (name: string) => `${name} 선택`,
+  selectedCount: (n: number) => `${n}명 선택`,
+  approve: '승인',
+  reject: '거절',
+  approved: '승인했어요',
+  bandNotice:
+    '승인하면 준비 중·진행 중인 공연에 참여자와 기본 팀원으로 자동 추가돼요',
+  emptyRequests: '대기 중인 가입 신청이 없어요',
+  emptyInvites: '보낸 초대가 없어요',
+  sourceCode: '코드',
+  sourceSearch: '검색',
+  rejectTitle: (name: string) => `${name}님의 가입 신청을 거절할까요?`,
+  rejectBulkTitle: (n: number) => `선택한 ${n}명의 가입 신청을 거절할까요?`,
+  rejected: '거절했어요',
+  bulkDone: (ok: number, failed: number) =>
+    failed === 0 ? `${ok}명 처리했어요` : `${ok}명 처리, ${failed}명 실패`,
+  gone: '이미 처리되었거나 신청이 취소되었어요. 목록을 새로 불러왔어요.',
+  regular: '정회원',
+  guest: '객원',
+  expired: '만료',
+  until: (md: string) => `${md}까지`,
+  reinvite: '다시 초대',
+  reinvited: '다시 초대했어요',
+  declinedInvites: (n: number) => `거절한 초대 ${n}`,
+  noHandle: '탈퇴한 사용자',
+  // CLUB-105
+  addTitle: '멤버 직접 추가',
+  handlePlaceholder: '사용자 ID',
+  handleLabel: '사용자 ID',
+  find: '찾기',
+  handleHint:
+    '정확한 사용자 ID를 입력해 주세요. 일부만 입력하면 찾을 수 없어요.',
+  handleNotFound: '해당 ID의 사용자를 찾을 수 없어요.',
+  alreadyMember: '이미 활동 중인 멤버예요',
+  alreadyPending: '이미 가입 신청한 사람이에요 — 가입 관리에서 승인하세요',
+  alreadyInvited: (md: string) => `이미 초대했어요(${md}까지)`,
+  goJoinManage: '가입 관리',
+  typeLabel: '멤버 유형',
+  guestDescription:
+    '객원은 동아리 밖 연주자예요. 임원이 참여자로 지정한 공연만 볼 수 있고, 임원이 될 수 없어요',
+  invite: '초대하기',
+  invited: '초대했어요. 상대가 1개월 안에 수락하면 멤버가 돼요',
+  inviteDuplicate:
+    '이미 소속이 있거나 초대한 사람이에요. 현재 상태를 다시 불러왔어요.',
+  inviteGone: '해당 사용자를 찾을 수 없어요.',
+} as const

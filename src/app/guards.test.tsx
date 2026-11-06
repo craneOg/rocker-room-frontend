@@ -19,6 +19,7 @@ type Scenario = {
   me?: Me
   memberships?: {
     clubId: string
+    club: { clubType: string }
     role: 'CLUB_ADMIN' | 'MEMBER'
     status: string
   }[]
@@ -78,6 +79,7 @@ const active = (
   status = 'ACTIVE',
 ) => ({
   clubId,
+  club: { clubType: 'CLUB' },
   role,
   status,
 })
