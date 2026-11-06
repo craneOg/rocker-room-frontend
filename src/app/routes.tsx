@@ -130,7 +130,14 @@ export const routes: RouteObject[] = [
                 ['/me/withdrawal', 'MY-004'],
               ]),
               { path: '/calendar', ...screen('SCHD-001') },
-              { path: '/me', ...screen('MY-001') },
+              {
+                path: '/me',
+                handle: { title: 'MY-001' },
+                lazy: async () => {
+                  const { MyInfo } = await import('../features/my/MyInfo')
+                  return { Component: MyInfo }
+                },
+              },
               {
                 path: '/clubs/:clubId',
                 element: <RequireClubMember />,
