@@ -50,10 +50,31 @@ export const searchClubs = (q: string, page: number, signal?: AbortSignal) =>
     signal,
   })
 
-export const requestJoin = (
+/**
+ * 404 of a join request: the club or its code is gone (the code was re-issued, or the club was
+ * deactivated). Being no ApiError, it stays out of the global handler's full-page 404 view.
+ */
+export class JoinTargetGoneError extends Error {
+  constructor() {
+    super('join target gone')
+    this.name = 'JoinTargetGoneError'
+  }
+}
+
+export const requestJoin = async (
   clubId: string,
   body: { source: 'JOIN_CODE'; joinCode: string } | { source: 'SEARCH' },
-) => api.post<unknown>(`/api/v1/clubs/${clubId}/join-requests`, body)
+) => {
+  try {
+    return await api.post<unknown>(
+      `/api/v1/clubs/${clubId}/join-requests`,
+      body,
+    )
+  } catch (e) {
+    if (isApiError(e, 'NOT_FOUND')) throw new JoinTargetGoneError()
+    throw e
+  }
+}
 
 /** Normalizes input the way CLUB-002 specifies: no whitespace, upper case. */
 export const normalizeJoinCode = (raw: string) =>

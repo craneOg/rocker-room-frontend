@@ -68,7 +68,7 @@ describe('CLUB-002 JoinCode', () => {
     expect((codeInput() as HTMLInputElement).value).toBe('ABCD234XYZ')
     expect(confirmButton().disabled).toBe(false)
 
-    typeCode('ABCD234XY1') // 0, 1, O, I are not in the code alphabet
+    typeCode('ABCD234XY1') // the pattern is [A-Z2-9]: 0 and 1 are out (O and I are in, API-013)
     expect(confirmButton().disabled).toBe(true)
   })
 
@@ -111,6 +111,39 @@ describe('CLUB-002 JoinCode', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: T.confirm }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/start'))
+  })
+
+  it('keeps the page and tells the user when applying finds the code gone (404)', async () => {
+    // The global error toast animates; jsdom has no Web Animations API.
+    Object.defineProperty(Element.prototype, 'getAnimations', {
+      value: () => [],
+      configurable: true,
+    })
+    openJoin({
+      'POST /api/v1/clubs/10/join-requests': () => apiError('NOT_FOUND', 404),
+    })
+    await findScreen('CLUB-002')
+    typeCode('ABCD234XYZ')
+    fireEvent.click(confirmButton())
+    fireEvent.click(await screen.findByRole('button', { name: T.apply }))
+
+    await screen.findByText(T.applyGone)
+    expect(screen.queryByText(COPY.notFoundTitle)).toBeNull()
+    expect(document.querySelector('[data-screen-id="CLUB-002"]')).toBeTruthy()
+  })
+
+  it('moves to the club from the member notice', async () => {
+    const { router } = openJoin({
+      [`POST ${RESOLVE}`]: () => json(preview('ACTIVE')),
+    })
+    await findScreen('CLUB-002')
+    typeCode('ABCD234XYZ')
+    fireEvent.click(confirmButton())
+    fireEvent.click(await screen.findByRole('button', { name: T.goClub }))
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/clubs/10'),
+    )
   })
 
   it.each([

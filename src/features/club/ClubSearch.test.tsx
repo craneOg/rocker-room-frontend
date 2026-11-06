@@ -75,6 +75,12 @@ describe('CLUB-003 ClubSearch', () => {
     expect(callsTo(fetchMock, SEARCH)).toHaveLength(0)
   })
 
+  it('limits the query to 100 characters (API-012)', async () => {
+    openSearch()
+    await findScreen('CLUB-003')
+    expect(field().getAttribute('maxlength')).toBe('100')
+  })
+
   it('lists results with the query, page size and sort', async () => {
     const { fetchMock } = openSearch()
     await findScreen('CLUB-003')
