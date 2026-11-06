@@ -84,6 +84,15 @@ const initialState = () => ({
       requestedAt: ago(3),
     },
     {
+      id: 'm5',
+      clubId: 'c5',
+      club: clubOf('c5', '크레인 밴드 (임원)'),
+      role: 'CLUB_ADMIN',
+      status: 'ACTIVE',
+      invitationExpiresAt: null,
+      requestedAt: null,
+    },
+    {
       id: 'm4',
       clubId: 'c4',
       club: clubOf('c4', '홍대 합주단'),
@@ -102,6 +111,28 @@ const initialState = () => ({
       requestedAt: null,
     },
   ] as Membership[],
+  // Members of club c5 as an officer sees them (API-020/022/023/024/025/143).
+  clubMembers: [
+    ['p1', '김민수', 'minsu_kim', 'PENDING', 'JOIN_CODE', 'REGULAR'],
+    ['p2', '이서연', 'seoyeon_lee', 'PENDING', 'SEARCH', 'REGULAR'],
+    ['i1', '박지훈', 'jihun_park', 'INVITED', 'ADMIN_ADDED', 'REGULAR'],
+    ['i2', '최유나', 'yuna_choi', 'INVITED', 'ADMIN_ADDED', 'GUEST'],
+    ['d1', '정하늘', 'haneul_jung', 'DECLINED', 'ADMIN_ADDED', 'REGULAR'],
+    ['a1', '한소희', 'sohee_han', 'ACTIVE', 'JOIN_CODE', 'REGULAR'],
+  ].map(([id, userName, handle, status, joinSource, memberType], i) => ({
+    id,
+    userName,
+    handle,
+    profileImageUrl: null,
+    displayName: null,
+    memberType,
+    status,
+    joinSource,
+    requestedAt: status === 'PENDING' ? ago(i + 1) : null,
+    // i2 is already expired: it shows the "다시 초대" button.
+    invitationExpiresAt:
+      status === 'INVITED' ? (id === 'i2' ? ago(1) : inDays(10)) : null,
+  })),
   // API-135: unconfirmed succession notices (c1 = the club the invite card accepts).
   notices: [
     {
@@ -724,6 +755,112 @@ export function createMockApi() {
       if (what === 'accept') m.status = 'ACTIVE'
       else state.memberships = state.memberships.filter((x) => x !== m)
       return send(res, 204)
+    }
+
+    // CLUB-104/105: only club c5 has members in this mock.
+    const clubApi = /^\/api\/v1\/clubs\/c5\/(.+)$/.exec(path)
+    if (clubApi) {
+      const sub = clubApi[1]
+      const list = state.clubMembers
+      if (method === 'GET' && sub === 'memberships') {
+        const wanted = (url.searchParams.get('status') ?? 'ACTIVE').split(',')
+        const items = list.filter((m) => wanted.includes(m.status))
+        return ok(res, {
+          items,
+          page: 0,
+          size: 100,
+          totalElements: items.length,
+          totalPages: 1,
+        })
+      }
+      const decide = /^memberships\/([^/]+)\/(approve|reject)$/.exec(sub)
+      if (method === 'POST' && decide) {
+        const m = list.find((x) => x.id === decide[1])
+        if (!m) return fail(res, 404, 'NOT_FOUND')
+        if (m.status !== 'PENDING') return fail(res, 409, 'STATE_CONFLICT')
+        m.status = decide[2] === 'approve' ? 'ACTIVE' : 'REJECTED'
+        return ok(res, m)
+      }
+      if (method === 'POST' && sub === 'join-requests/bulk-decisions') {
+        const { membershipIds, decision } = await readBody(req)
+        const ids = Array.isArray(membershipIds) ? membershipIds : []
+        const succeeded: { membershipId: string }[] = []
+        const failed: { membershipId: string; reason: string }[] = []
+        for (const id of ids) {
+          const m = list.find((x) => x.id === id)
+          if (m?.status === 'PENDING') {
+            m.status = decision === 'APPROVE' ? 'ACTIVE' : 'REJECTED'
+            succeeded.push({ membershipId: String(id) })
+          } else
+            failed.push({ membershipId: String(id), reason: 'NOT_PENDING' })
+        }
+        return ok(res, {
+          succeeded,
+          failed,
+          summary: {
+            requested: ids.length,
+            succeeded: succeeded.length,
+            failed: failed.length,
+          },
+        })
+      }
+      if (method === 'GET' && sub === 'users/lookup') {
+        const handle = url.searchParams.get('handle') ?? ''
+        const known = [
+          ...list.map((m) => [m.handle, m.userName] as const),
+          ['newbie_kim', '신입 김'],
+        ]
+        const hit = known.find(([h]) => h === handle)
+        if (!hit) return fail(res, 404, 'NOT_FOUND')
+        const m = list.find((x) => x.handle === handle)
+        const live = m && ['ACTIVE', 'PENDING', 'INVITED'].includes(m.status)
+        return ok(res, {
+          userId: handle,
+          handle,
+          name: hit[1],
+          profileImageUrl: null,
+          membership: live
+            ? {
+                id: m.id,
+                status: m.status,
+                invitationExpiresAt: m.invitationExpiresAt,
+              }
+            : null,
+        })
+      }
+      if (method === 'POST' && sub === 'memberships/invite') {
+        const { handle, memberType } = await readBody(req)
+        const m = list.find((x) => x.handle === handle)
+        const expired =
+          m?.status === 'INVITED' &&
+          Date.parse(m.invitationExpiresAt ?? '') <= Date.now()
+        if (m && ['ACTIVE', 'PENDING'].includes(m.status))
+          return fail(res, 409, 'DUPLICATE')
+        if (m?.status === 'INVITED' && !expired)
+          return fail(res, 409, 'DUPLICATE')
+        const type = memberType === 'GUEST' ? 'GUEST' : 'REGULAR'
+        const until = inDays(30)
+        if (m)
+          Object.assign(m, {
+            status: 'INVITED',
+            memberType: type,
+            invitationExpiresAt: until,
+          })
+        else
+          list.push({
+            id: `n${Date.now()}`,
+            userName: '신입 김',
+            handle: String(handle),
+            profileImageUrl: null,
+            displayName: null,
+            memberType: type,
+            status: 'INVITED',
+            joinSource: 'ADMIN_ADDED',
+            requestedAt: null,
+            invitationExpiresAt: until,
+          })
+        return send(res, expired ? 200 : 201, { data: { status: 'INVITED' } })
+      }
     }
 
     return fail(res, 404, 'NOT_FOUND')
