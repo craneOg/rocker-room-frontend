@@ -6,6 +6,8 @@ export const CLUB_COPY = {
   codeConfirm: '확인',
   codeInvalid: '코드가 올바르지 않아요. 임원에게 최신 코드를 확인해 주세요.',
   apply: '가입 신청',
+  applyGone:
+    '가입 신청할 수 없어요. 코드나 동아리 상태가 바뀌었는지 확인해 주세요.',
   applyDoneTitle: '가입 신청 완료',
   applyDone: (club: string) => `임원이 승인하면 ${club}를 이용할 수 있어요.`,
   confirm: '확인',

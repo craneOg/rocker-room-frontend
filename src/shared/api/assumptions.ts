@@ -42,6 +42,10 @@ export const AUTH_ERROR_QUERY_PARAM = 'error'
 // - Me: `name`, `handle` (null until onboarding), `profileImageUrl` (nullable).
 // - Membership (API-010, confirmed): see features/auth/api.ts.
 
+// Recovery APIs (131-133), confirmed by the backend: a 401 UNAUTHENTICATED whose
+// `details[0]` is `{field: "request", reason: "RESTORATION_COOKIE_INVALID"}` means the choice
+// cookie is missing, expired or used (see isRestorationCookieInvalid). A 409 is "not restorable".
+
 export const LOGIN_RESULT_RESTORATION_REQUIRED = 'RESTORATION_REQUIRED'
 
 export const REQUESTED_WITH_HEADER = { 'X-Requested-With': 'XMLHttpRequest' }

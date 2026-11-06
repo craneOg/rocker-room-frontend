@@ -62,6 +62,7 @@ export function ClubSearch() {
             value={input}
             placeholder={T.searchPlaceholder}
             aria-label={T.searchPlaceholder}
+            maxLength={100}
             status={tooShort ? 'negative' : 'normal'}
             onChange={(e) => setInput(e.target.value)}
           />

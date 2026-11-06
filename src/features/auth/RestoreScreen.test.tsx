@@ -272,6 +272,30 @@ describe('AUTH-004 RestoreScreen', () => {
       await waitFor(() => expect(router.state.location.pathname).toBe('/'))
     })
 
+    it.each([
+      ['an unlisted code', 'NOT_RESTORABLE'],
+      ['STATE_CONFLICT', 'STATE_CONFLICT'],
+    ])(
+      'shows only the recovery message, no global error, for a 409 with %s',
+      async (_, code) => {
+        // The global error toast animates; jsdom has no Web Animations API.
+        Element.prototype.getAnimations = () => []
+        openRestore({
+          ...anonymous,
+          [`POST ${API_PATHS.restore}`]: () =>
+            new Response(JSON.stringify({ error: { code, message: 'x' } }), {
+              status: 409,
+            }),
+        })
+        await screen.findByText(T.restoreTitle)
+        fireEvent.click(screen.getByRole('button', { name: T.restoreAction }))
+        await screen.findByText(T.notRestorable)
+        // A negative check passes before the response is handled: only look after the toast.
+        expect(screen.queryByText(COPY.unknownError)).toBeNull()
+        expect(screen.queryByText(COPY.stateConflictTitle)).toBeNull()
+      },
+    )
+
     it('shows a separate message and goes to / on 409 NOT_RESTORABLE', async () => {
       const { router } = openRestore({
         ...anonymous,

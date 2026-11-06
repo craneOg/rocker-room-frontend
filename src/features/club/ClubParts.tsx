@@ -1,8 +1,13 @@
 import { Button, ContentBadge, Typography } from '@montage-ui/core'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
 import { feedback } from '../../shared/ui/feedbackBus'
-import { requestJoin, type ClubSummary, type JoinPreview } from './api'
+import {
+  JoinTargetGoneError,
+  requestJoin,
+  type ClubSummary,
+  type JoinPreview,
+} from './api'
 import { CLUB_COPY as T, CLUB_TYPE_LABEL } from './copy'
 
 /** Query keys of everything that shows `existingMembershipStatus` start with this. */
@@ -48,9 +53,12 @@ export function useJoinRequest() {
       })
       navigate('/start')
     },
-    // A conflict means the membership changed meanwhile: show the current state again.
-    onError: () =>
-      void queryClient.invalidateQueries({ queryKey: [CLUB_JOIN_KEY] }),
+    // A conflict or a vanished club means things changed meanwhile: show the current state again.
+    onError: (e) => {
+      void queryClient.invalidateQueries({ queryKey: [CLUB_JOIN_KEY] })
+      if (e instanceof JoinTargetGoneError)
+        feedback.toast(T.applyGone, 'negative')
+    },
   })
 }
 
@@ -64,6 +72,7 @@ export function JoinAction({
   pending: boolean
   onApply: () => void
 }) {
+  const navigate = useNavigate()
   const { club, existingMembershipStatus: status, canApply } = preview
   const notice = (text: string, link?: { to: string; label: string }) => (
     <div className="start-card-actions">
@@ -74,8 +83,13 @@ export function JoinAction({
         {text}
       </Typography>
       {link ? (
-        <Button size="small" variant="outlined" color="assistive">
-          <Link to={link.to}>{link.label}</Link>
+        <Button
+          size="small"
+          variant="outlined"
+          color="assistive"
+          onClick={() => navigate(link.to)}
+        >
+          {link.label}
         </Button>
       ) : null}
     </div>

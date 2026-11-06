@@ -8,7 +8,13 @@ import { isApiError, isRestorationCookieInvalid } from '../../shared/api/errors'
 import { formatKstYmd } from '../../shared/lib/time'
 import { COPY } from '../../shared/ui/copy'
 import { feedback } from '../../shared/ui/feedbackBus'
-import { getRecoveryInfo, logout, restoreProfile, startNewAccount } from './api'
+import {
+  getRecoveryInfo,
+  logout,
+  NotRestorableError,
+  restoreProfile,
+  startNewAccount,
+} from './api'
 import { AUTH_COPY as T } from './copy'
 
 /** AUTH-004: Withdrawn account recovery choice screen (within 90 days). */
@@ -20,7 +26,7 @@ export function RestoreScreen() {
   // so say why and go back to the login screen. Returns false for any other error.
   const leaveIfOver = (e: unknown) => {
     const expired = isRestorationCookieInvalid(e)
-    if (!expired && !(isApiError(e) && e.status === 409)) return false
+    if (!expired && !(e instanceof NotRestorableError)) return false
     feedback.toast(expired ? T.restoreExpired : T.notRestorable, 'negative')
     navigate('/', { replace: true })
     return true
