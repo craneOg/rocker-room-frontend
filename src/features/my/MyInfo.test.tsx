@@ -111,9 +111,11 @@ describe('MY-001 MyInfo', () => {
       expect(router.state.location.pathname).toBe('/me/profile'),
     )
 
+    // MY-002 is a lazy screen: wait for it to render before leaving, or its late mount can land on top of MY-001.
+    await findScreen('MY-002')
     await router.navigate('/me')
     await findScreen('MY-001')
-    fireEvent.click(screen.getByRole('link', { name: T.withdraw }))
+    fireEvent.click(await screen.findByRole('link', { name: T.withdraw }))
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/me/withdrawal'),
     )
