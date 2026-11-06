@@ -8,6 +8,7 @@ import {
   formatKstShort,
   formatKstTime,
 } from '../../shared/lib/time'
+import { isClubAdmin, useSession } from '../../shared/auth/session'
 import { Badge } from '../../shared/ui/Badge'
 import type { BadgeValue } from '../../shared/ui/badges'
 import { COPY } from '../../shared/ui/copy'
@@ -19,6 +20,7 @@ import {
   type HomeSchedule,
   type HomeTodo,
 } from './api'
+import { AdminHome } from './AdminHome'
 import { HOME_COPY as T } from './copy'
 import { SuccessionNotices } from './SuccessionNotices'
 
@@ -246,6 +248,7 @@ function MyPerformances({
 export function Home() {
   const { clubId = '' } = useParams()
   const base = `/clubs/${clubId}`
+  const admin = isClubAdmin(useSession(), clubId)
   const { data, isPending, isError, refetch } = useQuery({
     queryKey: ['home', clubId],
     queryFn: () => getHome(clubId),
@@ -270,6 +273,7 @@ export function Home() {
           <MyPerformances performances={data.myPerformances} base={base} />
         </>
       ) : null}
+      {admin ? <AdminHome clubId={clubId} base={base} /> : null}
     </div>
   )
 }

@@ -2,6 +2,7 @@ import {
   BottomNavigation,
   BottomNavigationItem,
   Button,
+  PushBadge,
   TopNavigation,
   TopNavigationButton,
   Typography,
@@ -14,7 +15,7 @@ import {
   IconPerson,
   IconPersons,
 } from '@montage-ui/icon'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, type ReactNode } from 'react'
 import {
   NavLink,
@@ -24,6 +25,8 @@ import {
   useNavigate,
   useParams,
 } from 'react-router'
+import { getHomeBadge } from '../features/home/api'
+import { HOME_COPY } from '../features/home/copy'
 import { isClubMember, useSession } from '../shared/auth/session'
 import { readLastClubId } from '../shared/lib/lastClub'
 import { COPY } from '../shared/ui/copy'
@@ -40,6 +43,19 @@ type NavItem = {
   to: string
   icon: ReactNode
   tab: boolean
+  badge?: number
+}
+
+/** API-139: the home tab number. Decoration only, so a failure just hides it. */
+function useHomeBadge(clubId: string | null) {
+  const session = useSession()
+  const { data } = useQuery({
+    queryKey: ['home', clubId, 'badge'],
+    queryFn: () =>
+      getHomeBadge(clubId ?? '').catch((): number | undefined => undefined),
+    enabled: clubId !== null && isClubMember(session, clubId),
+  })
+  return data
 }
 
 function useNavItems(): NavItem[] {
@@ -50,6 +66,7 @@ function useNavItems(): NavItem[] {
     params.clubId ??
     (lastClubId && isClubMember(session, lastClubId) ? lastClubId : null)
   const clubBase = clubId ? `/clubs/${clubId}` : null
+  const badge = useHomeBadge(clubId)
   return [
     {
       id: 'home',
@@ -57,6 +74,7 @@ function useNavItems(): NavItem[] {
       to: clubBase ?? '/',
       icon: <IconHome />,
       tab: true,
+      badge,
     },
     {
       id: 'performances',
@@ -234,7 +252,18 @@ export function AppShell() {
                 key={i.id}
                 value={i.id}
                 label={i.label}
-                icon={i.icon}
+                icon={
+                  i.badge ? (
+                    <PushBadge
+                      text={i.badge > 99 ? '99+' : i.badge}
+                      aria-label={HOME_COPY.tabBadge(i.badge)}
+                    >
+                      {i.icon}
+                    </PushBadge>
+                  ) : (
+                    i.icon
+                  )
+                }
               />
             ))}
         </BottomNavigation>
