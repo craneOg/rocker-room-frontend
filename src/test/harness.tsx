@@ -60,7 +60,7 @@ export function renderApp(path: string) {
       </ThemeProvider>
     </StrictMode>,
   )
-  return router
+  return Object.assign(router, { queryClient })
 }
 
 export const findScreen = (id: string) =>
