@@ -142,7 +142,14 @@ export const routes: RouteObject[] = [
                 path: '/clubs/:clubId',
                 element: <RequireClubMember />,
                 children: [
-                  { index: true, ...screen('HOME-001') },
+                  {
+                    index: true,
+                    handle: { title: 'HOME-001' },
+                    lazy: async () => {
+                      const { Home } = await import('../features/home/Home')
+                      return { Component: Home }
+                    },
+                  },
                   { path: 'performances', ...screen('PERF-001') },
                   ...subScreens([
                     ['info', 'CLUB-101'],

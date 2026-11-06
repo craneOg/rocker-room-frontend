@@ -516,3 +516,15 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+.home-scroll {
+  display: flex;
+  gap: var(--spacing-12);
+  overflow-x: auto;
+  padding-bottom: var(--spacing-4);
+}
+
+.home-perf-card {
+  flex: none;
+  width: 240px;
+}

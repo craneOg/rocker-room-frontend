@@ -90,6 +90,17 @@ const initialState = () => ({
       requestedAt: null,
     },
   ] as Membership[],
+  // API-135: unconfirmed succession notices (c1 = the club the invite card accepts).
+  notices: [
+    {
+      id: 'n1',
+      type: 'ADMIN',
+      clubId: 'c1',
+      clubName: '한빛 밴드 동아리',
+      teamName: null,
+      performanceName: null,
+    },
+  ] as { id: string; [k: string]: unknown }[],
   outcome: 'ok' as Outcome,
   recovery: {
     withdrawnAt: ago(30),
@@ -371,6 +382,69 @@ export function createMockApi() {
         requestedAt: new Date().toISOString(),
       })
       return send(res, 201, { data: { status: 'PENDING', approvedAt: null } })
+    }
+
+    // API-137: home data (dates are relative to now so the screen always looks current).
+    if (/^\/api\/v1\/clubs\/[^/]+\/home$/.test(path) && method === 'GET') {
+      const day = (n: number) => inDays(n).slice(0, 10)
+      return ok(res, {
+        banners: [{ type: 'MEMBER_GRADUATED' }],
+        todos: [
+          {
+            type: 'VOTE',
+            performanceId: 'p1',
+            performanceName: '2026 가을 공연',
+            label: '투표 (선택 0/3곡)',
+            teamId: null,
+            deadline: inDays(3),
+          },
+          {
+            type: 'TEAM_SUBMIT',
+            performanceId: 'p1',
+            performanceName: '2026 가을 공연',
+            label: '작성 중인 팀 신청서',
+            teamId: 't1',
+            deadline: null,
+          },
+        ],
+        upcomingSchedules: [
+          {
+            scheduleId: 's1',
+            performanceId: 'p1',
+            startAt: inDays(2),
+            endAt: new Date(
+              Date.parse(inDays(2)) + 2 * 3_600_000,
+            ).toISOString(),
+            type: 'REHEARSAL',
+            title: '1팀 합주',
+            performanceName: '2026 가을 공연',
+            location: '합주실 A',
+          },
+        ],
+        myPerformances: [
+          {
+            performanceId: 'p1',
+            name: '2026 가을 공연',
+            status: 'ACTIVE',
+            performanceDate: day(30),
+            myStatus: 'APPROVED',
+            teamNames: ['1팀', '2팀'],
+            songCount: 2,
+          },
+        ],
+      })
+    }
+    // API-135 / 136: succession notices.
+    if (path === '/api/v1/me/succession-notices' && method === 'GET')
+      return ok(res, { items: state.notices })
+    const confirmNotice =
+      /^\/api\/v1\/me\/succession-notices\/([^/]+)\/confirm$/.exec(path)
+    if (confirmNotice && method === 'POST') {
+      state.notices = state.notices.filter((n) => n.id !== confirmNotice[1])
+      return ok(res, {
+        id: confirmNotice[1],
+        confirmedAt: new Date().toISOString(),
+      })
     }
 
     // API-026/027 (invite) and API-028 (cancel a join request).
