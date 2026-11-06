@@ -3,6 +3,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { useDeferredValue, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { isClubAdmin, useSession } from '../../shared/auth/session'
+import { COPY } from '../../shared/ui/copy'
 import {
   EmptyState,
   ErrorState,
@@ -122,6 +123,16 @@ export function MemberList() {
             }
           />
         ))}
+        {parts.isError ? (
+          <Button
+            size="small"
+            variant="outlined"
+            color="assistive"
+            onClick={() => void parts.refetch()}
+          >
+            {COPY.retry}
+          </Button>
+        ) : null}
         {activeParts.map((p) => (
           <FilterChip
             key={p.id}

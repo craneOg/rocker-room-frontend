@@ -417,7 +417,7 @@ export function createMockApi() {
         totalPages: Math.ceil(hits.length / size),
       })
     }
-    // CLUB-101..103 reads. Only club c10 has data; any other club is 404.
+    // CLUB-101..103 reads. Every club the user is an ACTIVE member of serves the same sample data.
     const clubRoute =
       /^\/api\/v1\/clubs\/([^/]+)(?:\/(memberships|parts))?(?:\/([^/]+))?$/.exec(
         path,
@@ -428,7 +428,17 @@ export function createMockApi() {
       const own = state.memberships.find(
         (m) => m.clubId === clubId && m.status === 'ACTIVE',
       )
-      if (!club || !own || clubId !== 'c10') return fail(res, 404, 'NOT_FOUND')
+      if (!club || !own) return fail(res, 404, 'NOT_FOUND')
+      // The signed-in user is the sample member u1 (their name and handle follow the saved profile).
+      const self = (m: MockMember): MockMember =>
+        m.id === 'u1'
+          ? {
+              ...m,
+              userName: state.user.name || m.userName,
+              handle: state.user.handle ?? m.handle,
+            }
+          : m
+      const members = MEMBERS.map(self)
       const admin = own.role === 'CLUB_ADMIN'
       if (!sub)
         return ok(res, {
@@ -451,7 +461,10 @@ export function createMockApi() {
           })),
         })
       if (memberId) {
-        const m = MEMBERS.find((x) => x.id === memberId)
+        // A membership ID of the session (such as m1) is the user's own row.
+        const m = members.find(
+          (x) => x.id === (memberId === own.id ? 'u1' : memberId),
+        )
         if (!m || (!admin && m.status === 'WITHDRAWN'))
           return fail(res, 404, 'NOT_FOUND')
         return ok(res, {
@@ -478,18 +491,20 @@ export function createMockApi() {
       const statuses = (statusParam ?? 'ACTIVE').split(',')
       const name = (q.get('q') ?? '').trim()
       const partIds = (q.get('partId') ?? '').split(',').filter(Boolean)
-      const hits = MEMBERS.filter(
-        (m) =>
-          (admin ? statuses.includes(m.status) : m.status !== 'WITHDRAWN') &&
-          (!name || `${m.displayName ?? ''}${m.userName}`.includes(name)) &&
-          (!q.get('role') || m.role === q.get('role')) &&
-          (!q.get('memberType') || m.memberType === q.get('memberType')) &&
-          (partIds.length === 0 ||
-            m.partIds.some((id) => partIds.includes(id))),
-      ).sort(
-        (a, b) =>
-          Number(b.role === 'CLUB_ADMIN') - Number(a.role === 'CLUB_ADMIN'),
-      )
+      const hits = members
+        .filter(
+          (m) =>
+            (admin ? statuses.includes(m.status) : m.status !== 'WITHDRAWN') &&
+            (!name || `${m.displayName ?? ''}${m.userName}`.includes(name)) &&
+            (!q.get('role') || m.role === q.get('role')) &&
+            (!q.get('memberType') || m.memberType === q.get('memberType')) &&
+            (partIds.length === 0 ||
+              m.partIds.some((id) => partIds.includes(id))),
+        )
+        .sort(
+          (a, b) =>
+            Number(b.role === 'CLUB_ADMIN') - Number(a.role === 'CLUB_ADMIN'),
+        )
       const size = Number(q.get('size') ?? 20)
       const page = Number(q.get('page') ?? 0)
       return ok(res, {
