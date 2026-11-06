@@ -118,4 +118,6 @@ export const AUTH_COPY = {
     '이전 이름과 사진은 바로 지워지고 되찾을 수 없어요.',
   startNewConfirm: '새로 시작',
   restoreWelcome: '다시 오신 걸 환영해요',
+  restoreExpired: '복구 시간이 지났어요. 다시 로그인해 주세요',
+  notRestorable: '이미 복구했거나 보관 기간이 지나 복구할 수 없어요',
 } as const

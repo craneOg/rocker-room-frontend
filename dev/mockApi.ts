@@ -86,6 +86,8 @@ const initialState = () => ({
 
 const COOKIE_EXCHANGE = 'loginExchange'
 const COOKIE_SESSION = 'mockSession'
+// The 10-minute recovery-choice cookie that a withdrawn account gets instead of a session.
+const COOKIE_RESTORE = 'restoreChoice'
 
 export function createMockApi() {
   let state = initialState()
@@ -164,16 +166,28 @@ export function createMockApi() {
       const outcome = state.outcome
       state.outcome = 'ok'
       if (outcome === 'forbidden') return fail(res, 403, 'FORBIDDEN')
+      const restore = outcome === 'restore'
       return send(
         res,
         200,
-        { data: { restoreRequired: outcome === 'restore' } },
         {
-          // The exchange cookie is single-use.
-          'Set-Cookie': [
-            setCookie(COOKIE_EXCHANGE, false),
-            setCookie(COOKIE_SESSION, true),
-          ],
+          data: {
+            loginResult: restore ? 'RESTORATION_REQUIRED' : 'LOGGED_IN',
+            user: null,
+            onboardingRequired: false,
+          },
+        },
+        {
+          // The exchange cookie is single-use. A withdrawn account gets the choice cookie only.
+          'Set-Cookie': restore
+            ? [
+                setCookie(COOKIE_EXCHANGE, false),
+                setCookie(COOKIE_RESTORE, true),
+              ]
+            : [
+                setCookie(COOKIE_EXCHANGE, false),
+                setCookie(COOKIE_SESSION, true),
+              ],
         },
       )
     }
@@ -185,6 +199,62 @@ export function createMockApi() {
       return send(res, 204, undefined, {
         'Set-Cookie': setCookie(COOKIE_SESSION, false),
       })
+
+    // Recovery choice (API 131-133): runs on the choice cookie, not a session. 131 does not
+    // consume the cookie; 132/133 do, and a success logs the account in.
+    if (
+      path.startsWith('/api/v1/auth/') &&
+      hasCookie(req, COOKIE_RESTORE) === false
+    ) {
+      if (
+        (path === '/api/v1/auth/recovery-info' && method === 'GET') ||
+        ((path === '/api/v1/auth/restore' ||
+          path === '/api/v1/auth/start-new') &&
+          method === 'POST')
+      )
+        return send(res, 401, {
+          error: {
+            code: 'UNAUTHENTICATED',
+            message: 'UNAUTHENTICATED',
+            details: [
+              { field: 'request', reason: 'RESTORATION_COOKIE_INVALID' },
+            ],
+          },
+        })
+    }
+    if (path === '/api/v1/auth/recovery-info' && method === 'GET') {
+      if (!state.recovery) return fail(res, 409, 'NOT_RESTORABLE')
+      return ok(res, state.recovery)
+    }
+    if (
+      (path === '/api/v1/auth/restore' || path === '/api/v1/auth/start-new') &&
+      method === 'POST'
+    ) {
+      const restoring = path === '/api/v1/auth/restore'
+      const consume = [
+        setCookie(COOKIE_RESTORE, false),
+        setCookie(COOKIE_SESSION, true),
+      ]
+      if (
+        !state.recovery ||
+        (restoring && Date.parse(state.recovery.expiresAt) <= Date.now())
+      )
+        return send(
+          res,
+          409,
+          { error: { code: 'NOT_RESTORABLE', message: 'NOT_RESTORABLE' } },
+          { 'Set-Cookie': setCookie(COOKIE_RESTORE, false) },
+        )
+      state.user.name = restoring ? state.recovery.name : '새사용자'
+      state.user.onboardingRequired = true
+      state.recovery = null
+      return send(
+        res,
+        200,
+        { data: { success: true } },
+        { 'Set-Cookie': consume },
+      )
+    }
 
     if (!signedIn) return fail(res, 401, 'UNAUTHENTICATED')
 
@@ -210,29 +280,6 @@ export function createMockApi() {
       const handle = url.searchParams.get('handle') ?? ''
       await new Promise((r) => setTimeout(r, 300)) // lets the "checking" state show
       return ok(res, { available: !TAKEN_HANDLES.includes(handle) })
-    }
-
-    if (path === '/api/v1/auth/recovery-info' && method === 'GET') {
-      if (!state.recovery) return fail(res, 404, 'NOT_FOUND')
-      return ok(res, state.recovery)
-    }
-
-    if (path === '/api/v1/auth/restore' && method === 'POST') {
-      if (!state.recovery) return fail(res, 404, 'NOT_FOUND')
-      if (Date.parse(state.recovery.expiresAt) <= Date.now()) {
-        return fail(res, 400, 'RECOVERY_EXPIRED')
-      }
-      state.user.name = state.recovery.name
-      state.user.onboardingRequired = true
-      state.recovery = null
-      return ok(res, { success: true })
-    }
-
-    if (path === '/api/v1/auth/start-new' && method === 'POST') {
-      state.user.name = '새사용자'
-      state.user.onboardingRequired = true
-      state.recovery = null
-      return ok(res, { success: true })
     }
 
     const action =

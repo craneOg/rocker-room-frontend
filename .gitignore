@@ -25,3 +25,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local-only notes and plans
+/tmp
+# hyeseongkit (커밋하지 않음 — D20/F2)
+.hyeseongkit/
+HYESEONGKIT.md
