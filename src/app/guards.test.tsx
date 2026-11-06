@@ -111,9 +111,22 @@ describe('session failures', () => {
   const stub = (me: () => Response, memberships: () => Response) =>
     vi.stubGlobal(
       'fetch',
-      vi.fn((url: string) =>
-        Promise.resolve(url.endsWith(API_PATHS.me) ? me() : memberships()),
-      ),
+      vi.fn((url: string) => {
+        if (url.endsWith(API_PATHS.me)) return Promise.resolve(me())
+        if (url.endsWith(API_PATHS.memberships))
+          return Promise.resolve(memberships())
+        // HOME-001 is a real screen now: it loads its own data.
+        if (url.endsWith('/home'))
+          return Promise.resolve(
+            ok({
+              banners: [],
+              todos: [],
+              upcomingSchedules: [],
+              myPerformances: [],
+            }),
+          )
+        return Promise.resolve(ok({ items: [] }))
+      }),
     )
 
   it('offers a retry instead of the login screen when /me fails', async () => {

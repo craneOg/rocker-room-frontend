@@ -39,6 +39,8 @@ type RecoveryMock = {
 }
 
 const DAY = 86_400_000
+const PREVIEW_PNG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
 const TAKEN_HANDLES = ['admin', 'rocker', 'drummer_kim']
 const ago = (days: number) => new Date(Date.now() - days * DAY).toISOString()
 const inDays = (days: number) => ago(-days)
@@ -48,7 +50,8 @@ const initialState = () => ({
     id: '1',
     name: '명혜성',
     handle: null as string | null,
-    profileImageUrl: null,
+    profileImageUrl: null as string | null,
+    profileImagePublic: true,
     onboardingRequired: true,
     isSuperAdmin: false,
   },
@@ -57,7 +60,7 @@ const initialState = () => ({
       id: 'm1',
       clubId: 'c1',
       club: clubOf('c1', '한빛 밴드 동아리'),
-      role: 'MEMBER',
+      role: 'CLUB_ADMIN',
       status: 'INVITED',
       invitationExpiresAt: inDays(5),
       requestedAt: null,
@@ -90,7 +93,7 @@ const initialState = () => ({
       requestedAt: null,
     },
     {
-      id: 'm5',
+      id: 'u1',
       clubId: 'c10',
       club: clubOf('c10', '크레인 밴드'),
       role: 'CLUB_ADMIN',
@@ -99,6 +102,17 @@ const initialState = () => ({
       requestedAt: null,
     },
   ] as Membership[],
+  // API-135: unconfirmed succession notices (c1 = the club the invite card accepts).
+  notices: [
+    {
+      id: 'n1',
+      type: 'ADMIN',
+      clubId: 'c1',
+      clubName: '한빛 밴드 동아리',
+      teamName: null,
+      performanceName: null,
+    },
+  ] as { id: string; [k: string]: unknown }[],
   outcome: 'ok' as Outcome,
   recovery: {
     withdrawnAt: ago(30),
@@ -374,18 +388,65 @@ export function createMockApi() {
 
     if (path === '/api/v1/me' && method === 'GET') return ok(res, state.user)
     if (path === '/api/v1/me' && method === 'PATCH') {
-      const { name, handle } = await readBody(req)
+      // API-008 is partial; onboarding (AUTH-002) still sends both name and handle.
+      const { name, handle, profileImageUrl, profileImagePublic } =
+        await readBody(req)
       if (
-        typeof name !== 'string' ||
-        name.length < 1 ||
-        name.length > 50 ||
-        typeof handle !== 'string' ||
-        !/^[a-z0-9_]{5,30}$/.test(handle)
+        (name !== undefined &&
+          (typeof name !== 'string' || name.length < 1 || name.length > 50)) ||
+        (handle !== undefined &&
+          (typeof handle !== 'string' || !/^[a-z0-9_]{5,30}$/.test(handle))) ||
+        (profileImagePublic !== undefined &&
+          typeof profileImagePublic !== 'boolean') ||
+        (state.user.handle === null && (name === undefined || !handle))
       )
         return fail(res, 400, 'VALIDATION_ERROR')
-      if (TAKEN_HANDLES.includes(handle)) return fail(res, 409, 'DUPLICATE')
-      Object.assign(state.user, { name, handle, onboardingRequired: false })
+      if (
+        typeof handle === 'string' &&
+        handle !== state.user.handle &&
+        TAKEN_HANDLES.includes(handle)
+      )
+        return send(res, 409, {
+          error: {
+            code: 'DUPLICATE',
+            message: 'DUPLICATE',
+            details: [{ reason: 'HANDLE_TAKEN' }],
+          },
+        })
+      if (typeof profileImageUrl === 'string') {
+        // The key must come from API-129 (mock keys start with tmp/users/1/).
+        if (!profileImageUrl.startsWith('tmp/users/1/'))
+          return send(res, 404, {
+            error: {
+              code: 'NOT_FOUND',
+              message: 'NOT_FOUND',
+              details: [{ reason: 'IMAGE_KEY_NOT_FOUND' }],
+            },
+          })
+        state.user.profileImageUrl = PREVIEW_PNG
+      } else if (profileImageUrl === null) state.user.profileImageUrl = null
+      if (typeof name === 'string') state.user.name = name
+      if (typeof handle === 'string') state.user.handle = handle
+      if (typeof profileImagePublic === 'boolean')
+        state.user.profileImagePublic = profileImagePublic
+      state.user.onboardingRequired = false
       return ok(res, state.user)
+    }
+
+    // API-129: the mock only checks for a multipart body; the preview is a 1x1 PNG.
+    if (path === '/api/v1/me/profile-image' && method === 'POST') {
+      if (
+        !(req.headers['content-type'] ?? '').startsWith('multipart/form-data')
+      )
+        return fail(res, 415, 'UNSUPPORTED_MEDIA_TYPE')
+      req.resume() // the body is not read
+      return send(res, 201, {
+        data: {
+          imageKey: `tmp/users/1/${Date.now()}.png`,
+          previewUrl: PREVIEW_PNG,
+          purpose: 'USER_PROFILE',
+        },
+      })
     }
     if (path === '/api/v1/me/memberships' && method === 'GET')
       return ok(res, { items: state.memberships })
@@ -420,7 +481,7 @@ export function createMockApi() {
         totalPages: Math.ceil(hits.length / size),
       })
     }
-    // CLUB-101..103 reads. Only club c10 has data; any other club is 404.
+    // CLUB-101..103 reads. Every club the user is an ACTIVE member of serves the same sample data.
     const clubRoute =
       /^\/api\/v1\/clubs\/([^/]+)(?:\/(memberships|parts))?(?:\/([^/]+))?$/.exec(
         path,
@@ -431,7 +492,17 @@ export function createMockApi() {
       const own = state.memberships.find(
         (m) => m.clubId === clubId && m.status === 'ACTIVE',
       )
-      if (!club || !own || clubId !== 'c10') return fail(res, 404, 'NOT_FOUND')
+      if (!club || !own) return fail(res, 404, 'NOT_FOUND')
+      // The signed-in user is the sample member u1 (their name and handle follow the saved profile).
+      const self = (m: MockMember): MockMember =>
+        m.id === 'u1'
+          ? {
+              ...m,
+              userName: state.user.name || m.userName,
+              handle: state.user.handle ?? m.handle,
+            }
+          : m
+      const members = MEMBERS.map(self)
       const admin = own.role === 'CLUB_ADMIN'
       if (!sub)
         return ok(res, {
@@ -454,7 +525,10 @@ export function createMockApi() {
           })),
         })
       if (memberId) {
-        const m = MEMBERS.find((x) => x.id === memberId)
+        // A membership ID of the session (such as m1) is the user's own row.
+        const m = members.find(
+          (x) => x.id === (memberId === own.id ? 'u1' : memberId),
+        )
         if (!m || (!admin && m.status === 'WITHDRAWN'))
           return fail(res, 404, 'NOT_FOUND')
         return ok(res, {
@@ -481,18 +555,20 @@ export function createMockApi() {
       const statuses = (statusParam ?? 'ACTIVE').split(',')
       const name = (q.get('q') ?? '').trim()
       const partIds = (q.get('partId') ?? '').split(',').filter(Boolean)
-      const hits = MEMBERS.filter(
-        (m) =>
-          (admin ? statuses.includes(m.status) : m.status !== 'WITHDRAWN') &&
-          (!name || `${m.displayName ?? ''}${m.userName}`.includes(name)) &&
-          (!q.get('role') || m.role === q.get('role')) &&
-          (!q.get('memberType') || m.memberType === q.get('memberType')) &&
-          (partIds.length === 0 ||
-            m.partIds.some((id) => partIds.includes(id))),
-      ).sort(
-        (a, b) =>
-          Number(b.role === 'CLUB_ADMIN') - Number(a.role === 'CLUB_ADMIN'),
-      )
+      const hits = members
+        .filter(
+          (m) =>
+            (admin ? statuses.includes(m.status) : m.status !== 'WITHDRAWN') &&
+            (!name || `${m.displayName ?? ''}${m.userName}`.includes(name)) &&
+            (!q.get('role') || m.role === q.get('role')) &&
+            (!q.get('memberType') || m.memberType === q.get('memberType')) &&
+            (partIds.length === 0 ||
+              m.partIds.some((id) => partIds.includes(id))),
+        )
+        .sort(
+          (a, b) =>
+            Number(b.role === 'CLUB_ADMIN') - Number(a.role === 'CLUB_ADMIN'),
+        )
       const size = Number(q.get('size') ?? 20)
       const page = Number(q.get('page') ?? 0)
       return ok(res, {
@@ -786,6 +862,108 @@ export function createMockApi() {
         requestedAt: new Date().toISOString(),
       })
       return send(res, 201, { data: { status: 'PENDING', approvedAt: null } })
+    }
+
+    // API-137: home data (dates are relative to now so the screen always looks current).
+    if (/^\/api\/v1\/clubs\/[^/]+\/home$/.test(path) && method === 'GET') {
+      const day = (n: number) => inDays(n).slice(0, 10)
+      return ok(res, {
+        banners: [{ type: 'MEMBER_GRADUATED' }],
+        todos: [
+          {
+            type: 'VOTE',
+            performanceId: 'p1',
+            performanceName: '2026 가을 공연',
+            label: '투표 (선택 0/3곡)',
+            teamId: null,
+            deadline: inDays(3),
+          },
+          {
+            type: 'TEAM_SUBMIT',
+            performanceId: 'p1',
+            performanceName: '2026 가을 공연',
+            label: '작성 중인 팀 신청서',
+            teamId: 't1',
+            deadline: null,
+          },
+        ],
+        upcomingSchedules: [
+          {
+            scheduleId: 's1',
+            performanceId: 'p1',
+            startAt: inDays(2),
+            endAt: new Date(
+              Date.parse(inDays(2)) + 2 * 3_600_000,
+            ).toISOString(),
+            type: 'REHEARSAL',
+            title: '1팀 합주',
+            performanceName: '2026 가을 공연',
+            location: '합주실 A',
+          },
+        ],
+        myPerformances: [
+          {
+            performanceId: 'p1',
+            name: '2026 가을 공연',
+            status: 'ACTIVE',
+            performanceDate: day(30),
+            myStatus: 'APPROVED',
+            teamNames: ['1팀', '2팀'],
+            songCount: 2,
+          },
+        ],
+      })
+    }
+    // API-138: admin home (5~7). API-139: home tab badge = todos (2) + pending (7).
+    if (/^\/api\/v1\/clubs\/[^/]+\/home\/admin$/.test(path) && method === 'GET')
+      return ok(res, {
+        pending: {
+          joinRequests: 2,
+          invitesWaiting: 1,
+          participationRequests: 3,
+          teamReviews: 1,
+          auditionReviews: 0,
+        },
+        performanceChecks: [
+          {
+            performanceId: 'p1',
+            performanceName: '2026 가을 공연',
+            satisfied: 4,
+            total: 6,
+            items: [
+              { checkId: 'L-01', kind: 'BLOCKER', satisfied: false, count: 2 },
+              { checkId: 'L-04', kind: 'BLOCKER', satisfied: false, count: 1 },
+              { checkId: 'L-07', kind: 'WARNING', satisfied: false, count: 1 },
+              { checkId: 'L-06', kind: 'BLOCKER', satisfied: true, count: 0 },
+            ],
+            responseRates: {
+              playability: { answered: 12, total: 19 },
+              vote: null,
+              availability: { answered: 15, total: 19 },
+            },
+          },
+        ],
+        clubStats: {
+          activeMembers: 19,
+          admins: 3,
+          graduated: 4,
+          guests: 1,
+          performances: { draft: 0, active: 1, locked: 0, finished: 2 },
+        },
+      })
+    if (/^\/api\/v1\/clubs\/[^/]+\/home\/badge$/.test(path) && method === 'GET')
+      return ok(res, { count: 9 })
+    // API-135 / 136: succession notices.
+    if (path === '/api/v1/me/succession-notices' && method === 'GET')
+      return ok(res, { items: state.notices })
+    const confirmNotice =
+      /^\/api\/v1\/me\/succession-notices\/([^/]+)\/confirm$/.exec(path)
+    if (confirmNotice && method === 'POST') {
+      state.notices = state.notices.filter((n) => n.id !== confirmNotice[1])
+      return ok(res, {
+        id: confirmNotice[1],
+        confirmedAt: new Date().toISOString(),
+      })
     }
 
     // API-026/027 (invite) and API-028 (cancel a join request).

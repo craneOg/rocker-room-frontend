@@ -6,6 +6,8 @@ export const API_PATHS = {
   kakaoAuthorize: '/api/v1/auth/kakao/authorize',
   exchange: '/api/v1/auth/exchange',
   me: '/api/v1/me',
+  // API-129 (confirmed in the API spec): multipart upload, answers a temporary image key.
+  profileImage: '/api/v1/me/profile-image',
   memberships: '/api/v1/me/memberships',
   // Not in the API table (AUTH-14, path unknown).
   logout: '/api/v1/auth/logout',

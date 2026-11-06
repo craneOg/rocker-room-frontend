@@ -65,6 +65,13 @@ describe('handleApiError', () => {
     expect(notFoundStore.get()).toBe(true)
   })
 
+  it('leaves a NOT_FOUND about an upload key to the screen (no not-found page)', async () => {
+    await handleApiError(
+      err('NOT_FOUND', 404, { details: [{ reason: 'IMAGE_KEY_NOT_FOUND' }] }),
+    )
+    expect(notFoundStore.get()).toBe(false)
+  })
+
   it('leaves VALIDATION_ERROR, CONFIRMATION_REQUIRED and UNAUTHENTICATED to their owners', async () => {
     await handleApiError(err('VALIDATION_ERROR', 400))
     await handleApiError(err('CONFIRMATION_REQUIRED'))

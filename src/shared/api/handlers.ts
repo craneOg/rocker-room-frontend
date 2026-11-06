@@ -45,6 +45,8 @@ export async function handleApiError(
       feedback.toast(COPY.officerOnly, 'negative')
       return
     case 'NOT_FOUND':
+      // An expired upload key (API-008) is reported by the profile screen itself.
+      if (error.details.some((d) => d.reason === 'IMAGE_KEY_NOT_FOUND')) return
       notFoundStore.set(true)
       return
     case 'VALIDATION_ERROR':

@@ -198,6 +198,21 @@ describe('CLUB-102 MemberList', () => {
     )
   })
 
+  it('offers a retry for the part filters when they fail to load', async () => {
+    let healthy = false
+    open('/clubs/10/members', 'MEMBER', {
+      [`GET ${BASE}/parts`]: () =>
+        healthy
+          ? json({ items: [{ ...part('1', '보컬'), memberCount: 1 }] })
+          : apiError('INTERNAL', 500),
+    })
+    await screen.findByText('정규채')
+    const retry = await screen.findByRole('button', { name: COPY.retry })
+    healthy = true
+    fireEvent.click(retry)
+    expect(await screen.findByRole('button', { name: '보컬' })).toBeTruthy()
+  })
+
   it('shows badges and at most 3 part names with a +n for the rest', async () => {
     open('/clubs/10/members', 'MEMBER', {
       [`GET ${BASE}/memberships`]: () =>
