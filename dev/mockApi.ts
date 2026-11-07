@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { handlePerformanceForm } from './performanceFormMock.ts'
+import { createPerformancePolicyMock } from './performancePolicyMock.ts'
 import { bodyCache, createPerformanceViewMock } from './performanceViewMock.ts'
 
 // Dev-server-only mock backend (`npm run dev:mock`). In-memory state, plain Node handler.
@@ -271,6 +272,7 @@ const COOKIE_RESTORE = 'restoreChoice'
 
 export function createMockApi() {
   let state = initialState()
+  const performancePolicy = createPerformancePolicyMock()
   const perfMock = createPerformanceViewMock()
 
   const hasCookie = (req: IncomingMessage, name: string) =>
@@ -548,6 +550,21 @@ export function createMockApi() {
         totalPages: Math.ceil(hits.length / size),
       })
     }
+    // PERF-004 / PERF-005 (sample performances 91-96). Before the view mock, which answers 404 for ids it does not know.
+    if (
+      await performancePolicy({
+        method,
+        path,
+        readBody: () => readBody(req),
+        send: (status, body) => send(res, status, body),
+        hasClub: (id) =>
+          state.memberships.some(
+            (m) => m.clubId === id && m.status === 'ACTIVE',
+          ),
+      })
+    )
+      return
+
     if (
       signedIn &&
       (await perfMock({

@@ -291,9 +291,25 @@ export const routes: RouteObject[] = [
                           return { Component: PerformanceEdit }
                         },
                       },
+                      {
+                        path: `${PERF}/policy`,
+                        handle: { title: '운영 정책', sub: true },
+                        lazy: async () => {
+                          const { PerformancePolicy } =
+                            await import('../features/performance/PerformancePolicy')
+                          return { Component: PerformancePolicy }
+                        },
+                      },
+                      {
+                        path: `${PERF}/status`,
+                        handle: { title: '공연 상태 변경', sub: true },
+                        lazy: async () => {
+                          const { PerformanceStatusScreen } =
+                            await import('../features/performance/PerformanceStatus')
+                          return { Component: PerformanceStatusScreen }
+                        },
+                      },
                       ...subScreens([
-                        [`${PERF}/policy`, 'PERF-004'],
-                        [`${PERF}/status`, 'PERF-005'],
                         [`${PERF}/teams/new`, 'TEAM-003'],
                         [`${PERF}/teams/review`, 'TEAM-005'],
                         [`${PERF}/songs/status`, 'SONG-005'],
