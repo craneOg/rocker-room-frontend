@@ -186,7 +186,6 @@ export const routes: RouteObject[] = [
                     },
                   },
                   ...subScreens([
-                    ['leave', 'CLUB-108'],
                     [PERF, 'PERF-003'],
                     [`${PERF}/members`, 'PMEM-001'],
                     [`${PERF}/teams`, 'TEAM-001'],
@@ -203,8 +202,35 @@ export const routes: RouteObject[] = [
                     [`${PERF}/schedules/:scheduleId`, 'SCHD-002'],
                   ]),
                   {
+                    path: 'leave',
+                    handle: { title: '동아리 나가기', sub: true },
+                    lazy: async () => {
+                      const { ClubLeave } =
+                        await import('../features/club/ClubLeave')
+                      return { Component: ClubLeave }
+                    },
+                  },
+                  {
                     element: <RequireClubAdmin />,
                     children: [
+                      {
+                        path: 'join-code',
+                        handle: { title: '가입 코드·공개 설정', sub: true },
+                        lazy: async () => {
+                          const { JoinCodeSettings } =
+                            await import('../features/club/JoinCodeSettings')
+                          return { Component: JoinCodeSettings }
+                        },
+                      },
+                      {
+                        path: 'parts',
+                        handle: { title: '파트 관리', sub: true },
+                        lazy: async () => {
+                          const { PartSettings } =
+                            await import('../features/club/PartSettings')
+                          return { Component: PartSettings }
+                        },
+                      },
                       {
                         path: 'join-requests',
                         handle: { title: '가입 관리', sub: true },
@@ -224,8 +250,6 @@ export const routes: RouteObject[] = [
                         },
                       },
                       ...subScreens([
-                        ['join-code', 'CLUB-106'],
-                        ['parts', 'CLUB-107'],
                         ['performances/new', 'PERF-002'],
                         [`${PERF}/policy`, 'PERF-004'],
                         [`${PERF}/status`, 'PERF-005'],

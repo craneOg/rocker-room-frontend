@@ -529,6 +529,25 @@ body {
   overflow: hidden;
 }
 
+.join-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.1em;
+}
+
+.part-handle {
+  cursor: grab;
+  user-select: none;
+}
+
+.leave-select {
+  padding: var(--spacing-8);
+  border: 1px solid var(--semantic-line-neutral-tertiary);
+  border-radius: var(--radius-8);
+  background: var(--semantic-background-neutral-primary);
+  color: inherit;
+  font: inherit;
+}
+
 .member-header {
   display: flex;
   align-items: center;

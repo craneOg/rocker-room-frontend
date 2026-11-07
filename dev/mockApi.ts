@@ -111,6 +111,18 @@ const initialState = () => ({
       requestedAt: null,
     },
   ] as Membership[],
+  // CLUB-106/107 state of club c5 (API-016/017/018/019/033-035).
+  settings: {
+    joinCode: 'MOCKCODE22' as string | null,
+    isSearchable: true,
+    parts: ['보컬', '기타', '베이스', '드럼', '키보드'].map((name, i) => ({
+      id: `p${i + 1}`,
+      name,
+      displayOrder: i,
+      isActive: true,
+      memberCount: 5 - i,
+    })),
+  },
   // Members of club c5 as an officer sees them (API-020/022/023/024/025/143).
   clubMembers: [
     ['p1', '김민수', 'minsu_kim', 'PENDING', 'JOIN_CODE', 'REGULAR'],
@@ -514,13 +526,25 @@ export function createMockApi() {
       /^\/api\/v1\/clubs\/([^/]+)(?:\/(memberships|parts))?(?:\/([^/]+))?$/.exec(
         path,
       )
-    if (clubRoute && method === 'GET' && clubRoute[1] !== 'search') {
-      const [, clubId, sub, memberId] = clubRoute
-      const club = CLUBS.find((c) => c.id === clubId)
-      const own = state.memberships.find(
-        (m) => m.clubId === clubId && m.status === 'ACTIVE',
-      )
-      if (!club || !own) return fail(res, 404, 'NOT_FOUND')
+    const sampleClub = clubRoute
+      ? CLUBS.find((c) => c.id === clubRoute[1])
+      : undefined
+    const sampleOwn = clubRoute
+      ? state.memberships.find(
+          (m) => m.clubId === clubRoute[1] && m.status === 'ACTIVE',
+        )
+      : undefined
+    // A club without sample data (such as c5) falls through to its own handlers below; the last line is the 404.
+    if (
+      clubRoute &&
+      method === 'GET' &&
+      clubRoute[1] !== 'search' &&
+      sampleClub &&
+      sampleOwn
+    ) {
+      const [, , sub, memberId] = clubRoute
+      const club = sampleClub
+      const own = sampleOwn
       // The signed-in user is the sample member u1 (their name and handle follow the saved profile).
       const self = (m: MockMember): MockMember =>
         m.id === 'u1'
@@ -755,6 +779,107 @@ export function createMockApi() {
       if (what === 'accept') m.status = 'ACTIVE'
       else state.memberships = state.memberships.filter((x) => x !== m)
       return send(res, 204)
+    }
+
+    // CLUB-106/107/108 (club c5 only).
+    const clubPath = /^\/api\/v1\/clubs\/c5(\/.*)?$/.exec(path)
+    if (clubPath) {
+      const sub = clubPath[1] ?? ''
+      const settings = state.settings
+      const clubDto = () => ({ id: 'c5', isSearchable: settings.isSearchable })
+      if (sub === '' && method === 'GET') return ok(res, clubDto())
+      if (sub === '' && method === 'PATCH') {
+        const { isSearchable } = await readBody(req)
+        if (typeof isSearchable === 'boolean')
+          settings.isSearchable = isSearchable
+        return ok(res, clubDto())
+      }
+      if (sub === '/join-code' && method === 'GET')
+        return ok(res, { joinCode: settings.joinCode })
+      if (sub === '/join-code' && method === 'DELETE') {
+        settings.joinCode = null
+        return send(res, 204)
+      }
+      if (sub === '/join-code/regenerate' && method === 'POST') {
+        settings.joinCode = `NEW${Date.now().toString(36).toUpperCase()}`
+          .replace(/[01]/g, '2')
+          .padEnd(10, '2')
+          .slice(0, 10)
+        return ok(res, { joinCode: settings.joinCode })
+      }
+      if (sub === '/parts' && method === 'GET')
+        return ok(res, {
+          items: [...settings.parts].sort(
+            (a, b) => a.displayOrder - b.displayOrder,
+          ),
+        })
+      if (sub === '/parts' && method === 'POST') {
+        const { name, displayOrder } = await readBody(req)
+        if (typeof name !== 'string' || name.length < 1 || name.length > 50)
+          return fail(res, 400, 'VALIDATION_ERROR')
+        if (settings.parts.some((p) => p.name === name))
+          return fail(res, 409, 'DUPLICATE')
+        const part = {
+          id: `p${Date.now()}`,
+          name,
+          displayOrder: Number(displayOrder ?? 0),
+          isActive: true,
+          memberCount: 0,
+        }
+        settings.parts.push(part)
+        return send(res, 201, { data: { ...part, memberCount: undefined } })
+      }
+      const part = /^\/parts\/([^/]+)$/.exec(sub)
+      if (part && method === 'PATCH') {
+        const target = settings.parts.find((p) => p.id === part[1])
+        if (!target) return fail(res, 404, 'NOT_FOUND')
+        const body = await readBody(req)
+        if (
+          typeof body.name === 'string' &&
+          settings.parts.some((p) => p !== target && p.name === body.name)
+        )
+          return fail(res, 409, 'DUPLICATE')
+        if (typeof body.name === 'string') target.name = body.name
+        if (typeof body.displayOrder === 'number')
+          target.displayOrder = body.displayOrder
+        if (typeof body.isActive === 'boolean') target.isActive = body.isActive
+        return ok(res, { ...target, memberCount: undefined })
+      }
+      if (sub === '/memberships/me/leave-preview' && method === 'GET')
+        return ok(res, {
+          role: 'CLUB_ADMIN',
+          succession: {
+            type: 'DESIGNATED_OR_EARLIEST',
+            candidateMembershipId: '23',
+            candidateName: '김하늘',
+          },
+          performanceImpacts: [
+            {
+              performanceId: '31',
+              performanceName: '2026 가을 공연',
+              participationStatus: 'APPROVED',
+              isTeamLeader: true,
+              teamName: '1팀',
+            },
+          ],
+          teamLeaderCandidates: [
+            {
+              performanceId: '31',
+              performanceName: '2026 가을 공연',
+              teamId: '41',
+              teamName: '1팀',
+              candidates: [
+                { membershipId: '23', displayName: '김하늘' },
+                { membershipId: '24', displayName: '박서연' },
+              ],
+            },
+          ],
+          warnings: [],
+        })
+      if (sub === '/memberships/m5/withdraw' && method === 'POST') {
+        state.memberships = state.memberships.filter((m) => m.id !== 'm5')
+        return ok(res, { resource: { id: 'm5', status: 'WITHDRAWN' } })
+      }
     }
 
     // CLUB-104/105: only club c5 has members in this mock.
