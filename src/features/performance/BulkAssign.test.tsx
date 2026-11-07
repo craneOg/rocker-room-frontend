@@ -114,6 +114,27 @@ describe('CLUB-102 4-3 add to a performance', () => {
     })
   })
 
+  it('disables 추가 when the picked performance leaves the list', async () => {
+    let gone = false
+    const { router } = openMembers({
+      [`GET ${LIST}`]: (url, init) =>
+        listed(gone ? [perf({ id: '32', title: '겨울 공연' })] : [perf()])(
+          url,
+          init,
+        ),
+    })
+    await selectOne()
+    await click(T.bulkAssign)
+    fireEvent.click(await screen.findByRole('radio', { name: /가을 정기공연/ }))
+    const add = screen.getByRole('button', { name: T.bulkAssignAdd })
+    await waitFor(() => expect((add as HTMLButtonElement).disabled).toBe(false))
+    gone = true
+    await router.queryClient.invalidateQueries()
+    await screen.findByRole('radio', { name: /겨울 공연/ })
+    expect(screen.queryByRole('radio', { name: /가을 정기공연/ })).toBeNull()
+    expect((add as HTMLButtonElement).disabled).toBe(true)
+  })
+
   it('does not count a skipped (already participating) member as changed', async () => {
     openMembers({
       [`GET ${LIST}`]: listed([perf()]),

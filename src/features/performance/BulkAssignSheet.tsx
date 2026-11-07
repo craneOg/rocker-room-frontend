@@ -38,7 +38,7 @@ export function BulkAssignSheet({
       title={T.bulkAssignTitle}
       actionLabel={T.bulkAssignAdd}
       loading={loading}
-      actionDisabled={picked === ''}
+      actionDisabled={!items.some((p) => p.id === picked)}
       onClose={onClose}
       onSubmit={() => onSubmit(picked)}
     >

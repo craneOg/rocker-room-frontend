@@ -187,10 +187,13 @@ export function createPerformanceViewMock() {
       if (method !== 'POST') return false
       const body = await readBody(req)
       if (body.action !== 'ASSIGN_PERFORMANCE') return false
+      if (!admin) return no(res, 403, 'FORBIDDEN')
       const params = (body.params ?? {}) as Record<string, unknown>
       const pid = String(params.performanceId)
       const perf = state.perfs.find((p) => p.id === pid)
       if (!perf) return no(res, 404, 'NOT_FOUND')
+      if (!['DRAFT', 'ACTIVE'].includes(perf.status))
+        return no(res, 409, 'STATE_CONFLICT', [{ reason: 'INVALID_STATE' }])
       const ids = Array.isArray(body.membershipIds)
         ? (body.membershipIds as string[])
         : []

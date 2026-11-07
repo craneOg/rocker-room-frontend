@@ -244,6 +244,40 @@ describe('PMEM-001 officer review', () => {
       decision: 'APPROVE',
     })
   })
+
+  it('sends only the rows still on screen after one was decided on its own', async () => {
+    let decided = false
+    const { fetchMock } = openAdmin({
+      [`GET ${MEMBERS}`]: (url) =>
+        decided
+          ? byStatus({ ...ROWS, APPLIED: [ROWS.APPLIED[1]] })(url)
+          : byStatus(ROWS)(url),
+      [`POST ${MEMBERS}/2/reject`]: () => {
+        decided = true
+        return json({ resource: {} })
+      },
+      [`POST ${MEMBERS}/bulk-decisions`]: () =>
+        json({
+          succeeded: [{ performanceMemberId: '3' }],
+          failed: [],
+          summary: { requested: 1, succeeded: 1, failed: 0 },
+        }),
+    })
+    fireEvent.click(await tab(T.tabApplied(2)))
+    await screen.findByText('김도윤')
+    fireEvent.click(await screen.findByRole('checkbox', { name: T.selectAll }))
+    await screen.findByText(T.selectedCount(2))
+    await rowButton('김도윤', T.reject)
+    await screen.findByText(T.selectedCount(1))
+    expect(screen.queryByText('김도윤')).toBeNull()
+    await click(T.bulkApprove)
+
+    await screen.findByText(T.bulkResult(1, 0))
+    expect(body(fetchMock, `${MEMBERS}/bulk-decisions`)).toEqual({
+      performanceMemberIds: ['3'],
+      decision: 'APPROVE',
+    })
+  })
 })
 
 describe('PMEM-001 3-1 release', () => {

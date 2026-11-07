@@ -97,6 +97,8 @@ export function PerformanceMembers() {
       last.page + 1 < last.totalPages ? last.page + 1 : undefined,
   })
   const items = members.data?.pages.flatMap((p) => p.items) ?? []
+  // Only the rows still on screen: a filter or a per-row decision can drop picked rows.
+  const chosen = selected.filter((id) => items.some((m) => m.id === id))
   const counts = members.data?.pages[0]?.statusCounts
   const count = (t: Tab) =>
     TAB_STATUS[t].reduce((n, s) => n + (counts?.[s] ?? 0), 0)
@@ -131,7 +133,7 @@ export function PerformanceMembers() {
   })
   const bulk = useMutation({
     mutationFn: (decision: 'APPROVE' | 'REJECT') =>
-      bulkDecide(clubId, performanceId, selected, decision),
+      bulkDecide(clubId, performanceId, chosen, decision),
     onSuccess: async (r) => {
       setSelected([])
       await invalidatePerformance(qc, clubId, performanceId)
@@ -169,7 +171,7 @@ export function PerformanceMembers() {
         ? T.tabApplied(count(t))
         : T.tabRejected(count(t))
   const bulkable = admin && tab === 'applied' && !locked && perf !== undefined
-  const allSelected = items.length > 0 && selected.length === items.length
+  const allSelected = items.length > 0 && chosen.length === items.length
 
   return (
     <div className="start" data-screen-id="PMEM-001">
@@ -350,10 +352,10 @@ export function PerformanceMembers() {
         </Button>
       ) : null}
 
-      {bulkable && selected.length > 0 ? (
+      {bulkable && chosen.length > 0 ? (
         <div className="bulk-bar" role="toolbar">
           <Typography variant="body2" weight="bold">
-            {T.selectedCount(selected.length)}
+            {T.selectedCount(chosen.length)}
           </Typography>
           <Button
             size="small"
