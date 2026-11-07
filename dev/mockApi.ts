@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { handlePerformanceForm } from './performanceFormMock.ts'
 
 // Dev-server-only mock backend (`npm run dev:mock`). In-memory state, plain Node handler.
 // Paths and shapes mirror src/shared/api/assumptions.ts. Never imported by src/.
@@ -325,6 +326,17 @@ export function createMockApi() {
       state.outcome = (await readBody(req)).outcome as Outcome
       return send(res, 204)
     }
+
+    // PERF-002/006 (create, read and update of performances made here): dev/performanceFormMock.ts
+    if (
+      signedIn &&
+      (await handlePerformanceForm(req, res, {
+        path,
+        method,
+        memberships: state.memberships,
+      }))
+    )
+      return
 
     if (method === 'GET' && path === '/api/v1/auth/kakao/authorize') {
       const failed = state.outcome === 'cancelled'

@@ -249,11 +249,27 @@ export const routes: RouteObject[] = [
                           return { Component: MemberAdd }
                         },
                       },
+                      {
+                        path: 'performances/new',
+                        handle: { title: '공연 만들기', sub: true },
+                        lazy: async () => {
+                          const { PerformanceCreate } =
+                            await import('../features/performance/PerformanceCreate')
+                          return { Component: PerformanceCreate }
+                        },
+                      },
+                      {
+                        path: `${PERF}/edit`,
+                        handle: { title: '공연 정보 수정', sub: true },
+                        lazy: async () => {
+                          const { PerformanceEdit } =
+                            await import('../features/performance/PerformanceEdit')
+                          return { Component: PerformanceEdit }
+                        },
+                      },
                       ...subScreens([
-                        ['performances/new', 'PERF-002'],
                         [`${PERF}/policy`, 'PERF-004'],
                         [`${PERF}/status`, 'PERF-005'],
-                        [`${PERF}/edit`, 'PERF-006'],
                         [`${PERF}/teams/new`, 'TEAM-003'],
                         [`${PERF}/teams/review`, 'TEAM-005'],
                         [`${PERF}/songs/status`, 'SONG-005'],
