@@ -152,6 +152,7 @@ export type BulkAction =
       action: 'CHANGE_PARTS'
       params: { mode: 'ADD' | 'REMOVE'; partIds: string[] }
     }
+  | { action: 'ASSIGN_PERFORMANCE'; params: { performanceId: string } }
 
 export type BulkResult = {
   succeeded: { membershipId: string; skipped: boolean }[]
