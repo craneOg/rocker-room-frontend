@@ -1,4 +1,8 @@
+language: ko-KR
 reviews:
+  auto_review:
+    base_branches:
+      - '.*'
   pre_merge_checks:
     docstrings:
       mode: 'off'
