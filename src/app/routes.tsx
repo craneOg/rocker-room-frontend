@@ -249,10 +249,26 @@ export const routes: RouteObject[] = [
                           return { Component: MemberAdd }
                         },
                       },
+                      {
+                        path: `${PERF}/policy`,
+                        handle: { title: '운영 정책', sub: true },
+                        lazy: async () => {
+                          const { PerformancePolicy } =
+                            await import('../features/performance/PerformancePolicy')
+                          return { Component: PerformancePolicy }
+                        },
+                      },
+                      {
+                        path: `${PERF}/status`,
+                        handle: { title: '공연 상태 변경', sub: true },
+                        lazy: async () => {
+                          const { PerformanceStatusScreen } =
+                            await import('../features/performance/PerformanceStatus')
+                          return { Component: PerformanceStatusScreen }
+                        },
+                      },
                       ...subScreens([
                         ['performances/new', 'PERF-002'],
-                        [`${PERF}/policy`, 'PERF-004'],
-                        [`${PERF}/status`, 'PERF-005'],
                         [`${PERF}/edit`, 'PERF-006'],
                         [`${PERF}/teams/new`, 'TEAM-003'],
                         [`${PERF}/teams/review`, 'TEAM-005'],
