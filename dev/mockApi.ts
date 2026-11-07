@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { createPerformancePolicyMock } from './performancePolicyMock.ts'
 
 // Dev-server-only mock backend (`npm run dev:mock`). In-memory state, plain Node handler.
 // Paths and shapes mirror src/shared/api/assumptions.ts. Never imported by src/.
@@ -269,6 +270,7 @@ const COOKIE_RESTORE = 'restoreChoice'
 
 export function createMockApi() {
   let state = initialState()
+  const performancePolicy = createPerformancePolicyMock()
 
   const hasCookie = (req: IncomingMessage, name: string) =>
     (req.headers.cookie ?? '').split(/;\s*/).includes(`${name}=1`)
@@ -1057,6 +1059,21 @@ export function createMockApi() {
       else state.memberships = state.memberships.filter((x) => x !== m)
       return send(res, 204)
     }
+
+    // PERF-004 / PERF-005 (any club the user is an active member of).
+    if (
+      await performancePolicy({
+        method,
+        path,
+        readBody: () => readBody(req),
+        send: (status, body) => send(res, status, body),
+        hasClub: (id) =>
+          state.memberships.some(
+            (m) => m.clubId === id && m.status === 'ACTIVE',
+          ),
+      })
+    )
+      return
 
     // CLUB-106/107/108 (club c5 only).
     const clubPath = /^\/api\/v1\/clubs\/c5(\/.*)?$/.exec(path)
