@@ -1,6 +1,6 @@
-name: "📌 Custom Issue"
-description: "기타 논의할 사항을 기록"
-labels: [ "custom" ]
+name: '📌 Custom Issue'
+description: '기타 논의할 사항을 기록'
+labels: ['custom']
 body:
   - type: textarea
     attributes:
