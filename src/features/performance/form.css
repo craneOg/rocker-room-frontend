@@ -1,0 +1,122 @@
+/* PERF-002 / PERF-006 */
+.perf-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-24);
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.perf-form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
+}
+
+.perf-undecided {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
+.perf-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--semantic-foreground-neutral-tertiary);
+}
+
+.perf-steps [aria-current='step'] {
+  color: var(--semantic-foreground-neutral-primary);
+  font-weight: 700;
+}
+
+.perf-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-8);
+}
+
+.perf-preset {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-8);
+  padding: var(--spacing-12);
+  border: 1px solid var(--semantic-line-neutral-primary);
+  border-radius: var(--radius-8);
+}
+
+.perf-preset-on {
+  border-color: var(--semantic-line-brand-primary);
+}
+
+.perf-preset-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  min-width: 0;
+}
+
+.perf-chips-line {
+  font-size: 12px;
+  color: var(--semantic-foreground-neutral-secondary);
+}
+
+.perf-chat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
+}
+
+.perf-chat-turn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+}
+
+.perf-bubble {
+  max-width: 85%;
+  padding: var(--spacing-8) var(--spacing-12);
+  border-radius: var(--radius-12);
+}
+
+.perf-bubble-q {
+  align-self: flex-start;
+  background: var(--semantic-background-neutral-secondary);
+}
+
+.perf-bubble-a {
+  align-self: flex-end;
+  border: 0;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  background: var(--semantic-background-brand-secondary);
+}
+
+.perf-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
+.perf-summary {
+  margin: var(--spacing-4) 0 0;
+  padding-left: var(--spacing-16);
+}
+
+.perf-confirm-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.perf-confirm-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
