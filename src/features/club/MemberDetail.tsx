@@ -7,6 +7,7 @@ import { Badge } from '../../shared/ui/Badge'
 import { ErrorState, ListSkeleton } from '../../shared/ui/StateViews'
 import { getMember } from './api'
 import { JOIN_SOURCE_LABEL, MEMBER_COPY as T, MEMBER_TYPE_LABEL } from './copy'
+import { MemberActions } from './MemberActions'
 import { MemberAvatar, MemberBadges, memberName } from './MemberBits'
 
 function InfoRow({ label, value }: { label: string; value: string }) {
@@ -21,12 +22,15 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * CLUB-103: one member's club membership, read-only. The officer actions (3-1, 5-1..5-4) are not
- * built yet. A 404 (e.g. a withdrawn membership seen by a regular member) is the global 404 view.
+ * CLUB-103: one member's club membership. Officers get the actions (3-1, 5-1..5-4). A 404 (e.g. a withdrawn membership seen by a regular member) is the global 404 view.
  */
 export function MemberDetail() {
   const { clubId = '', membershipId = '' } = useParams()
-  const admin = isClubAdmin(useSession(), clubId)
+  const session = useSession()
+  const admin = isClubAdmin(session, clubId)
+  const isSelf = session.memberships.some(
+    (x) => x.clubId === clubId && x.id === membershipId,
+  )
   const query = useQuery({
     queryKey: ['club-member', clubId, membershipId],
     queryFn: () => getMember(clubId, membershipId),
@@ -131,6 +135,9 @@ export function MemberDetail() {
           </div>
         )}
       </section>
+      {admin ? (
+        <MemberActions clubId={clubId} member={m} isSelf={isSelf} />
+      ) : null}
 
       <section className="start-section">
         <Typography variant="body1" weight="bold" as="h2">
