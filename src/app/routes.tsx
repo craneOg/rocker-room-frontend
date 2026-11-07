@@ -203,7 +203,7 @@ export const routes: RouteObject[] = [
                   ]),
                   {
                     path: 'leave',
-                    handle: { title: 'CLUB-108', sub: true },
+                    handle: { title: '동아리 나가기', sub: true },
                     lazy: async () => {
                       const { ClubLeave } =
                         await import('../features/club/ClubLeave')
@@ -215,7 +215,7 @@ export const routes: RouteObject[] = [
                     children: [
                       {
                         path: 'join-code',
-                        handle: { title: 'CLUB-106', sub: true },
+                        handle: { title: '가입 코드·공개 설정', sub: true },
                         lazy: async () => {
                           const { JoinCodeSettings } =
                             await import('../features/club/JoinCodeSettings')
@@ -224,16 +224,32 @@ export const routes: RouteObject[] = [
                       },
                       {
                         path: 'parts',
-                        handle: { title: 'CLUB-107', sub: true },
+                        handle: { title: '파트 관리', sub: true },
                         lazy: async () => {
                           const { PartSettings } =
                             await import('../features/club/PartSettings')
                           return { Component: PartSettings }
                         },
                       },
+                      {
+                        path: 'join-requests',
+                        handle: { title: '가입 관리', sub: true },
+                        lazy: async () => {
+                          const { JoinManage } =
+                            await import('../features/club/JoinManage')
+                          return { Component: JoinManage }
+                        },
+                      },
+                      {
+                        path: 'members/new',
+                        handle: { title: '멤버 직접 추가', sub: true },
+                        lazy: async () => {
+                          const { MemberAdd } =
+                            await import('../features/club/MemberAdd')
+                          return { Component: MemberAdd }
+                        },
+                      },
                       ...subScreens([
-                        ['join-requests', 'CLUB-104'],
-                        ['members/new', 'CLUB-105'],
                         ['performances/new', 'PERF-002'],
                         [`${PERF}/policy`, 'PERF-004'],
                         [`${PERF}/status`, 'PERF-005'],

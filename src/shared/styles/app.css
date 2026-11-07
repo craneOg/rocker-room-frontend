@@ -548,6 +548,48 @@ body {
   font: inherit;
 }
 
+.member-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-8);
+}
+
+.member-person {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--spacing-12);
+  min-width: 0;
+}
+
+.member-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
+.member-bulk {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
+.member-bulk .start-card-actions {
+  margin-left: auto;
+}
+
+.member-radio {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
+.member-declined > summary {
+  cursor: pointer;
+  padding: var(--spacing-8) 0;
+}
+
 .club-profile,
 .member-profile {
   display: flex;
