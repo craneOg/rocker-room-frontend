@@ -100,6 +100,26 @@ describe('PERF-004 PerformancePolicy', () => {
     })
   })
 
+  it('keeps a limit editable when its text is cleared to type a new number', async () => {
+    open('DRAFT')
+    await findScreen('PERF-004')
+    await screen.findByText(T.presetLine('팀 먼저'))
+    const field = screen.getByLabelText(T.candidateLimit) as HTMLInputElement
+    const box = card(T.features.candidate).getByRole('checkbox', {
+      name: T.unlimited,
+    }) as HTMLInputElement
+    fireEvent.change(field, { target: { value: '' } })
+    expect(box.checked).toBe(false)
+    expect(field.disabled).toBe(false)
+    fireEvent.change(field, { target: { value: '5' } })
+    expect(field.value).toBe('5')
+    // Leaving it empty puts a number back instead of silently saving "no limit".
+    fireEvent.change(field, { target: { value: '' } })
+    fireEvent.blur(field)
+    expect(field.value).toBe('1')
+    await act(async () => {})
+  })
+
   it('checks a vote-method change, asks 4-1 with the vote count, then changes it with confirmed', async () => {
     const changed = detail('ACTIVE', {
       voteMethod: 'SCORE',

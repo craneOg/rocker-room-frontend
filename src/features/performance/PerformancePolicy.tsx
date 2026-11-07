@@ -56,7 +56,9 @@ function LimitField({
   disabled: boolean
   onChange: (v: string) => void
 }) {
-  const unlimited = value === ''
+  // Only the checkbox sets this: clearing the text to type a new number must not flip it.
+  const [checked, setChecked] = useState(value === '')
+  const unlimited = checked && value === ''
   return (
     <div className="policy-limit">
       <Typography variant="body2">{label}</Typography>
@@ -65,7 +67,10 @@ function LimitField({
           type="checkbox"
           checked={unlimited}
           disabled={disabled}
-          onChange={(e) => onChange(e.target.checked ? '' : '1')}
+          onChange={(e) => {
+            setChecked(e.target.checked)
+            onChange(e.target.checked ? '' : '1')
+          }}
         />
         <span>{T.unlimited}</span>
       </label>
@@ -74,12 +79,12 @@ function LimitField({
         inputMode="numeric"
         value={value}
         disabled={disabled || unlimited}
-        status={
-          unlimited || value === '' || /^[1-9]\d*$/.test(value)
-            ? 'normal'
-            : 'negative'
-        }
+        status={unlimited || /^[1-9]\d*$/.test(value) ? 'normal' : 'negative'}
         onChange={(e) => onChange(e.target.value.trim())}
+        // An empty box that is not "제한 없음" would save as no limit: put a number back.
+        onBlur={() => {
+          if (!unlimited && value === '') onChange('1')
+        }}
       />
     </div>
   )
