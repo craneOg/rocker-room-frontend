@@ -157,7 +157,15 @@ export const routes: RouteObject[] = [
                       return { Component: Home }
                     },
                   },
-                  { path: 'performances', ...screen('PERF-001') },
+                  {
+                    path: 'performances',
+                    handle: { title: '공연' },
+                    lazy: async () => {
+                      const { PerformanceList } =
+                        await import('../features/performance/PerformanceList')
+                      return { Component: PerformanceList }
+                    },
+                  },
                   {
                     path: 'info',
                     handle: { title: '동아리', sub: true },
@@ -185,9 +193,25 @@ export const routes: RouteObject[] = [
                       return { Component: MemberDetail }
                     },
                   },
+                  {
+                    path: PERF,
+                    handle: { title: '공연 상세', sub: true },
+                    lazy: async () => {
+                      const { PerformanceDetail } =
+                        await import('../features/performance/PerformanceDetail')
+                      return { Component: PerformanceDetail }
+                    },
+                  },
+                  {
+                    path: `${PERF}/members`,
+                    handle: { title: '참여자', sub: true },
+                    lazy: async () => {
+                      const { PerformanceMembers } =
+                        await import('../features/performance/PerformanceMembers')
+                      return { Component: PerformanceMembers }
+                    },
+                  },
                   ...subScreens([
-                    [PERF, 'PERF-003'],
-                    [`${PERF}/members`, 'PMEM-001'],
                     [`${PERF}/teams`, 'TEAM-001'],
                     [`${PERF}/teams/apply`, 'TEAM-004'],
                     [`${PERF}/teams/:teamId`, 'TEAM-002'],
@@ -250,6 +274,24 @@ export const routes: RouteObject[] = [
                         },
                       },
                       {
+                        path: 'performances/new',
+                        handle: { title: '공연 만들기', sub: true },
+                        lazy: async () => {
+                          const { PerformanceCreate } =
+                            await import('../features/performance/PerformanceCreate')
+                          return { Component: PerformanceCreate }
+                        },
+                      },
+                      {
+                        path: `${PERF}/edit`,
+                        handle: { title: '공연 정보 수정', sub: true },
+                        lazy: async () => {
+                          const { PerformanceEdit } =
+                            await import('../features/performance/PerformanceEdit')
+                          return { Component: PerformanceEdit }
+                        },
+                      },
+                      {
                         path: `${PERF}/policy`,
                         handle: { title: '운영 정책', sub: true },
                         lazy: async () => {
@@ -268,8 +310,6 @@ export const routes: RouteObject[] = [
                         },
                       },
                       ...subScreens([
-                        ['performances/new', 'PERF-002'],
-                        [`${PERF}/edit`, 'PERF-006'],
                         [`${PERF}/teams/new`, 'TEAM-003'],
                         [`${PERF}/teams/review`, 'TEAM-005'],
                         [`${PERF}/songs/status`, 'SONG-005'],
