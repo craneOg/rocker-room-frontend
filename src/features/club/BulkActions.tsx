@@ -13,6 +13,8 @@ import { BULK_FAIL_REASON, MANAGE_COPY as M } from './manageCopy'
 import { ActionModal, RadioList } from './ManageBits'
 import { memberName } from './MemberBits'
 import { feedback } from '../../shared/ui/feedbackBus'
+import { BulkAssignSheet } from '../performance/BulkAssignSheet'
+import { VIEW_COPY as P } from '../performance/viewCopy'
 
 type Props = {
   clubId: string
@@ -22,12 +24,12 @@ type Props = {
 }
 
 /**
- * CLUB-102 4: fixed bar with 상태 변경 / 파트 변경 (4-1, 4-2) and the partial-failure result (4-4).
- * 공연에 추가 (4-3) is not built: it needs the performance list, which has no screen or API client yet.
+ * CLUB-102 4: fixed bar with 상태 변경 / 파트 변경 / 공연에 추가 (4-1, 4-2, 4-3) and the
+ * partial-failure result (4-4).
  */
 export function BulkBar({ clubId, selected, onDone }: Props) {
   const qc = useQueryClient()
-  const [sheet, setSheet] = useState<'status' | 'parts' | null>(null)
+  const [sheet, setSheet] = useState<'status' | 'parts' | 'assign' | null>(null)
   const [result, setResult] = useState<BulkResult | null>(null)
   const run = useMutation({
     mutationFn: (body: BulkAction) =>
@@ -39,6 +41,8 @@ export function BulkBar({ clubId, selected, onDone }: Props) {
     onSuccess: async (r) => {
       setSheet(null)
       await invalidateClub(qc, clubId)
+      // 공연에 추가 changes the performances' participants.
+      await qc.invalidateQueries({ queryKey: ['club', clubId] })
       if (r.failed.length > 0) setResult(r)
       else {
         feedback.toast(
@@ -71,6 +75,13 @@ export function BulkBar({ clubId, selected, onDone }: Props) {
         >
           {M.bulkParts}
         </Button>
+        <Button
+          size="small"
+          disabled={selected.length === 0}
+          onClick={() => setSheet('assign')}
+        >
+          {P.bulkAssign}
+        </Button>
       </div>
 
       {sheet === 'status' ? (
@@ -89,6 +100,19 @@ export function BulkBar({ clubId, selected, onDone }: Props) {
           onClose={() => setSheet(null)}
           onSubmit={(mode, partIds) =>
             run.mutate({ action: 'CHANGE_PARTS', params: { mode, partIds } })
+          }
+        />
+      ) : null}
+      {sheet === 'assign' ? (
+        <BulkAssignSheet
+          clubId={clubId}
+          loading={run.isPending}
+          onClose={() => setSheet(null)}
+          onSubmit={(performanceId) =>
+            run.mutate({
+              action: 'ASSIGN_PERFORMANCE',
+              params: { performanceId },
+            })
           }
         />
       ) : null}
