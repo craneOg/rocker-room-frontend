@@ -211,13 +211,37 @@ export const routes: RouteObject[] = [
                       return { Component: PerformanceMembers }
                     },
                   },
+                  {
+                    path: `${PERF}/songs`,
+                    handle: { title: '곡', sub: true },
+                    lazy: async () => {
+                      const { SongList } =
+                        await import('../features/song/SongList')
+                      return { Component: SongList }
+                    },
+                  },
+                  {
+                    path: `${PERF}/songs/new`,
+                    handle: { title: '후보곡 제안', sub: true },
+                    lazy: async () => {
+                      const { SongCreate } =
+                        await import('../features/song/SongCreate')
+                      return { Component: SongCreate }
+                    },
+                  },
+                  {
+                    path: `${PERF}/songs/:songId`,
+                    handle: { title: '곡 상세', sub: true },
+                    lazy: async () => {
+                      const { SongDetail } =
+                        await import('../features/song/SongDetail')
+                      return { Component: SongDetail }
+                    },
+                  },
                   ...subScreens([
                     [`${PERF}/teams`, 'TEAM-001'],
                     [`${PERF}/teams/apply`, 'TEAM-004'],
                     [`${PERF}/teams/:teamId`, 'TEAM-002'],
-                    [`${PERF}/songs`, 'SONG-001'],
-                    [`${PERF}/songs/new`, 'SONG-002'],
-                    [`${PERF}/songs/:songId`, 'SONG-003'],
                     [`${PERF}/setlist`, 'SET-001'],
                     [`${PERF}/auditions/mine`, 'AUDI-004'],
                     [`${PERF}/availability`, 'AVAIL-001'],
@@ -309,11 +333,27 @@ export const routes: RouteObject[] = [
                           return { Component: PerformanceStatusScreen }
                         },
                       },
+                      {
+                        path: `${PERF}/songs/status`,
+                        handle: { title: '투표·가불 현황', sub: true },
+                        lazy: async () => {
+                          const { SongStatus } =
+                            await import('../features/song/SongStatus')
+                          return { Component: SongStatus }
+                        },
+                      },
+                      {
+                        path: `${PERF}/songs/:songId/players`,
+                        handle: { title: '연주자 배정', sub: true },
+                        lazy: async () => {
+                          const { SongPlayers } =
+                            await import('../features/song/SongPlayers')
+                          return { Component: SongPlayers }
+                        },
+                      },
                       ...subScreens([
                         [`${PERF}/teams/new`, 'TEAM-003'],
                         [`${PERF}/teams/review`, 'TEAM-005'],
-                        [`${PERF}/songs/status`, 'SONG-005'],
-                        [`${PERF}/songs/:songId/players`, 'SONG-004'],
                         [`${PERF}/auditions`, 'AUDI-001'],
                         [`${PERF}/auditions/new`, 'AUDI-002'],
                         [`${PERF}/auditions/:auditionId/result`, 'AUDI-003'],

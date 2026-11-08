@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { handlePerformanceForm } from './performanceFormMock.ts'
 import { createPerformancePolicyMock } from './performancePolicyMock.ts'
 import { bodyCache, createPerformanceViewMock } from './performanceViewMock.ts'
+import { createSongMock } from './songMock.ts'
 
 // Dev-server-only mock backend (`npm run dev:mock`). In-memory state, plain Node handler.
 // Paths and shapes mirror src/shared/api/assumptions.ts. Never imported by src/.
@@ -274,6 +275,7 @@ export function createMockApi() {
   let state = initialState()
   const performancePolicy = createPerformancePolicyMock()
   const perfMock = createPerformanceViewMock()
+  const songMock = createSongMock()
 
   const hasCookie = (req: IncomingMessage, name: string) =>
     (req.headers.cookie ?? '').split(/;\s*/).includes(`${name}=1`)
@@ -562,6 +564,20 @@ export function createMockApi() {
             (m) => m.clubId === id && m.status === 'ACTIVE',
           ),
       })
+    )
+      return
+
+    // SONG-001..005 (songs, evaluations, team reads of c10). Before the view mock, which would answer 404 for them.
+    if (
+      signedIn &&
+      (await songMock({
+        req,
+        res,
+        url,
+        path,
+        method,
+        memberships: state.memberships,
+      }))
     )
       return
 
