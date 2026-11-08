@@ -1,3 +1,5 @@
+import { parseWarnings, warningText, type ApiWarning } from './warnings'
+
 export const ERROR_CODES = [
   'VALIDATION_ERROR',
   'UNAUTHENTICATED',
@@ -24,6 +26,8 @@ export class ApiError extends Error {
   readonly status: number
   readonly code: ApiErrorCode
   readonly details: ErrorDetail[]
+  /** A CONFIRMATION_REQUIRED error's top-level `error.warnings`. */
+  readonly warnings: ApiWarning[]
   readonly requestId?: string
 
   constructor(init: {
@@ -31,6 +35,7 @@ export class ApiError extends Error {
     code: ApiErrorCode
     message: string
     details?: ErrorDetail[]
+    warnings?: ApiWarning[]
     requestId?: string
   }) {
     super(init.message)
@@ -38,6 +43,7 @@ export class ApiError extends Error {
     this.status = init.status
     this.code = init.code
     this.details = init.details ?? []
+    this.warnings = init.warnings ?? []
     this.requestId = init.requestId
   }
 }
@@ -66,12 +72,14 @@ export function parseErrorBody(status: number, body: unknown): ApiError {
         reason: typeof d.reason === 'string' ? d.reason : undefined,
       }))
     : []
+  const warnings = parseWarnings(error?.warnings)
   return new ApiError({
     status,
     code: known ?? 'UNKNOWN',
     message:
       typeof error?.message === 'string' ? error.message : `HTTP ${status}`,
     details,
+    warnings,
     requestId:
       typeof error?.requestId === 'string' ? error.requestId : undefined,
   })
@@ -99,7 +107,8 @@ export function fieldErrors(error: unknown): Record<string, string> {
   return result
 }
 
-/** CONFIRMATION_REQUIRED warning list (assumption: `details[].message`). */
+/** CONFIRMATION_REQUIRED warning sentences: `error.warnings` (backend-confirmed), else `details[].message`. */
 export function confirmationWarnings(error: ApiError): string[] {
+  if (error.warnings.length > 0) return error.warnings.map(warningText)
   return error.details.flatMap((d) => (d.message ? [d.message] : []))
 }
