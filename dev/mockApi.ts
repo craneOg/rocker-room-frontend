@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { handlePerformanceForm } from './performanceFormMock.ts'
 import { createPerformancePolicyMock } from './performancePolicyMock.ts'
+import { createScheduleMock } from './scheduleMock.ts'
 import { bodyCache, createPerformanceViewMock } from './performanceViewMock.ts'
 
 // Dev-server-only mock backend (`npm run dev:mock`). In-memory state, plain Node handler.
@@ -274,6 +275,7 @@ export function createMockApi() {
   let state = initialState()
   const performancePolicy = createPerformancePolicyMock()
   const perfMock = createPerformanceViewMock()
+  const scheduleMock = createScheduleMock()
 
   const hasCookie = (req: IncomingMessage, name: string) =>
     (req.headers.cookie ?? '').split(/;\s*/).includes(`${name}=1`)
@@ -322,6 +324,7 @@ export function createMockApi() {
     if (method === 'POST' && path === '/api/__mock/reset') {
       state = initialState()
       perfMock.reset()
+      scheduleMock.reset()
       return send(res, 204, undefined, {
         'Set-Cookie': [
           setCookie(COOKIE_SESSION, false),
@@ -562,6 +565,19 @@ export function createMockApi() {
             (m) => m.clubId === id && m.status === 'ACTIVE',
           ),
       })
+    )
+      return
+
+    if (
+      signedIn &&
+      (await scheduleMock({
+        req,
+        res,
+        url,
+        path,
+        method,
+        memberships: state.memberships,
+      }))
     )
       return
 

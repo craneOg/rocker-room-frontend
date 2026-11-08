@@ -1,0 +1,191 @@
+/* SCHD-001 / SCHD-002 / SCHD-003 */
+.schd {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.schd-seg,
+.schd-nav,
+.schd-badges,
+.schd-actions,
+.schd-when {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
+.schd-nav {
+  justify-content: space-between;
+}
+
+.schd-pill {
+  padding: var(--spacing-4) var(--spacing-12);
+  border: 1px solid var(--semantic-line-neutral-primary);
+  border-radius: var(--radius-full);
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.schd-pill[aria-pressed='true'] {
+  border-color: var(--semantic-line-brand-primary);
+  font-weight: 700;
+}
+
+.schd-filters,
+.schd-section,
+.schd-day {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+}
+
+.schd-section {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.schd-check {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
+.schd-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.schd-error {
+  color: var(--semantic-foreground-negative-primary);
+}
+
+/* Month grid, Sunday first (UI-18). */
+.schd-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.schd-grid-head {
+  text-align: center;
+  font-size: 12px;
+  color: var(--semantic-foreground-neutral-tertiary);
+}
+
+.schd-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 44px;
+  padding: var(--spacing-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-8);
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.schd-cell.is-outside {
+  color: var(--semantic-foreground-neutral-tertiary);
+}
+
+.schd-cell.is-today {
+  font-weight: 700;
+}
+
+.schd-cell[aria-pressed='true'] {
+  border-color: var(--semantic-line-brand-primary);
+}
+
+.schd-dot {
+  min-width: 16px;
+  border-radius: var(--radius-full);
+  background: var(--semantic-background-neutral-secondary);
+  font-size: 11px;
+  text-align: center;
+}
+
+.schd-events,
+.schd-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.schd-events {
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+
+.schd-chip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-8);
+  padding: var(--spacing-8) var(--spacing-12);
+  border: 1px solid var(--semantic-line-neutral-tertiary);
+  border-radius: var(--radius-8);
+  color: inherit;
+  text-decoration: none;
+}
+
+.schd-chip.is-tentative {
+  border-style: dashed;
+}
+
+.schd-chip.is-canceled .schd-chip-title {
+  text-decoration: line-through;
+}
+
+.schd-chip.is-performance {
+  background: var(--semantic-background-neutral-secondary);
+}
+
+.schd-tag,
+.schd-tentative,
+.schd-part {
+  font-size: 12px;
+  color: var(--semantic-foreground-neutral-secondary);
+}
+
+.schd-time {
+  font-variant-numeric: tabular-nums;
+}
+
+.schd-person {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  padding: 0 var(--spacing-8);
+  border-radius: var(--radius-full);
+  background: var(--semantic-background-neutral-secondary);
+  color: inherit;
+  text-decoration: none;
+}
+
+.schd-memo {
+  white-space: pre-wrap;
+}
+
+.schd-fab {
+  position: sticky;
+  bottom: var(--spacing-16);
+  align-self: flex-end;
+  padding: var(--spacing-12) var(--spacing-16);
+  border-radius: var(--radius-full);
+  background: var(--semantic-foreground-brand-primary);
+  color: var(--semantic-background-neutral-primary);
+  text-decoration: none;
+}
