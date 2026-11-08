@@ -52,20 +52,14 @@ export const LOGIN_RESULT_RESTORATION_REQUIRED = 'RESTORATION_REQUIRED'
 
 export const REQUESTED_WITH_HEADER = { 'X-Requested-With': 'XMLHttpRequest' }
 
-export type RawWarning = string | { code?: string; message: string }
+import { parseWarnings, warningText } from './warnings'
 
 /** Assumption: warnings of a successful response live at `data.warnings`. */
 export function extractWarnings(data: unknown): string[] {
   if (typeof data !== 'object' || data === null || !('warnings' in data)) {
     return []
   }
-  const warnings = (data as { warnings: unknown }).warnings
-  if (!Array.isArray(warnings)) return []
-  return warnings.flatMap((w: RawWarning) =>
-    typeof w === 'string'
-      ? [w]
-      : typeof w?.message === 'string'
-        ? [w.message]
-        : [],
+  return parseWarnings((data as { warnings: unknown }).warnings).map(
+    warningText,
   )
 }
