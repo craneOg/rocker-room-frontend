@@ -1,5 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { api } from '../../shared/api/client'
+import { parseWarnings, type ApiWarning } from '../../shared/api/warnings'
 import { performanceKey } from '../performance/api'
 
 // API-105 ~ 115, 153 (Notion API spec). IDs are strings, times are ISO-8601 with +09:00.
@@ -40,17 +41,33 @@ export type ScheduleFull = Schedule & {
 export type Person = { membershipId: string; displayName: string }
 
 /**
- * One warning item. `type` tells them apart: OVERLAP, OVERLAP_OTHER_CLUB, OUT_OF_SEASON and, in
- * API-113 only, check types such as PART_SHORTAGE (all other fields optional).
+ * One warning item (backend-confirmed): `type` plus type-specific fields, `message` only on
+ * OVERLAP_OTHER_CLUB. OVERLAP, OVERLAP_OTHER_CLUB, OUT_OF_SEASON and, in API-113, check types such
+ * as PART_SHORTAGE. Parsed by the shared `parseWarnings`.
  */
-export type ScheduleWarning = {
-  type: string
-  message?: string
+export type ScheduleWarning = ApiWarning & {
   scheduleId?: string
   title?: string
   startAt?: string
   endAt?: string
   participants?: Person[]
+}
+
+const warningsOf = (raw: unknown) => parseWarnings(raw) as ScheduleWarning[]
+
+/** A blocking item of a check: `{type, message}` (backend-confirmed; the type list is open). */
+export type HardError = { type: string; message: string }
+
+/** Reads `hardErrors`; a bare string is still shown as its own message. */
+function hardErrorsOf(raw: unknown): HardError[] {
+  if (!Array.isArray(raw)) return []
+  return raw.flatMap((e: unknown): HardError[] => {
+    if (typeof e === 'string') return e ? [{ type: 'UNKNOWN', message: e }] : []
+    if (typeof e !== 'object' || e === null) return []
+    const r = e as Record<string, unknown>
+    const message = typeof r.message === 'string' ? r.message : ''
+    return [{ type: typeof r.type === 'string' ? r.type : 'UNKNOWN', message }]
+  })
 }
 
 export type ScheduleParticipant = {
@@ -103,6 +120,11 @@ export type CalendarEvent = {
 export type Range = { from: string; to: string }
 
 /** API-114: every club I belong to. TENTATIVE never comes back. */
+const parsed = <T>(r: MutationResult<T>): MutationResult<T> => ({
+  ...r,
+  warnings: warningsOf(r.warnings),
+})
+
 export const getMyCalendar = (
   p: Range & { clubIds?: string[]; includeCanceled?: boolean },
   signal?: AbortSignal,
@@ -187,10 +209,10 @@ export const getConflicts = (
     .get<{ items: ScheduleWarning[] }>(
       `${perfPath(clubId, performanceId)}/schedules/${scheduleId}/conflicts`,
     )
-    .then((r) => r.items)
+    .then((r) => warningsOf(r.items))
 
 export type ValidationResult = {
-  hardErrors: unknown[]
+  hardErrors: HardError[]
   warnings: ScheduleWarning[]
   /** The whole attendee list before saving (E-09). */
   participants: Person[]
@@ -203,11 +225,17 @@ export const validateSchedule = (
   body: ScheduleBody,
   signal?: AbortSignal,
 ) =>
-  api.post<ValidationResult>(
-    `${perfPath(clubId, performanceId)}/schedules/validate`,
-    body,
-    { signal },
-  )
+  api
+    .post<ValidationResult>(
+      `${perfPath(clubId, performanceId)}/schedules/validate`,
+      body,
+      { signal },
+    )
+    .then((r) => ({
+      ...r,
+      hardErrors: hardErrorsOf(r.hardErrors),
+      warnings: warningsOf(r.warnings),
+    }))
 
 /** API-107. */
 export const createSchedule = (
@@ -215,22 +243,29 @@ export const createSchedule = (
   performanceId: string,
   body: ScheduleBody,
 ) =>
-  api.post<MutationResult<ScheduleFull>>(
-    `${perfPath(clubId, performanceId)}/schedules`,
-    body,
-  )
+  api
+    .post<MutationResult<ScheduleFull>>(
+      `${perfPath(clubId, performanceId)}/schedules`,
+      body,
+    )
+    .then(parsed)
 
-/** API-110. It never changes `status` (use confirm / unconfirm for that). */
+/**
+ * API-110. It never changes `status` (use confirm / unconfirm for that).
+ * ponytail: whether the server's PATCH also takes `status` is unconfirmed (backend).
+ */
 export const updateSchedule = (
   clubId: string,
   performanceId: string,
   scheduleId: string,
   body: Omit<ScheduleBody, 'status'> & { version: string },
 ) =>
-  api.patch<MutationResult<ScheduleFull>>(
-    `${perfPath(clubId, performanceId)}/schedules/${scheduleId}`,
-    body,
-  )
+  api
+    .patch<MutationResult<ScheduleFull>>(
+      `${perfPath(clubId, performanceId)}/schedules/${scheduleId}`,
+      body,
+    )
+    .then(parsed)
 
 /** API-111: with warnings the first call is 409 CONFIRMATION_REQUIRED; resend with `confirmed`. */
 export const confirmSchedule = (
@@ -239,10 +274,12 @@ export const confirmSchedule = (
   scheduleId: string,
   body: { version: string; confirmed: boolean },
 ) =>
-  api.post<MutationResult<Schedule>>(
-    `${perfPath(clubId, performanceId)}/schedules/${scheduleId}/confirm`,
-    body,
-  )
+  api
+    .post<MutationResult<Schedule>>(
+      `${perfPath(clubId, performanceId)}/schedules/${scheduleId}/confirm`,
+      body,
+    )
+    .then(parsed)
 
 /** API-153. */
 export const unconfirmSchedule = (
@@ -256,21 +293,29 @@ export const unconfirmSchedule = (
     { version },
   )
 
-/** API-112. The screen has no reason input, so none is sent. */
+/**
+ * API-112. The screen has no reason input, so none is sent.
+ * ponytail: the cancel reason and the conflict lookup of a canceled schedule are unconfirmed (backend).
+ */
 export const cancelSchedule = (
   clubId: string,
   performanceId: string,
   scheduleId: string,
   version: string,
 ) =>
-  api.post<MutationResult<Schedule>>(
-    `${perfPath(clubId, performanceId)}/schedules/${scheduleId}/cancel`,
-    { version },
-  )
+  api
+    .post<MutationResult<Schedule>>(
+      `${perfPath(clubId, performanceId)}/schedules/${scheduleId}/cancel`,
+      { version },
+    )
+    .then(parsed)
 
 export type Choice = { id: string; label: string }
 
-/** API-061 reduced to a choice list: approved teams (SCHD-003 6). */
+/**
+ * API-061 reduced to a choice list: approved teams (SCHD-003 6). Keeps the spec's `items`; the
+ * backend said `content` and will fix the server. ponytail: max `size` unconfirmed.
+ */
 export const listTeamChoices = (clubId: string, performanceId: string) =>
   api
     .get<{ items: { id: string; name: string }[] }>(
@@ -279,7 +324,10 @@ export const listTeamChoices = (clubId: string, performanceId: string) =>
     )
     .then((r): Choice[] => r.items.map((t) => ({ id: t.id, label: t.name })))
 
-/** API-075 reduced to a choice list: candidate and confirmed songs (E-03). */
+/**
+ * API-075 reduced to a choice list: candidate and confirmed songs (E-03).
+ * ponytail: the max `size` (100 asked) and the response key `items` are unconfirmed (backend).
+ */
 export const listSongChoices = (clubId: string, performanceId: string) =>
   api
     .get<{ items: { id: string; title: string }[] }>(

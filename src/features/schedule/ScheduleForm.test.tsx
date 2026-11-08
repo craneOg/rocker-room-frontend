@@ -157,6 +157,23 @@ describe('SCHD-003 ScheduleForm (create)', () => {
     await screen.findByText('정규채 · 밴드 합주 19:00~20:00와 겹쳐요')
   })
 
+  it('a bare-string warning of the save response still reaches the banner', async () => {
+    await openNew({
+      [`POST ${SCH}`]: () =>
+        json(
+          { resource: detailOf().schedule, warnings: ['문자열 경고예요'] },
+          201,
+        ),
+      [`GET ${ONE}`]: () => json(detailOf()),
+      [`GET ${ONE}/conflicts`]: () => json({ items: [] }),
+    })
+    pick('Crane Team')
+    await screen.findByText(T.attendees(2))
+    fireEvent.click(saveButton())
+    await findScreen('SCHD-002')
+    await screen.findByText('문자열 경고예요')
+  })
+
   it('"all participants" hides teams and songs and sends empty lists', async () => {
     const { fetchMock } = await openNew({
       [`POST ${SCH}`]: () =>
@@ -293,17 +310,23 @@ describe('SCHD-003 ScheduleForm (create)', () => {
     expect(callsTo(fetchMock, VALIDATE).length).toBeGreaterThan(0)
   })
 
-  it('hard errors of the check block the save', async () => {
+  it('hard errors of the check ({type, message}) show their message and block the save', async () => {
     await openNew({
       [`POST ${VALIDATE}`]: () =>
         json({
-          hardErrors: [{ message: '시간이 올바르지 않아요' }],
+          hardErrors: [
+            { type: 'SCHEDULE_TARGET_EMPTY', message: '참석 대상이 없습니다.' },
+            { type: 'SOMETHING_NEW', message: '처음 보는 사유예요' },
+            '문자열도 읽어요',
+          ],
           warnings: [],
           participants: [],
         }),
     })
     pick('Crane Team')
-    await screen.findByText('시간이 올바르지 않아요')
+    await screen.findByText('참석 대상이 없습니다.')
+    expect(screen.getByText('처음 보는 사유예요')).toBeTruthy()
+    expect(screen.getByText('문자열도 읽어요')).toBeTruthy()
     expect(saveButton().disabled).toBe(true)
   })
 

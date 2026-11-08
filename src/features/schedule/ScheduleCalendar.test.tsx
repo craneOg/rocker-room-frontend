@@ -261,6 +261,6 @@ describe('SCHD-001 ScheduleCalendar', () => {
         ),
     })
     await findScreen('SCHD-001')
-    await screen.findByText(T.rangeTooLarge)
+    await screen.findByText('일정이 너무 많아요. 기간이나 필터를 줄여 주세요.')
   })
 })

@@ -1,3 +1,4 @@
+import { warningText as sharedWarningText } from '../../shared/api/warnings'
 import { SCHEDULE_COPY as T } from './scheduleCopy'
 import type { ScheduleWarning } from './scheduleApi'
 
@@ -68,12 +69,13 @@ const names = (w: ScheduleWarning) =>
 const span = (w: ScheduleWarning) =>
   w.startAt && w.endAt ? `${clockOf(w.startAt)}~${clockOf(w.endAt)}` : ''
 
-/** The wording of a warning item (SCHD-003 9); other types fall back to the server message. */
+/** The wording of a warning item (SCHD-003 9); other types use the shared wording. */
 export function warningText(w: ScheduleWarning): string {
   if (w.type === 'OVERLAP') return T.overlap(names(w), w.title ?? '', span(w))
-  if (w.type === 'OVERLAP_OTHER_CLUB') return T.overlapOther(names(w), span(w))
+  if (w.type === 'OVERLAP_OTHER_CLUB')
+    return T.overlapOther(names(w), span(w), w.message)
   if (w.type === 'OUT_OF_SEASON') return T.outOfSeason
-  return w.message ?? ''
+  return sharedWarningText(w)
 }
 
 export const warningTexts = (warnings: ScheduleWarning[]) =>

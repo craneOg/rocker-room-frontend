@@ -54,5 +54,26 @@ describe('scheduleBits', () => {
     expect(warningText({ type: 'PART_SHORTAGE', message: '드럼 부족' })).toBe(
       '드럼 부족',
     )
+    // no message: the shared wording builds it from the fields, or a generic line
+    expect(
+      warningText({
+        type: 'PART_SHORTAGE',
+        partName: '드럼',
+        requiredCount: 2,
+        assignedCount: 1,
+      }),
+    ).toBe('드럼 파트가 1명 부족해요 (필요 2명, 현재 1명)')
+    expect(warningText({ type: 'FUTURE_TYPE' })).toBe(
+      '확인이 필요한 항목이 있어요',
+    )
+    expect(
+      warningText({
+        type: 'OVERLAP_OTHER_CLUB',
+        message: '다른 일정이 있어요',
+        startAt: '2026-10-15T19:30:00+09:00',
+        endAt: '2026-10-15T21:00:00+09:00',
+        participants: [{ membershipId: '2', displayName: '임형규' }],
+      }),
+    ).toBe('임형규 · 다른 일정이 있어요 19:30~21:00')
   })
 })

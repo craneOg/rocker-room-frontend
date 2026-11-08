@@ -24,7 +24,8 @@ export const SCHEDULE_COPY = {
   showTentative: '임시 일정 보기',
   empty: '이 기간에 일정이 없어요',
   emptyDay: '일정 없음',
-  rangeTooLarge: '일정이 너무 많아요. 보는 기간을 줄여 주세요.',
+  // RANGE_TOO_LARGE counts results (over 2000 events), not days.
+  rangeTooLarge: '일정이 너무 많아요. 기간이나 필터를 줄여 주세요.',
   addSchedule: '+ 일정',
   tentativeTag: '임시',
   allDay: '종일',
@@ -102,8 +103,8 @@ export const SCHEDULE_COPY = {
   hardErrorsTitle: '저장할 수 없어요',
   overlap: (names: string, title: string, span: string) =>
     `${names} · ${title} ${span}와 겹쳐요`,
-  overlapOther: (names: string, span: string) =>
-    `${names} · 다른 일정 있음 ${span}`,
+  overlapOther: (names: string, span: string, message = '다른 일정 있음') =>
+    `${names} · ${message} ${span}`,
   // UI-19
   outOfSeason: '합주 시즌 밖이라 가능 시간 정보가 없어요. 저장은 할 수 있어요.',
 } as const

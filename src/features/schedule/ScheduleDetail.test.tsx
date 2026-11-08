@@ -138,7 +138,13 @@ describe('SCHD-002 ScheduleDetail', () => {
                   error: {
                     code: 'CONFIRMATION_REQUIRED',
                     message: 'x',
-                    details: [{ message: T.outOfSeason }],
+                    warnings: [
+                      {
+                        type: 'OVERLAP',
+                        title: '밴드 합주',
+                        scheduleId: '402',
+                      },
+                    ],
                   },
                 }),
                 { status: 409 },
@@ -153,7 +159,7 @@ describe('SCHD-002 ScheduleDetail', () => {
     await screen.findByText(T.confirmDialogTitle)
     inDialog(T.confirmDialogAction)
     await screen.findByText(COPY.confirmTitle)
-    expect(screen.getByText(T.outOfSeason)).toBeTruthy()
+    expect(screen.getByText("'밴드 합주' 일정과 시간이 겹쳐요")).toBeTruthy()
     inDialog(COPY.proceed)
     await screen.findByText(T.confirmedToast)
     expect(callsTo(fetchMock, `${ONE}/confirm`)).toHaveLength(2)

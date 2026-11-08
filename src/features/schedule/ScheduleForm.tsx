@@ -183,16 +183,6 @@ function TimeSelect({
   )
 }
 
-const hardErrorText = (e: unknown) => {
-  if (typeof e === 'string') return e
-  if (typeof e === 'object' && e !== null) {
-    const r = e as Record<string, unknown>
-    for (const k of ['message', 'reason', 'field'])
-      if (typeof r[k] === 'string') return r[k]
-  }
-  return T.hardErrorsTitle
-}
-
 function FormBody({
   clubId,
   performanceId,
@@ -488,7 +478,7 @@ function FormBody({
         {hardErrors.length ? (
           <ul className="warning-list">
             {hardErrors.map((e, i) => (
-              <li key={i}>{hardErrorText(e)}</li>
+              <li key={i}>{e.message || T.hardErrorsTitle}</li>
             ))}
           </ul>
         ) : null}
