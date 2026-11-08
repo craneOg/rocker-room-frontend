@@ -287,7 +287,7 @@ export function createPerformanceViewMock() {
         teamApplicationDeadline: null,
         availabilityState: 'CLOSED',
         availabilityDeadline: null,
-        candidateScope: 'PERFORMANCE',
+        candidateScope: 'ALL_PARTICIPANTS',
         candidateLimitPerMember: 3,
         voteMethod: 'APPROVAL',
         voteMaxChoices: null,
