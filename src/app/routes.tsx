@@ -211,6 +211,33 @@ export const routes: RouteObject[] = [
                       return { Component: PerformanceMembers }
                     },
                   },
+                  {
+                    path: `${PERF}/setlist`,
+                    handle: { title: '세트리스트', sub: true },
+                    lazy: async () => {
+                      const { Setlist } =
+                        await import('../features/setlist/Setlist')
+                      return { Component: Setlist }
+                    },
+                  },
+                  {
+                    path: `${PERF}/availability`,
+                    handle: { title: '합주 가능 시간', sub: true },
+                    lazy: async () => {
+                      const { Availability } =
+                        await import('../features/availability/Availability')
+                      return { Component: Availability }
+                    },
+                  },
+                  {
+                    path: `${PERF}/availability/common`,
+                    handle: { title: '공통 가능 시간', sub: true },
+                    lazy: async () => {
+                      const { AvailabilityCommon } =
+                        await import('../features/availability/AvailabilityCommon')
+                      return { Component: AvailabilityCommon }
+                    },
+                  },
                   ...subScreens([
                     [`${PERF}/teams`, 'TEAM-001'],
                     [`${PERF}/teams/apply`, 'TEAM-004'],
@@ -218,10 +245,7 @@ export const routes: RouteObject[] = [
                     [`${PERF}/songs`, 'SONG-001'],
                     [`${PERF}/songs/new`, 'SONG-002'],
                     [`${PERF}/songs/:songId`, 'SONG-003'],
-                    [`${PERF}/setlist`, 'SET-001'],
                     [`${PERF}/auditions/mine`, 'AUDI-004'],
-                    [`${PERF}/availability`, 'AVAIL-001'],
-                    [`${PERF}/availability/common`, 'AVAIL-002'],
                     [`${PERF}/schedules`, 'SCHD-001'],
                     [`${PERF}/schedules/:scheduleId`, 'SCHD-002'],
                   ]),

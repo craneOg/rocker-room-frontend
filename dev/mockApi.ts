@@ -1,7 +1,9 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { createAvailabilityMock } from './availabilityMock.ts'
 import { handlePerformanceForm } from './performanceFormMock.ts'
 import { createPerformancePolicyMock } from './performancePolicyMock.ts'
 import { bodyCache, createPerformanceViewMock } from './performanceViewMock.ts'
+import { createSetlistMock } from './setlistMock.ts'
 
 // Dev-server-only mock backend (`npm run dev:mock`). In-memory state, plain Node handler.
 // Paths and shapes mirror src/shared/api/assumptions.ts. Never imported by src/.
@@ -274,6 +276,8 @@ export function createMockApi() {
   let state = initialState()
   const performancePolicy = createPerformancePolicyMock()
   const perfMock = createPerformanceViewMock()
+  const setlistMock = createSetlistMock()
+  const availabilityMock = createAvailabilityMock()
 
   const hasCookie = (req: IncomingMessage, name: string) =>
     (req.headers.cookie ?? '').split(/;\s*/).includes(`${name}=1`)
@@ -564,6 +568,19 @@ export function createMockApi() {
       })
     )
       return
+
+    // SET-001 / AVAIL-001 / AVAIL-002 (setlist and availability of p1 / p3, everything of p71). Before the view mock.
+    if (signedIn) {
+      const ctx = {
+        req,
+        res,
+        url,
+        path,
+        method,
+        memberships: state.memberships,
+      }
+      if ((await setlistMock(ctx)) || (await availabilityMock(ctx))) return
+    }
 
     if (
       signedIn &&
