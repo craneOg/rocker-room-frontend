@@ -1045,40 +1045,82 @@ describe('SONG-003 officer decisions', () => {
     })
   })
 
-  it('rejects a selected song after showing what is released, with confirmed=true', async () => {
+  it('rejects a selected song through the server confirmation, listing its warnings (9-4)', async () => {
+    let calls = 0
     const { fetchMock } = openSong(PATH, 'CLUB_ADMIN', {
       routes: base(
         { status: 'CONFIRMED', setlistOrder: 1, version: '8' },
+        {},
         {
-          schedules: [
-            {
-              id: '1',
-              eventType: 'PRACTICE',
-              title: '합주',
-              status: 'CONFIRMED',
-              startAt: new Date(Date.now() + 86_400_000)
-                .toISOString()
-                .replace('Z', '+09:00'),
-              endAt: new Date(Date.now() + 90_000_000)
-                .toISOString()
-                .replace('Z', '+09:00'),
-            },
-          ],
+          [`POST ${S}/reject`]: () => {
+            calls++
+            return calls === 1
+              ? new Response(
+                  JSON.stringify({
+                    error: {
+                      code: 'CONFIRMATION_REQUIRED',
+                      message: 'x',
+                      details: [{ reason: 'CONFIRMED_SONG_REJECTION' }],
+                      warnings: [
+                        {
+                          type: 'ASSIGNMENT_RELEASED',
+                          teamId: '7',
+                          setlistOrder: 1,
+                        },
+                        {
+                          type: 'SCHEDULE_LINK_RELEASED',
+                          scheduleIds: ['701'],
+                        },
+                      ],
+                    },
+                  }),
+                  { status: 409 },
+                )
+              : json({})
+          },
         },
-        { [`POST ${S}/reject`]: () => json({}) },
       ),
     })
     await click(T.actionReject)
     await screen.findByText(T.rejectConfirmedTitle)
-    expect(screen.getByText(T.impactTeamOrder)).toBeTruthy()
-    expect(screen.getByText(T.impactSchedules(1))).toBeTruthy()
-    expect(screen.getByText(T.impactSessions)).toBeTruthy()
+    // The sheet itself lists nothing: the server's warnings are the one list.
+    expect(screen.queryByText(T.impactTeamOrder)).toBeNull()
     await inDialog(T.actionReject)
+    await screen.findByText('담당 팀 배정과 곡 순서가 해제돼요')
+    expect(screen.getByText('연결된 일정 1개가 해제돼요')).toBeTruthy()
+    fireEvent.click(await screen.findByRole('button', { name: COPY.proceed }))
     await screen.findByText(T.rejectDone)
-    expect(body(fetchMock, `${S}/reject`)).toEqual({
+    const posts = callsTo(fetchMock, `${S}/reject`).filter(
+      ([, i]) => i?.method === 'POST',
+    )
+    expect(posts).toHaveLength(2)
+    expect(JSON.parse(String(posts[0]?.[1]?.body))).toEqual({ version: '8' })
+    expect(JSON.parse(String(posts[1]?.[1]?.body))).toEqual({
       version: '8',
       confirmed: true,
     })
+  })
+
+  it('sends the reason only in a locked performance, the note always', async () => {
+    const { fetchMock } = openSong(PATH, 'CLUB_ADMIN', {
+      routes: base(
+        { version: '8' },
+        {},
+        { [`POST ${S}/reject`]: () => json({}) },
+      ),
+    })
+    await click(T.actionReject)
+    fireEvent.change(
+      await screen.findByRole('textbox', { name: T.confirmReason }),
+      {
+        target: { value: '난이도' },
+      },
+    )
+    await inDialog(T.actionReject)
+    await screen.findByText(T.rejectDone)
+    const sent = body(fetchMock, `${S}/reject`) as Record<string, unknown>
+    expect(sent.decisionNote).toBe('난이도')
+    expect('reason' in sent).toBe(false)
   })
 
   it('answers a CONFIRMATION_REQUIRED of the server with the confirmation and repeats the request', async () => {

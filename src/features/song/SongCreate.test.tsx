@@ -202,6 +202,31 @@ describe('SONG-002 as a member', () => {
     expect(screen.getAllByText(T.duplicateWarning('Creep'))).toHaveLength(1)
   })
 
+  it('shows another warning type with the shared sentence, not as a duplicate', async () => {
+    openSong(PATH, 'MEMBER', {
+      routes: routes({
+        [`POST ${SONGS}`]: () =>
+          created([
+            { type: 'PART_NOT_REGISTERED', membershipId: '1', partId: '4' },
+          ]),
+      }),
+    })
+    await type(T.fieldTitle, 'Creep')
+    await submit()
+    await findScreen('SONG-001')
+    await screen.findByText('등록하지 않은 파트로 지정돼요')
+    await screen.findByText(T.proposed)
+    expect(screen.queryByText(T.duplicateWarning('Creep'))).toBeNull()
+  })
+
+  it('is closed for a member when the candidate feature is disabled', async () => {
+    openSong(PATH, 'MEMBER', {
+      routes: routes(),
+      policy: { candidateState: 'DISABLED' },
+    })
+    await screen.findByText(T.createClosed)
+  })
+
   it('is closed for a non-participant, a closed feature and a late proposal', async () => {
     openSong(PATH, 'MEMBER', { routes: routes(), me: null })
     await screen.findByText(T.createClosed)
@@ -229,7 +254,7 @@ describe('SONG-002 scope team', () => {
 
   it('makes a member pick one of the own teams when the scope is per team', async () => {
     const { fetchMock } = openSong(PATH, 'MEMBER', {
-      policy: { candidateScope: 'TEAM' },
+      policy: { candidateScope: 'TEAM_MEMBERS' },
       me: mine(['7', 'Crane Team'], ['8', 'Moon Team']),
       routes: routes(),
     })
@@ -253,7 +278,7 @@ describe('SONG-002 scope team', () => {
 
   it('picks the only team on its own', async () => {
     const { fetchMock } = openSong(PATH, 'MEMBER', {
-      policy: { candidateScope: 'TEAM' },
+      policy: { candidateScope: 'TEAM_MEMBERS' },
       me: mine(['7', 'Crane Team']),
       routes: routes(),
     })
@@ -269,7 +294,7 @@ describe('SONG-002 scope team', () => {
 
   it('cannot propose without a team in a per-team performance', async () => {
     openSong(PATH, 'MEMBER', {
-      policy: { candidateScope: 'TEAM' },
+      policy: { candidateScope: 'TEAM_MEMBERS' },
       me: mine(),
       routes: routes(),
     })
@@ -296,7 +321,7 @@ describe('SONG-002 scope team', () => {
 
   it('fixes the team when opened from a team application', async () => {
     const { fetchMock } = openSong(`${PATH}?teamId=8`, 'MEMBER', {
-      policy: { candidateScope: 'TEAM' },
+      policy: { candidateScope: 'TEAM_MEMBERS' },
       me: mine(['7', 'Crane Team'], ['8', 'Moon Team']),
       routes: routes(),
     })
@@ -342,7 +367,7 @@ describe('SONG-002 as an officer', () => {
 
   it('requires a team in a per-team performance', async () => {
     openSong(PATH, 'CLUB_ADMIN', {
-      policy: { candidateScope: 'TEAM' },
+      policy: { candidateScope: 'TEAM_MEMBERS' },
       routes: routes(),
     })
     await type(T.fieldTitle, '곡')
@@ -391,6 +416,14 @@ describe('SONG-002 as an officer', () => {
       status: 'CONFIRMED',
       assignedTeamId: null,
     })
+  })
+
+  it('lets an officer register while the candidate feature is disabled', async () => {
+    openSong(PATH, 'CLUB_ADMIN', {
+      routes: routes(),
+      policy: { candidateState: 'DISABLED' },
+    })
+    await screen.findByRole('textbox', { name: T.fieldTitle })
   })
 
   it('can register in a draft performance but not in a finished one', async () => {

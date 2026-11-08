@@ -49,8 +49,8 @@ export function SongCreate() {
     queryFn: () => listTeams(clubId, performanceId),
     enabled: admin,
   })
-  // ponytail: the API leaves `candidateScope` as "enum"; the team value is assumed to be TEAM (same as PERF-004).
-  const teamScope = policy?.candidateScope === 'TEAM'
+  // candidateScope is ALL_PARTICIPANTS or TEAM_MEMBERS (backend-confirmed).
+  const teamScope = policy?.candidateScope === 'TEAM_MEMBERS'
   // Scope team choices: a member picks among own teams, an officer among the live teams.
   const teamChoices = admin
     ? (teams.data ?? [])

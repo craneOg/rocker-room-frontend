@@ -52,6 +52,7 @@ export function PlayerPicker({
   const team = useTeamMembers(clubId, performanceId, teamId)
   const [tab, setTab] = useState<'team' | 'all'>(teamId ? 'team' : 'all')
   // The song's playability answers (API-089; officers see the names).
+  // ponytail: reading a selected song's answers through API-089 is not confirmed by the server yet.
   const answers = useQuery({
     queryKey: [...songKey(clubId, performanceId, songId ?? ''), 'eval-picker'],
     queryFn: () => getEvaluations(clubId, performanceId, songId ?? ''),

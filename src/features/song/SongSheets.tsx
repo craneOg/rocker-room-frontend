@@ -271,11 +271,12 @@ function DecideSheet(p: SheetProps & { kind: 'reject' | 'unconfirm' }) {
     () =>
       kind === 'unconfirm'
         ? unconfirmSong(clubId, performanceId, songId, body())
-        : // The sheet shows the impact list; confirmed=true follows the user's own confirmation (CONFIRMED_SONG_REJECTION).
+        : // A selected song answers CONFIRMATION_REQUIRED (CONFIRMED_SONG_REJECTION) with what would be released: the
+          // shared dialog lists those warnings (9-4), and "계속 진행" repeats the call with confirmed=true.
           withConfirmation((confirmed) =>
             rejectSong(clubId, performanceId, songId, {
               ...body(),
-              ...(confirmedSong || confirmed ? { confirmed: true } : {}),
+              ...(confirmed ? { confirmed: true } : {}),
             }),
           ),
     kind === 'unconfirm' ? T.unconfirmDone : T.rejectDone,
@@ -296,7 +297,7 @@ function DecideSheet(p: SheetProps & { kind: 'reject' | 'unconfirm' }) {
       onClose={p.onClose}
       onSubmit={() => run.mutate(undefined)}
     >
-      {confirmedSong ? <ImpactList detail={detail} /> : null}
+      {kind === 'unconfirm' ? <ImpactList detail={detail} /> : null}
       <ReasonInput
         label={locked ? T.lockedReason : T.confirmReason}
         placeholder={
@@ -552,7 +553,7 @@ function TeamSheet(p: SheetProps) {
         ...(locked ? { reason: reason.trim() } : {}),
       }),
     T.teamChanged,
-    (r) => warningTexts((r as { warnings?: never[] }).warnings),
+    (r) => warningTexts((r as { warnings?: unknown }).warnings),
   )
   return (
     <ActionModal

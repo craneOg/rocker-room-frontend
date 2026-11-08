@@ -218,8 +218,8 @@ export function SongList() {
   const q = useDeferredValue(input.trim())
   const [sheet, setSheet] = useState<{ action: SheetAction; songId: string }>()
 
-  // ponytail: the API leaves `candidateScope` as "enum"; the team value is assumed to be TEAM (same as PERF-004).
-  const teamScope = policy?.candidateScope === 'TEAM'
+  // candidateScope is ALL_PARTICIPANTS or TEAM_MEMBERS (backend-confirmed).
+  const teamScope = policy?.candidateScope === 'TEAM_MEMBERS'
   const teams = useQuery({
     queryKey: teamsKey(clubId, performanceId),
     queryFn: () => listTeams(clubId, performanceId),

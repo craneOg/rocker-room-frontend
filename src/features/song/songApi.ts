@@ -1,4 +1,5 @@
 import { api } from '../../shared/api/client'
+import type { ApiWarning } from '../../shared/api/warnings'
 import { performanceKey } from '../performance/api'
 
 // API-075..086, 089..099, 156..158 (Notion API spec) plus the two team reads of API-061 / 154 that
@@ -142,21 +143,10 @@ export const getSong = (
   songId: string,
 ) => api.get<SongDetail>(songPath(clubId, performanceId, songId))
 
-export type Warning =
-  | {
-      type: 'PART_SHORTAGE' | 'PART_EXCESS'
-      partName: string
-      requiredCount: number
-      assignedCount: number
-    }
-  | { type: 'SONG_COUNT_EXCEEDED'; displayName: string; songCount: number }
-  | { type: string }
-  | string
-
 /** Write result of API-076 / 081 / 082 / 084 / 085. */
 export type MutationResult = {
   resource: { id: string; status: SongStatus; version: string }
-  warnings: Warning[]
+  warnings: ApiWarning[]
 }
 
 export type CreateSongBody = {

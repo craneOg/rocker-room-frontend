@@ -2,6 +2,7 @@ import { useQuery, type QueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { isClubAdmin, useSession } from '../../shared/auth/session'
+import { parseWarnings, warningText } from '../../shared/api/warnings'
 import { warningsStore } from '../../shared/ui/feedbackBus'
 import { getMember, listParts } from '../club/api'
 import { getPerformance, performanceKey } from '../performance/api'
@@ -14,7 +15,7 @@ import {
   type MyParticipation,
 } from '../performance/viewApi'
 import { SONG_COPY as T } from './songCopy'
-import type { SongCard, SongStatus, Warning } from './songApi'
+import type { SongCard, SongStatus } from './songApi'
 import type { SheetAction } from './SongSheets'
 
 /** A feature is usable while OPEN and before its deadline (G-10). */
@@ -42,6 +43,7 @@ export function useSongContext(clubId: string, performanceId: string) {
   })
   const membershipId = session.memberships.find((m) => m.clubId === clubId)?.id
   // The requester's own registered parts (the default parts of a playability answer).
+  // ponytail: the default-part rule is not confirmed by the server yet.
   const self = useQuery({
     queryKey: ['club-member', clubId, membershipId],
     queryFn: () => getMember(clubId, membershipId ?? ''),
@@ -106,32 +108,46 @@ export function inputRights(
   }
 }
 
-/** Texts of the post-write warnings (COM-003 4). A song count is only shown from 3 songs on (UI-23). */
-export function warningTexts(
-  warnings: Warning[] | undefined,
-  duplicateTitle?: string,
-): string[] {
-  return (warnings ?? []).flatMap((w): string[] => {
-    if (typeof w === 'object' && w !== null) {
-      if (w.type === 'PART_SHORTAGE' && 'partName' in w)
-        return [T.warnShortage(w.partName, w.requiredCount - w.assignedCount)]
-      if (w.type === 'PART_EXCESS' && 'partName' in w)
-        return [T.warnExcess(w.partName, w.assignedCount - w.requiredCount)]
-      if (w.type === 'SONG_COUNT_EXCEEDED' && 'songCount' in w)
-        return w.songCount >= 3
-          ? [T.warnSongCount(w.displayName, w.songCount)]
-          : []
+/**
+ * Texts of the post-write warnings (COM-003 4). A song count is only shown from 3 songs on (UI-23);
+ * DUPLICATE_SONG names the song just saved; any other type uses the shared sentence.
+ */
+export function warningTexts(raw: unknown, savedTitle?: string): string[] {
+  return parseWarnings(raw).flatMap((w): string[] => {
+    switch (w.type) {
+      case 'PART_SHORTAGE':
+      case 'PART_EXCESS': {
+        const need = Number(w.requiredCount)
+        const have = Number(w.assignedCount)
+        const name = String(w.partName ?? '')
+        return Number.isFinite(need) && Number.isFinite(have)
+          ? [
+              w.type === 'PART_SHORTAGE'
+                ? T.warnShortage(name, need - have)
+                : T.warnExcess(name, have - need),
+            ]
+          : [warningText(w)]
+      }
+      case 'SONG_COUNT_EXCEEDED':
+        return typeof w.songCount === 'number'
+          ? w.songCount >= 3
+            ? [T.warnSongCount(String(w.displayName ?? ''), w.songCount)]
+            : []
+          : [warningText(w)]
+      case 'DUPLICATE_SONG':
+        return [
+          savedTitle === undefined
+            ? warningText(w)
+            : T.duplicateWarning(savedTitle),
+        ]
+      default:
+        return [warningText(w)]
     }
-    // ponytail: the spec leaves the duplicate-song warning's shape open; anything else on a create is read as that warning.
-    return duplicateTitle === undefined
-      ? []
-      : [T.duplicateWarning(duplicateTitle)]
   })
 }
 
-export const showWarnings = (texts: string[]) => {
-  if (texts.length > 0) warningsStore.set(texts)
-}
+/** Replaces the banner (also with nothing: the shared success handler may have put its own sentences there). */
+export const showWarnings = (texts: string[]) => warningsStore.set(texts)
 
 /**
  * Warnings handed over by `navigate(to, { state: { warnings } })` after a write that leaves its
@@ -179,6 +195,7 @@ export function useParticipants(clubId: string, performanceId: string) {
   })
 }
 
+// ponytail: the team-members permission for the 담당 팀원 tab is not confirmed by the server yet.
 /** Membership IDs of the assigned team (for the 지원 badge and the 담당 팀원 tab); empty without a team. */
 export function useTeamMembers(
   clubId: string,

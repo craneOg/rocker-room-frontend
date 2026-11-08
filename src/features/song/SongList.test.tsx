@@ -142,7 +142,7 @@ describe('SONG-001 list', () => {
 
   it('sorts, searches and filters by team', async () => {
     const { fetchMock } = openSong(PATH, 'MEMBER', {
-      policy: { candidateScope: 'TEAM' },
+      policy: { candidateScope: 'TEAM_MEMBERS' },
       routes: {
         ...list(),
         [`GET ${TEAMS}`]: () =>
@@ -405,6 +405,23 @@ describe('SONG-001 bottom buttons', () => {
     expect((await link(T.statusBoardButton)).getAttribute('href')).toBe(
       '/clubs/10/performances/31/songs/status',
     )
+  })
+
+  it('keeps register for an officer and hides propose for a member when candidates are disabled', async () => {
+    openSong(PATH, 'CLUB_ADMIN', {
+      routes: list(),
+      policy: { candidateState: 'DISABLED' },
+    })
+    await link(T.registerButton)
+  })
+
+  it('hides propose from a member when candidates are disabled', async () => {
+    openSong(PATH, 'MEMBER', {
+      routes: list(),
+      policy: { candidateState: 'DISABLED' },
+    })
+    await screen.findByText(/꿈의 아이/)
+    expect(screen.queryByRole('link', { name: T.proposeButton })).toBeNull()
   })
 
   it('renames the officer button for a locked performance', async () => {

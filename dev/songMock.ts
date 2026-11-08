@@ -585,7 +585,7 @@ export function createSongMock() {
         songs = [...songs, created]
         renumber(pid)
         const result = resource(created)
-        if (dup) result.warnings = [{ type: 'DUPLICATE_SONG', songId: dup.id }]
+        if (dup) result.warnings = [{ type: 'DUPLICATE_SONG' }]
         ok(res, result, 201)
         return true
       }
@@ -742,7 +742,14 @@ export function createSongMock() {
             code: 'CONFIRMATION_REQUIRED',
             message: 'CONFIRMATION_REQUIRED',
             details: [{ reason: 'CONFIRMED_SONG_REJECTION' }],
-            warnings: [{ type: 'ASSIGNMENT_RELEASED', songId: s.id }],
+            warnings: [
+              {
+                type: 'ASSIGNMENT_RELEASED',
+                teamId: s.assignedTeamId,
+                setlistOrder: s.order,
+              },
+              { type: 'SCHEDULE_LINK_RELEASED', scheduleIds: ['sc1'] },
+            ],
           },
         })
         return true
