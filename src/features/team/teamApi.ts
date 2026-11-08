@@ -37,6 +37,10 @@ export type TeamCard = {
   candidateSongCount: number | null
   isMine: boolean
   version: string
+  /** Optional: the server sends them, the Notion card example does not. */
+  submittedAt?: string | null
+  decidedAt?: string | null
+  createdAt?: string | null
 }
 
 export type TeamPage = {
@@ -109,7 +113,17 @@ export type TeamBrief = {
   version: string
 }
 
-export type MutationResult = { resource: TeamBrief; warnings: string[] }
+/** Raw `warnings` of a write: parse them with parseWarnings (shared/api/warnings). */
+export type MutationResult = {
+  /** Notion spec shape. The backend answers a creation as `team` (both are read). */
+  resource?: TeamBrief
+  team?: TeamBrief
+  warnings?: unknown
+}
+
+/** The Team of a write answer: `team`, `resource`, or the Team itself (API-064 / 068). */
+export const briefOf = (r: MutationResult | TeamBrief): TeamBrief =>
+  'id' in r ? r : (r.team ?? (r.resource as TeamBrief))
 
 /** API-062 / 064 found the name already used in the performance (T-07). */
 export class TeamNameTakenError extends Error {
@@ -119,12 +133,33 @@ export class TeamNameTakenError extends Error {
   }
 }
 
-// ponytail: the spec names no error code for a duplicate team name; DUPLICATE is assumed.
+// ponytail: the spec and the server disagree (spec: 409 STATE_CONFLICT INELIGIBLE_TEAM_MEMBER, server:
+// 422 RULE_VIOLATION MEMBER_NOT_ELIGIBLE); a server fix is to be requested, so both names are accepted.
+export const INELIGIBLE_MEMBER_REASONS = [
+  'MEMBER_NOT_ELIGIBLE',
+  'INELIGIBLE_TEAM_MEMBER',
+]
+
+/** A member who cannot join a team (graduated, guest, ...), whichever name the server uses. */
+export const isIneligibleMember = (e: unknown) =>
+  (isApiError(e, 'RULE_VIOLATION') || isApiError(e, 'STATE_CONFLICT')) &&
+  e.details.some(
+    (d) =>
+      d.reason !== undefined && INELIGIBLE_MEMBER_REASONS.includes(d.reason),
+  )
+
+// ponytail: server: 409 DUPLICATE reason DUPLICATE_TEAM_NAME; a DUPLICATE without a reason (the
+// earlier assumption) is a name clash too. DUPLICATE_TEAM_MEMBER is not.
 async function nameChecked<T>(run: () => Promise<T>): Promise<T> {
   try {
     return await run()
   } catch (e) {
-    if (isApiError(e, 'DUPLICATE')) throw new TeamNameTakenError()
+    if (
+      isApiError(e, 'DUPLICATE') &&
+      (e.details.length === 0 ||
+        e.details.some((d) => d.reason === 'DUPLICATE_TEAM_NAME' || !d.reason))
+    )
+      throw new TeamNameTakenError()
     throw e
   }
 }
@@ -167,8 +202,9 @@ export const getDefaultTeamName = async (
 
 export type NewTeam = {
   name: string
+  /** A member's own request may list the requester too (a `partId` then sets their part at once). */
   members: { membershipId: string; partId: string | null }[]
-  /** Officers only. */
+  /** Officers only: a regular member's team always has the requester as leader. */
   leaderMembershipId?: string | null
 }
 
@@ -209,6 +245,34 @@ export const addTeamMember = (
     `${teamsPath(clubId, performanceId)}/${teamId}/members`,
     body,
   )
+
+/**
+ * API-065 takes one person per request and every write bumps the team version, so the picks go one
+ * by one, each with the version the last answer carried. Answers `{warnings}` (all of them) so the
+ * global success handler can show them.
+ */
+export async function addTeamMembers(
+  clubId: string,
+  performanceId: string,
+  teamId: string,
+  version: string,
+  picks: { membershipId: string; partId: string | null }[],
+  reason?: string,
+) {
+  const warnings: unknown[] = []
+  let next = version
+  for (const p of picks) {
+    const r = await addTeamMember(clubId, performanceId, teamId, {
+      version: next,
+      membershipId: p.membershipId,
+      partId: p.partId,
+      reason,
+    })
+    next = versionOf(r)
+    if (Array.isArray(r.warnings)) warnings.push(...r.warnings)
+  }
+  return { warnings }
+}
 
 /** API-066. */
 export const changeMemberPart = (
@@ -291,5 +355,4 @@ export const teamKey = (
   teamId: string,
 ) => [...teamsKey(clubId, performanceId), 'detail', teamId] as const
 
-export const versionOf = (r: MutationResult | TeamBrief) =>
-  'resource' in r ? r.resource.version : r.version
+export const versionOf = (r: MutationResult | TeamBrief) => briefOf(r).version

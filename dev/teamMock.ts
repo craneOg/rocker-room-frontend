@@ -21,6 +21,7 @@ type Team = {
   leader: string | null
   members: Member[]
   version: number
+  submittedAt: string | null
 }
 
 const NAMES = ['명혜성', '송예림', '정규채', '김도윤', '이서연', '박지호']
@@ -37,9 +38,16 @@ const nameOf = (membershipId: string) =>
 // The same roster as the performance view mock: member i owns the first (i % 4) + 1 parts.
 const registered = (membershipId: string) =>
   PARTS.slice(0, (indexOf(membershipId) % 4) + 1).map((p) => p.id)
-// u5 asked to take part through a team application (APPLIED); everyone else is confirmed.
-const participation = (membershipId: string) =>
-  membershipId === 'u5' ? 'APPLIED' : 'APPROVED'
+// Participants of the sample performances: u5 asked through a team application (APPLIED), the
+// confirmed ones are APPROVED, anyone else joins a team as a 참여 희망 (APPLIED).
+const APPROVED_IN: Record<string, string[]> = {
+  p1: ['u1', 'u3', 'u4', 'u6'],
+  p3: ['u2', 'u3'],
+}
+const participation = (pid: string, membershipId: string) =>
+  (APPROVED_IN[pid] ?? []).includes(membershipId) ? 'APPROVED' : 'APPLIED'
+const isoDay = (n: number) =>
+  new Date(Date.now() + n * 86_400_000).toISOString().replace('Z', '+09:00')
 
 let seq = 100
 const mk = (
@@ -66,6 +74,7 @@ const mk = (
     partId,
   })),
   version: 1,
+  submittedAt: null,
   ...extra,
 })
 
@@ -91,11 +100,22 @@ const initial = (): Team[] => [
     ['u1', 'p1'],
     ['u2', 'p2'],
   ]),
-  mk('t4', 'p1', '4팀', 'SUBMITTED', 'SELF', 'u5', [
-    ['u5', 'p1'],
-    ['u6', null],
-  ]),
-  mk('t5', 'p1', '5팀', 'SUBMITTED', 'SELF', 'u4', [['u4', 'p4']]),
+  mk(
+    't4',
+    'p1',
+    '4팀',
+    'SUBMITTED',
+    'SELF',
+    'u5',
+    [
+      ['u5', 'p1'],
+      ['u6', null],
+    ],
+    { submittedAt: isoDay(-1) },
+  ),
+  mk('t5', 'p1', '5팀', 'SUBMITTED', 'SELF', 'u4', [['u4', 'p4']], {
+    submittedAt: isoDay(-3),
+  }),
   mk('t6', 'p1', '6팀', 'REJECTED', 'SELF', 'u1', [['u1', 'p1']], {
     rejectReason: '편성이 맞지 않아요.',
   }),
@@ -163,8 +183,9 @@ const brief = (t: Team) => ({
   leaderMembershipId: t.leader,
   version: String(t.version),
 })
-const result = (t: Team, warnings: string[] = []) => ({
-  resource: brief(t),
+// The backend answers a creation as `team`; the other writes follow the Notion spec (`resource`).
+const result = (t: Team, warnings: object[] = [], key = 'resource') => ({
+  [key]: brief(t),
   warnings,
   effects: {
     approvedPerformanceMemberIds: [],
@@ -231,6 +252,9 @@ export async function handleTeams(ctx: MockCtx): Promise<boolean> {
     candidateSongCount:
       admin || mine(t) ? (['t1', 't3', 't4'].includes(t.id) ? 1 : 0) : null,
     isMine: mine(t),
+    submittedAt: t.submittedAt,
+    decidedAt: null,
+    createdAt: isoDay(-5),
   })
 
   if (rest === '' && method === 'GET') {
@@ -287,7 +311,11 @@ export async function handleTeams(ctx: MockCtx): Promise<boolean> {
     )
   const nameOk = (v: unknown): v is string =>
     typeof v === 'string' && v.trim().length >= 1 && v.length <= 100
-  const bad = () => fail(res, 400, 'VALIDATION_ERROR', 'INVALID_VALUE')
+  const bad = (reason = 'INVALID_VALUE') =>
+    fail(res, 400, 'VALIDATION_ERROR', reason)
+  // Server reasons: 400 NAME_REQUIRED / REASON_REQUIRED, 409 DUPLICATE DUPLICATE_TEAM_NAME,
+  // 422 RULE_VIOLATION MEMBER_NOT_ELIGIBLE (the spec calls it INELIGIBLE_TEAM_MEMBER).
+  const eligible = (membershipId: string) => /^u\d+$/.test(membershipId)
   const roster = (membershipId: string, partId: string | null) => ({
     id: `tm${seq++}`,
     membershipId,
@@ -299,9 +327,10 @@ export async function handleTeams(ctx: MockCtx): Promise<boolean> {
         (x) =>
           x.partId !== null && !registered(x.membershipId).includes(x.partId),
       )
-      .map(
-        (x) => `${nameOf(x.membershipId)}님의 대표 파트가 등록 파트에 없어요.`,
-      )
+      .map((x) => ({
+        type: 'PART_NOT_REGISTERED',
+        membershipId: x.membershipId,
+      }))
 
   if (rest === '' && method === 'POST') {
     if (
@@ -309,14 +338,25 @@ export async function handleTeams(ctx: MockCtx): Promise<boolean> {
       (!admin && perfStatus !== 'ACTIVE')
     )
       return fail(res, 403, 'FORBIDDEN')
-    if (!nameOk(body.name)) return bad()
+    if (!nameOk(body.name))
+      return bad(
+        typeof body.name === 'string' && body.name.trim() === ''
+          ? 'NAME_REQUIRED'
+          : 'INVALID_VALUE',
+      )
     if (taken(body.name.trim()))
-      return fail(res, 409, 'DUPLICATE', 'TEAM_NAME_TAKEN')
+      return fail(res, 409, 'DUPLICATE', 'DUPLICATE_TEAM_NAME')
     const people = Array.isArray(body.members)
       ? (body.members as { membershipId: string; partId: string | null }[])
       : []
+    if (people.some((p) => !eligible(p.membershipId)))
+      return fail(res, 422, 'RULE_VIOLATION', 'MEMBER_NOT_ELIGIBLE')
+    if (new Set(people.map((p) => p.membershipId)).size !== people.length)
+      return bad('DUPLICATE_MEMBER')
     const members = people.map((p) => roster(p.membershipId, p.partId ?? null))
-    if (!admin) members.unshift(roster(self, null))
+    // The creator of a member's team is added as a member (and the leader) by the server.
+    if (!admin && !members.some((x) => x.membershipId === self))
+      members.unshift(roster(self, null))
     const leader = admin
       ? typeof body.leaderMembershipId === 'string' &&
         members.some((x) => x.membershipId === body.leaderMembershipId)
@@ -334,9 +374,10 @@ export async function handleTeams(ctx: MockCtx): Promise<boolean> {
       leader,
       members,
       version: 1,
+      submittedAt: null,
     }
     teams.push(team)
-    send(res, 201, { data: result(team, warn(members)) })
+    send(res, 201, { data: result(team, warn(members), 'team') })
     return true
   }
 
@@ -389,7 +430,7 @@ export async function handleTeams(ctx: MockCtx): Promise<boolean> {
           isLeader: x.membershipId === team.leader,
           isRegisteredPart:
             x.partId === null || registered(x.membershipId).includes(x.partId),
-          participationStatus: participation(x.membershipId),
+          participationStatus: participation(pid, x.membershipId),
         })),
         songs:
           team.id === 't1'
@@ -432,7 +473,7 @@ export async function handleTeams(ctx: MockCtx): Promise<boolean> {
       return false
     }
     if (!reasonOk) {
-      bad()
+      bad('REASON_REQUIRED')
       return false
     }
     if (String(body.version) !== String(team.version)) {
@@ -441,7 +482,7 @@ export async function handleTeams(ctx: MockCtx): Promise<boolean> {
     }
     return true
   }
-  const done = (status = 200, warnings: string[] = []) => {
+  const done = (status = 200, warnings: object[] = []) => {
     team.version++
     send(res, status, { data: result(team, warnings) })
     return true
@@ -451,7 +492,7 @@ export async function handleTeams(ctx: MockCtx): Promise<boolean> {
     if (!check()) return true
     if (!nameOk(body.name)) return bad()
     if (taken(body.name.trim(), team.id))
-      return fail(res, 409, 'DUPLICATE', 'TEAM_NAME_TAKEN')
+      return fail(res, 409, 'DUPLICATE', 'DUPLICATE_TEAM_NAME')
     team.name = body.name.trim()
     team.version++
     send(res, 200, { data: brief(team) })
@@ -460,6 +501,8 @@ export async function handleTeams(ctx: MockCtx): Promise<boolean> {
   if (tail === 'members' && method === 'POST') {
     if (!check()) return true
     const id = String(body.membershipId)
+    if (!eligible(id))
+      return fail(res, 422, 'RULE_VIOLATION', 'MEMBER_NOT_ELIGIBLE')
     if (team.members.some((x) => x.membershipId === id))
       return fail(res, 409, 'DUPLICATE', 'DUPLICATE_TEAM_MEMBER')
     const added = roster(
@@ -518,11 +561,10 @@ export async function handleTeams(ctx: MockCtx): Promise<boolean> {
       return fail(res, 409, 'VERSION_CONFLICT')
     if (!move.from.includes(team.status))
       return fail(res, 409, 'STATE_CONFLICT', 'INVALID_STATE')
-    if (
-      tail === 'submit' &&
-      (team.leader === null || team.members.length === 0)
-    )
-      return fail(res, 409, 'STATE_CONFLICT', 'INELIGIBLE_TEAM_MEMBER')
+    if (tail === 'submit' && team.leader === null)
+      return fail(res, 422, 'RULE_VIOLATION', 'LEADER_REQUIRED')
+    if (tail === 'submit' && team.members.length === 0)
+      return fail(res, 422, 'RULE_VIOLATION', 'MEMBERS_REQUIRED')
     if (tail === 'withdraw' && team.status === 'APPROVED' && !admin)
       return fail(res, 403, 'FORBIDDEN')
     if (tail === 'withdraw' && team.isDefault)
@@ -540,6 +582,13 @@ export async function handleTeams(ctx: MockCtx): Promise<boolean> {
           error: {
             code: 'CONFIRMATION_REQUIRED',
             message: 'CONFIRMATION_REQUIRED',
+            warnings: [
+              {
+                type: 'CONFIRMED_SONGS_IN_TEAM_SCOPE',
+                message:
+                  '선정된 곡 1곡이 이 팀 범위예요. 곡은 그대로 남고 담당 팀을 다시 정해야 해요.',
+              },
+            ],
             details: [
               {
                 reason: 'CONFIRMED_SONGS_IN_TEAM_SCOPE',
@@ -554,6 +603,7 @@ export async function handleTeams(ctx: MockCtx): Promise<boolean> {
       team.rejectReason = body.reason
     }
     team.status = move.to
+    if (tail === 'submit') team.submittedAt = isoDay(0)
     return done()
   }
   return fail(res, 404, 'NOT_FOUND')

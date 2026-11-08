@@ -12,6 +12,8 @@ import { TEAM_COPY as T } from './teamCopy'
 import {
   body,
   click,
+  created,
+  reasoned,
   clickLast,
   mutation,
   open,
@@ -79,6 +81,20 @@ describe('TEAM-003', () => {
     await screen.findByText(T.created)
   })
 
+  it('opens the team of a creation answered as `team`', async () => {
+    const { router } = openCreate({
+      [`POST ${TEAMS}`]: () => created({ status: 'APPROVED' }),
+      [`GET ${TEAMS}/201`]: () => teamDetail(),
+    })
+    await nameInput()
+    await click(T.create)
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(
+        '/clubs/10/performances/31/teams/201',
+      ),
+    )
+  })
+
   it('creates without members and without a leader', async () => {
     const { fetchMock } = openCreate({
       [`POST ${TEAMS}`]: () => mutation('1', { status: 'APPROVED' }, [], 201),
@@ -121,12 +137,33 @@ describe('TEAM-003', () => {
     ).toHaveLength(0)
   })
 
-  it('shows a duplicate name under the input and stays on the form', async () => {
+  it('shows the server duplicate reason under the input and stays on the form', async () => {
+    openCreate({
+      [`POST ${TEAMS}`]: () =>
+        reasoned('DUPLICATE', 409, 'DUPLICATE_TEAM_NAME'),
+    })
+    await nameInput()
+    await click(T.create)
+    await screen.findByText(`* ${T.nameTaken}`)
+    expect(screen.getByRole('button', { name: T.create })).toBeTruthy()
+  })
+
+  it('shows a reasonless duplicate under the input too', async () => {
     openCreate({ [`POST ${TEAMS}`]: () => apiError('DUPLICATE', 409) })
     await nameInput()
     await click(T.create)
     await screen.findByText(`* ${T.nameTaken}`)
     expect(screen.getByRole('button', { name: T.create })).toBeTruthy()
+  })
+
+  it('shows NAME_REQUIRED next to the input', async () => {
+    openCreate({
+      [`POST ${TEAMS}`]: () =>
+        reasoned('VALIDATION_ERROR', 400, 'NAME_REQUIRED'),
+    })
+    await nameInput()
+    await click(T.create)
+    await screen.findByText(`* ${T.nameRequired}`)
   })
 
   it('shows a server name error next to the input', async () => {

@@ -154,3 +154,39 @@ export const menuItem = async (summary: string, item: string) => {
 export const stubAnimations = () => {
   Element.prototype.getAnimations = () => []
 }
+
+/** Answer of API-062: the backend names the created team `team` (the other writes `resource`). */
+export const created = (
+  extra: Record<string, unknown> = {},
+  warnings: unknown[] = [],
+) =>
+  json(
+    {
+      team: {
+        id: '201',
+        performanceId: '31',
+        name: 'Crane Team',
+        status: 'DRAFT',
+        leaderMembershipId: 'm9',
+        version: '1',
+        ...extra,
+      },
+      warnings,
+      effects: {},
+    },
+    201,
+  )
+
+/** An error answer with a reason (the backend's reasons are in `details[].reason`). */
+export const reasoned = (
+  code: string,
+  status: number,
+  reason: string,
+  message = code,
+) =>
+  new Response(
+    JSON.stringify({
+      error: { code, message, details: [{ reason }] },
+    }),
+    { status },
+  )

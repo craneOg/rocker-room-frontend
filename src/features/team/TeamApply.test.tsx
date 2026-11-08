@@ -19,6 +19,8 @@ import { TEAM_COPY as T } from './teamCopy'
 import {
   body,
   click,
+  created,
+  reasoned,
   clickLast,
   menuItem,
   mutation,
@@ -78,9 +80,9 @@ describe('TEAM-004 new application', () => {
     await screen.findByText(T.cannotApply)
   })
 
-  it('saves a draft without the requester in the list, sets the own part, then continues on the saved team', async () => {
+  it('saves a draft with the requester and their part in one request, then continues on the saved team', async () => {
     const { fetchMock, router } = openNew({
-      [`POST ${TEAMS}`]: () => mutation('1', {}, [], 201),
+      [`POST ${TEAMS}`]: () => created(),
       [`GET ${T201}`]: () =>
         teamDetail(
           {
@@ -91,7 +93,6 @@ describe('TEAM-004 new application', () => {
           },
           [tmember('501', 'm9', '송예림', { isLeader: true })],
         ),
-      [`PATCH ${T201}/members/501`]: () => mutation('2'),
     })
     await findScreen('TEAM-004')
     expect(await screen.findByText(/작성 중 · 마감/)).toBeTruthy()
@@ -105,8 +106,9 @@ describe('TEAM-004 new application', () => {
 
     fireEvent.click(await screen.findByText(`+ ${T.addMember}`))
     fireEvent.click(await screen.findByRole('checkbox', { name: /이서연/ }))
-    await screen.findByText(T.willApply)
     await clickLast(T.pickerAdd)
+    // No client-side guess about the participation: the server says it after the save.
+    expect(screen.queryByText(T.willApply)).toBeNull()
     fireEvent.change(await screen.findByLabelText(T.pickerPart(T.me)), {
       target: { value: '4' },
     })
@@ -115,12 +117,15 @@ describe('TEAM-004 new application', () => {
     await screen.findByText(T.draftSaved)
     expect(body(fetchMock, TEAMS)).toEqual({
       name: '2팀',
-      members: [{ membershipId: '23', partId: '4' }],
+      members: [
+        { membershipId: 'm9', partId: '4' },
+        { membershipId: '23', partId: '4' },
+      ],
     })
-    expect(body(fetchMock, `${T201}/members/501`)).toEqual({
-      version: '1',
-      partId: '4',
-    })
+    // No follow-up write: the part went with the creation.
+    expect(
+      fetchMock.mock.calls.filter(([, i]) => i?.method === 'PATCH'),
+    ).toHaveLength(0)
     await waitFor(() =>
       expect(
         router.state.location.pathname + router.state.location.search,
@@ -134,27 +139,6 @@ describe('TEAM-004 new application', () => {
     expect(q.get('memberType')).toBe('REGULAR')
   })
 
-  it('opens the saved application when a step after the creation fails', async () => {
-    const { router } = openNew({
-      [`POST ${TEAMS}`]: () => mutation('1', {}, [], 201),
-      [`GET ${T201}`]: () =>
-        teamDetail(
-          { status: 'DRAFT', source: 'SELF', leaderMembershipId: 'm9' },
-          [tmember('501', 'm9', '송예림', { isLeader: true })],
-        ),
-      [`PATCH ${T201}/members/501`]: () => apiError('FORBIDDEN', 403),
-    })
-    fireEvent.change(await screen.findByLabelText(T.pickerPart(T.me)), {
-      target: { value: '4' },
-    })
-    await click(T.saveDraft)
-    await waitFor(() =>
-      expect(
-        router.state.location.pathname + router.state.location.search,
-      ).toBe(`${APPLY}?teamId=201`),
-    )
-  })
-
   it('stays on the new form when the creation itself fails', async () => {
     const { router } = openNew({
       [`POST ${TEAMS}`]: () => apiError('FORBIDDEN', 403),
@@ -165,11 +149,27 @@ describe('TEAM-004 new application', () => {
     expect(router.state.location.search).toBe('')
   })
 
-  it('shows a taken name under the input', async () => {
-    openNew({ [`POST ${TEAMS}`]: () => apiError('DUPLICATE', 409) })
+  it.each([
+    [
+      'the server reason',
+      () => reasoned('DUPLICATE', 409, 'DUPLICATE_TEAM_NAME'),
+    ],
+    ['a DUPLICATE without a reason', () => apiError('DUPLICATE', 409)],
+  ])('shows a taken name under the input (%s)', async (_, answer) => {
+    openNew({ [`POST ${TEAMS}`]: answer })
     await screen.findByRole('textbox', { name: T.nameLabel })
     await click(T.saveDraft)
     await screen.findByText(`* ${T.nameTaken}`)
+  })
+
+  it('shows NAME_REQUIRED under the input', async () => {
+    openNew({
+      [`POST ${TEAMS}`]: () =>
+        reasoned('VALIDATION_ERROR', 400, 'NAME_REQUIRED'),
+    })
+    await screen.findByRole('textbox', { name: T.nameLabel })
+    await click(T.saveDraft)
+    await screen.findByText(`* ${T.nameRequired}`)
   })
 })
 
@@ -226,7 +226,8 @@ describe('TEAM-004 saved application', () => {
     })
     const name = await screen.findByRole('textbox', { name: T.nameLabel })
     expect(screen.getByText('나')).toBeTruthy()
-    expect(screen.getByText(T.willApply)).toBeTruthy()
+    // Only the member the server marks APPLIED shows the hint (송예림 is APPROVED).
+    expect(screen.getAllByText(T.willApply)).toHaveLength(1)
     fireEvent.change(name, { target: { value: ' 새 팀 ' } })
     await click(T.saveDraft)
     await screen.findByText(T.draftSaved)

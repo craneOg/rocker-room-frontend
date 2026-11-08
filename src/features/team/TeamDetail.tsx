@@ -17,7 +17,7 @@ import {
   type PartOption,
 } from './teamHooks'
 import {
-  addTeamMember,
+  addTeamMembers,
   changeMemberPart,
   getTeam,
   listTeams,
@@ -28,7 +28,6 @@ import {
   teamKey,
   teamsKey,
   transitionTeam,
-  versionOf,
   type TeamMemberRow,
 } from './teamApi'
 import { TEAM_COPY as T } from './teamCopy'
@@ -149,19 +148,15 @@ export function TeamDetail() {
 
   const addPicks = (picks: Pick[]) =>
     edit(
-      async (reason) => {
-        // Every write bumps the team version: the next one carries the answer's.
-        let version = team.version
-        for (const p of picks)
-          version = versionOf(
-            await addTeamMember(clubId, performanceId, team.id, {
-              version,
-              membershipId: p.membershipId,
-              partId: p.partId,
-              reason,
-            }),
-          )
-      },
+      (reason) =>
+        addTeamMembers(
+          clubId,
+          performanceId,
+          team.id,
+          team.version,
+          picks,
+          reason,
+        ),
       T.memberAdded(picks.length),
       () => setAdding(false),
     )
@@ -189,6 +184,8 @@ export function TeamDetail() {
           done: T.reopened,
         }),
     ])
+  // ponytail: the server's reason for refusing to disband the default team is unconfirmed; the global
+  // STATE_CONFLICT dialog shows its message.
   if (c.admin && active && team.status === 'APPROVED')
     menu.push([
       T.menuDisband,

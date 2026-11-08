@@ -2,6 +2,7 @@ import { Button, Typography } from '@montage-ui/core'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { withConfirmation } from '../../shared/api/handlers'
+import { formatKstYmd } from '../../shared/lib/time'
 import { ReasonModal } from '../../shared/ui/ReasonModal'
 import {
   EmptyState,
@@ -34,7 +35,14 @@ export function TeamReview() {
     queryFn: ({ signal }) =>
       listTeams(c.clubId, c.performanceId, { status: ['SUBMITTED'] }, signal),
   })
-  const items = teams.data?.items ?? []
+  // 제출 순: oldest submission first. Without a `submittedAt` on every item the server order stays.
+  const fetched = teams.data?.items ?? []
+  const items = fetched.every((t) => t.submittedAt)
+    ? [...fetched].sort(
+        (a, b) =>
+          Date.parse(a.submittedAt ?? '') - Date.parse(b.submittedAt ?? ''),
+      )
+    : fetched
   const active = c.perf?.status === 'ACTIVE'
   return (
     <div className="start" data-screen-id="TEAM-005">
@@ -107,6 +115,9 @@ function ReviewCard({
       </div>
       <Typography variant="caption1">
         {[
+          team.submittedAt
+            ? T.submittedOn(formatKstYmd(team.submittedAt))
+            : null,
           T.leader(team.leaderDisplayName),
           T.members(team.memberCount),
           T.reviewSongs(team.candidateSongCount ?? 0),

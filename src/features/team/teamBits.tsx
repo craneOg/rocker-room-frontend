@@ -1,5 +1,5 @@
 import { Button, TextField, Typography } from '@montage-ui/core'
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { useDeferredValue, useState } from 'react'
 import { Link } from 'react-router'
 import { Badge } from '../../shared/ui/Badge'
@@ -201,40 +201,13 @@ export function MemberPicker({
     initialPageParam: 0,
     getNextPageParam: (last) => last.next,
   })
-  // ponytail: the first 100 confirmed participants decide the 참여 희망 hint; the server decides for real.
-  const approved = useQuery({
-    queryKey: [...performanceKey(c.clubId, c.performanceId), 'approved-ids'],
-    queryFn: async () =>
-      new Set(
-        (
-          await listPerformanceMembers(
-            c.clubId,
-            c.performanceId,
-            { status: ['APPROVED'] },
-            0,
-            100,
-          )
-        ).items.map((m) => m.membershipId),
-      ),
-    enabled: source === 'club',
-  })
   const items = people.data?.pages.flatMap((p) => p.items) ?? []
 
   const toggle = (m: Candidate) =>
     setPicked((list) =>
       list.some((p) => p.membershipId === m.membershipId)
         ? list.filter((p) => p.membershipId !== m.membershipId)
-        : [
-            ...list,
-            {
-              ...m,
-              partId: m.parts[0]?.id ?? null,
-              willApply:
-                source === 'club' &&
-                approved.data !== undefined &&
-                !approved.data.has(m.membershipId),
-            },
-          ],
+        : [...list, { ...m, partId: m.parts[0]?.id ?? null }],
     )
 
   return (
@@ -295,9 +268,6 @@ export function MemberPicker({
                       )
                     }
                   />
-                  {pick.willApply ? (
-                    <Typography variant="caption1">{T.willApply}</Typography>
-                  ) : null}
                 </>
               ) : null}
             </div>

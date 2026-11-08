@@ -6,14 +6,18 @@ import {
 } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 import { useParams } from 'react-router'
-import { fieldErrors } from '../../shared/api/errors'
+import { isApiError } from '../../shared/api/errors'
 import { isClubAdmin, useSession } from '../../shared/auth/session'
 import { feedback } from '../../shared/ui/feedbackBus'
 import { ReasonModal } from '../../shared/ui/ReasonModal'
 import { listParts } from '../club/api'
 import { getPerformance, performanceKey } from '../performance/api'
 import { invalidatePerformance } from '../performance/viewApi'
-import { TeamNameTakenError, type PartCount } from './teamApi'
+import {
+  isIneligibleMember,
+  TeamNameTakenError,
+  type PartCount,
+} from './teamApi'
 import { TEAM_COPY as T } from './teamCopy'
 
 /** What every team screen needs: the route ids, the performance and who the requester is. */
@@ -70,6 +74,8 @@ export function useTeamWrite(c: TeamContext) {
       await refreshTeams(qc, c)
       const text = teamNameError(e)
       if (text !== undefined) feedback.toast(text, 'negative')
+      else if (isIneligibleMember(e))
+        feedback.toast(T.ineligibleMember, 'negative')
     },
   })
 }
@@ -93,7 +99,11 @@ export async function confirmDialog(
 /** Helper text of the team-name input for a failed save, or undefined when the error is not about the name. */
 export function teamNameError(e: unknown): string | undefined {
   if (e instanceof TeamNameTakenError) return T.nameTaken
-  return 'name' in fieldErrors(e) ? T.nameRequired : undefined
+  // NAME_REQUIRED is the backend's reason (no field); a `name` field is accepted too.
+  return isApiError(e, 'VALIDATION_ERROR') &&
+    e.details.some((d) => d.reason === 'NAME_REQUIRED' || d.field === 'name')
+    ? T.nameRequired
+    : undefined
 }
 
 export const partSummaryText = (parts: PartCount[]) =>
@@ -111,8 +121,6 @@ export type Pick = {
   /** The member's own registered parts. */
   parts: PartOption[]
   partId: string | null
-  /** Not a confirmed participant yet: joins as 참여 희망 (T-03). */
-  willApply: boolean
 }
 
 /** The member's registered parts first, then the other active parts of the club. */

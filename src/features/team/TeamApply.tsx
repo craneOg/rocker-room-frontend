@@ -17,7 +17,8 @@ import {
   type Pick,
 } from './teamHooks'
 import {
-  addTeamMember,
+  addTeamMembers,
+  briefOf,
   changeMemberPart,
   createTeam,
   getDefaultTeamName,
@@ -28,7 +29,6 @@ import {
   teamKey,
   teamsKey,
   transitionTeam,
-  versionOf,
   type TeamDetail,
 } from './teamApi'
 import { TEAM_COPY as T } from './teamCopy'
@@ -75,44 +75,24 @@ function ApplyNew({ c }: { c: Ctx }) {
   const name = typed ?? defaultName.data ?? ''
 
   const save = useMutation({
-    mutationFn: async () => {
-      const made = await createTeam(c.clubId, c.performanceId, {
+    // The server makes the creator a member and the leader; listing them with a part sets it at once.
+    mutationFn: () =>
+      createTeam(c.clubId, c.performanceId, {
         name: name.trim(),
-        members: others.map((m) => ({
-          membershipId: m.membershipId,
-          partId: m.partId,
-        })),
-      })
-      // The team exists now: a failing follow-up must not leave the new form behind (a second save
-      // would only hit DUPLICATE), so the saved application opens and the error stays global.
-      try {
-        // The creator is added by the server without a part; a chosen one is set on that row.
-        if (myPart !== null) {
-          const mine = (
-            await getTeam(c.clubId, c.performanceId, made.resource.id)
-          ).members.find((m) => m.membershipId === c.myMembershipId)
-          if (mine)
-            await changeMemberPart(
-              c.clubId,
-              c.performanceId,
-              made.resource.id,
-              mine.id,
-              { version: made.resource.version, partId: myPart },
-            )
-        }
-      } catch (e) {
-        await refreshTeams(qc, c)
-        void navigate(`${c.base}/teams/apply?teamId=${made.resource.id}`, {
-          replace: true,
-        })
-        throw e
-      }
-      return made
-    },
+        members: [
+          ...(c.myMembershipId === undefined
+            ? []
+            : [{ membershipId: c.myMembershipId, partId: myPart }]),
+          ...others.map((m) => ({
+            membershipId: m.membershipId,
+            partId: m.partId,
+          })),
+        ],
+      }),
     onSuccess: async (r) => {
       await refreshTeams(qc, c)
       feedback.toast(T.draftSaved, 'positive')
-      void navigate(`${c.base}/teams/apply?teamId=${r.resource.id}`, {
+      void navigate(`${c.base}/teams/apply?teamId=${briefOf(r).id}`, {
         replace: true,
       })
     },
@@ -173,9 +153,6 @@ function ApplyNew({ c }: { c: Ctx }) {
                 )
               }
             />
-            {m.willApply ? (
-              <Typography variant="caption1">{T.willApply}</Typography>
-            ) : null}
             <Button
               size="small"
               variant="outlined"
@@ -542,23 +519,14 @@ function ApplyEdit({ c, teamId }: { c: Ctx; teamId: string }) {
           onClose={() => setPicking(false)}
           onConfirm={(picks) =>
             write.mutate({
-              run: async () => {
-                // Every write bumps the team version: the next one carries the answer's.
-                let version = team.version
-                for (const p of picks)
-                  version = versionOf(
-                    await addTeamMember(
-                      call.clubId,
-                      call.performanceId,
-                      call.teamId,
-                      {
-                        version,
-                        membershipId: p.membershipId,
-                        partId: p.partId,
-                      },
-                    ),
-                  )
-              },
+              run: () =>
+                addTeamMembers(
+                  call.clubId,
+                  call.performanceId,
+                  call.teamId,
+                  team.version,
+                  picks,
+                ),
               done: T.memberAdded(picks.length),
               onDone: () => setPicking(false),
             })

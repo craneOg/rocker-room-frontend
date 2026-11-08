@@ -108,6 +108,7 @@ export const TEAM_COPY = {
   pickerPart: (name: string) => `${name} 대표 파트`,
   loadMore: '더 보기',
   willApply: '참여 희망으로 함께 신청돼요',
+  ineligibleMember: '팀원이 될 수 없는 사람이에요',
   // TEAM-003
   createTitle: '팀 만들기',
   noLeader: '팀장 없음',
@@ -151,6 +152,7 @@ export const TEAM_COPY = {
   emptyReview: '심사할 팀이 없어요',
   reviewNotActive: '공연이 진행 중일 때만 심사할 수 있어요',
   reviewApplied: (n: number) => `참여 희망 ${n}명 포함`,
+  submittedOn: (ymd: string) => `제출 ${ymd}`,
   reviewSongs: (n: number) => `신청 곡 ${n}곡`,
   expand: '자세히 보기',
   collapse: '접기',

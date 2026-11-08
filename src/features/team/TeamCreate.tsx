@@ -13,7 +13,7 @@ import {
   teamNameError,
   type Pick,
 } from './teamHooks'
-import { createTeam, getDefaultTeamName, teamsKey } from './teamApi'
+import { briefOf, createTeam, getDefaultTeamName, teamsKey } from './teamApi'
 import { TEAM_COPY as T } from './teamCopy'
 
 /** TEAM-003: an officer makes an approved team with members and a leader in one request (API-062). */
@@ -50,7 +50,7 @@ export function TeamCreate() {
     onSuccess: async (r) => {
       await refreshTeams(qc, c)
       feedback.toast(T.created, 'positive')
-      void navigate(`${c.base}/teams/${r.resource.id}`)
+      void navigate(`${c.base}/teams/${briefOf(r).id}`)
     },
     onError: (e) => setNameError(teamNameError(e)),
   })

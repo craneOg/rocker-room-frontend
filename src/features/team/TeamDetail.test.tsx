@@ -14,6 +14,8 @@ import {
   body,
   card,
   click,
+  created,
+  reasoned,
   clickLast,
   menuItem,
   mutation,
@@ -300,6 +302,63 @@ describe('TEAM-002 officer edits', () => {
         ).length,
       ).toBeGreaterThan(before),
     )
+  })
+
+  const pickOne = async () => {
+    fireEvent.click(await screen.findByText(`+ ${T.addMember}`))
+    fireEvent.click(await screen.findByRole('checkbox', { name: /이서연/ }))
+    await clickLast(T.pickerAdd)
+  }
+  const roster = {
+    [`GET ${PERF}/members`]: () =>
+      memberPage([memberRow('2', '23', '이서연')], { APPROVED: 1 }),
+  }
+
+  it.each([
+    [
+      'the server name',
+      () => reasoned('RULE_VIOLATION', 422, 'MEMBER_NOT_ELIGIBLE'),
+    ],
+    [
+      'the spec name',
+      () => reasoned('STATE_CONFLICT', 409, 'INELIGIBLE_TEAM_MEMBER'),
+    ],
+  ])('says the person cannot join a team (%s)', async (_, answer) => {
+    openAdmin({ ...roster, [`POST ${T201}/members`]: answer })
+    await pickOne()
+    await screen.findByText(T.ineligibleMember)
+  })
+
+  it('does not treat a duplicate member as a name problem', async () => {
+    openAdmin({
+      ...roster,
+      [`POST ${T201}/members`]: () =>
+        reasoned('DUPLICATE', 409, 'DUPLICATE_TEAM_MEMBER', '이미 팀원이에요'),
+    })
+    await pickOne()
+    await screen.findByText('이미 팀원이에요')
+    expect(screen.queryByText(T.nameTaken)).toBeNull()
+    expect(screen.queryByText(T.ineligibleMember)).toBeNull()
+  })
+
+  it('shows the typed warnings of a write as a sentence', async () => {
+    openAdmin({
+      ...roster,
+      [`POST ${T201}/members`]: () =>
+        mutation('3', {}, [{ type: 'PART_NOT_REGISTERED' }] as never, 201),
+    })
+    await pickOne()
+    await screen.findByText('등록하지 않은 파트로 지정돼요')
+  })
+
+  it('reads the Team of a creation answer whatever the key is', async () => {
+    const { fetchMock } = openAdmin({
+      ...roster,
+      [`POST ${T201}/members`]: () => created({ version: '9' }),
+    })
+    await pickOne()
+    await screen.findByText(T.memberAdded(1))
+    expect(callsTo(fetchMock, `${T201}/members`)).toHaveLength(1)
   })
 
   it('disbands an approved team with a reason', async () => {

@@ -84,6 +84,43 @@ describe('TEAM-005', () => {
     expect(screen.getByRole('button', { name: T.collapse })).toBeTruthy()
   })
 
+  it('lists the oldest submission first and shows the submission date', async () => {
+    const mk = (id: string, name: string, at: string) =>
+      card(id, name, { status: 'SUBMITTED', source: 'SELF', submittedAt: at })
+    openReview({
+      [`GET ${TEAMS}`]: () =>
+        teamPage([
+          mk('402', '나중 팀', '2026-10-09T10:00:00+09:00'),
+          mk('401', '먼저 팀', '2026-10-03T10:00:00+09:00'),
+        ]),
+      [`GET ${TEAMS}/402`]: DETAIL,
+    })
+    await screen.findByText('먼저 팀')
+    const names = screen
+      .getAllByText(/^(먼저|나중) 팀$/)
+      .map((e) => e.textContent)
+    expect(names).toEqual(['먼저 팀', '나중 팀'])
+    expect(screen.getAllByText(/제출 2026/).length).toBe(2)
+  })
+
+  it('keeps the server order when a team has no submission time', async () => {
+    openReview({
+      [`GET ${TEAMS}`]: () =>
+        teamPage([
+          card('402', '나중 팀', {
+            status: 'SUBMITTED',
+            submittedAt: '2026-10-09T10:00:00+09:00',
+          }),
+          card('401', '먼저 팀', { status: 'SUBMITTED' }),
+        ]),
+      [`GET ${TEAMS}/402`]: DETAIL,
+    })
+    await screen.findByText('먼저 팀')
+    expect(
+      screen.getAllByText(/^(먼저|나중) 팀$/).map((e) => e.textContent),
+    ).toEqual(['나중 팀', '먼저 팀'])
+  })
+
   it('shows the empty state', async () => {
     openReview({ [`GET ${TEAMS}`]: () => teamPage([]) })
     await screen.findByText(T.emptyReview)
