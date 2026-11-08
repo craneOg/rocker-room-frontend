@@ -199,7 +199,7 @@ export function createPerformancePolicyMock() {
       else if (stale()) fail(409, 'VERSION_CONFLICT')
       else if (changes && p.votes > 0 && body.confirmed !== true)
         fail(409, 'CONFIRMATION_REQUIRED', {
-          details: [{ message: `투표 ${p.votes}건이 삭제돼요.` }],
+          warnings: [`투표 ${p.votes}건이 삭제돼요.`],
         })
       else {
         const removed = changes ? p.votes : 0
@@ -232,7 +232,7 @@ export function createPerformancePolicyMock() {
       else if (p.unmet.length > 0) rule('LOCK_REQUIREMENTS_FAILED')
       else if (p.warnings.length > 0 && body.confirmed !== true)
         fail(409, 'CONFIRMATION_REQUIRED', {
-          details: p.warnings.map((w) => ({ message: w.message })),
+          warnings: p.warnings.map((w) => w.message),
         })
       else {
         move('LOCKED')

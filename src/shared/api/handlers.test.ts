@@ -7,7 +7,7 @@ import {
   warningsStore,
 } from '../ui/feedbackBus'
 import { extractWarnings } from './assumptions'
-import { ApiError, fieldErrors } from './errors'
+import { ApiError, fieldErrors, parseErrorBody } from './errors'
 import { createCaches, handleApiError, withConfirmation } from './handlers'
 
 const toast = vi.fn()
@@ -150,6 +150,44 @@ describe('withConfirmation', () => {
         confirmLabel: COPY.proceed,
       }),
     )
+  })
+
+  it('lists the warnings of error.warnings (strings or {message}) before details', async () => {
+    const withWarnings = new ApiError({
+      status: 409,
+      code: 'CONFIRMATION_REQUIRED',
+      message: 'x',
+      details: [{ message: 'D1' }],
+      warnings: ['W1', 'W2'],
+    })
+    const run = vi.fn((confirmed: boolean) =>
+      confirmed ? Promise.resolve('done') : Promise.reject(withWarnings),
+    )
+    await withConfirmation(run)
+    expect(dialog).toHaveBeenCalledWith(
+      expect.objectContaining({ items: ['W1', 'W2'] }),
+    )
+  })
+
+  it('parses error.warnings from the response body', () => {
+    const e = parseErrorBody(409, {
+      error: {
+        code: 'CONFIRMATION_REQUIRED',
+        message: 'm',
+        details: [],
+        warnings: [
+          'A',
+          { message: 'B', affectedCount: 2 },
+          { code: 'x' },
+          7,
+          '',
+        ],
+      },
+    })
+    expect(e.warnings).toEqual(['A', 'B'])
+    expect(
+      parseErrorBody(409, { error: { code: 'DUPLICATE' } }).warnings,
+    ).toEqual([])
   })
 
   it('does not re-run when the user cancels', async () => {
