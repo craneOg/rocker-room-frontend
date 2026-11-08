@@ -384,6 +384,66 @@ describe('AUDI-003 AuditionResult', () => {
     )
   })
 
+  it('keeps looking on the next pages when the target is past the first 100', async () => {
+    const { fetchMock } = show('150', {
+      [`GET ${AUDITIONS}`]: (url) => {
+        const page = Number(new URL(url, 'http://x').searchParams.get('page'))
+        if (url.includes('tab=DONE')) return auditionPage([], { totalPages: 1 })
+        return auditionPage(page === 1 ? [audition('150')] : [audition('1')], {
+          page,
+          totalPages: 2,
+        })
+      },
+    })
+    await ready()
+    expect(screen.getByText('곡: Song A')).toBeTruthy()
+    expect(callsTo(fetchMock, AUDITIONS).length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('searches the done tab too, and gives up with the not-found view', async () => {
+    const { fetchMock } = show('99', {
+      [`GET ${AUDITIONS}`]: listOf([audition('12')], [done('21', 'PASSED')]),
+    })
+    await findScreen('AUDI-003')
+    await screen.findByText(COPY.notFoundTitle)
+    const tabs = callsTo(fetchMock, AUDITIONS).map(([u]) =>
+      new URL(u, 'http://x').searchParams.get('tab'),
+    )
+    expect(tabs).toEqual(expect.arrayContaining(['PENDING', 'DONE']))
+  })
+
+  it('asks for a reason when the server says REASON_REQUIRED (400)', async () => {
+    let calls = 0
+    const { fetchMock } = show('12', {
+      [`GET ${AUDITIONS}`]: listOf([audition('12')]),
+      [`PUT ${RESULT('12')}`]: () =>
+        ++calls === 1
+          ? new Response(
+              JSON.stringify({
+                error: {
+                  code: 'VALIDATION_ERROR',
+                  message: 'x',
+                  details: [{ field: 'reason', reason: 'REASON_REQUIRED' }],
+                },
+              }),
+              { status: 400 },
+            )
+          : saved({ songStatus: 'REJECTED' }),
+    })
+    await ready()
+    choose('passed')
+    save()
+    await screen.findByText(T.reasonTitle)
+    fireEvent.change(screen.getByRole('textbox', { name: T.reasonTitle }), {
+      target: { value: '정정' },
+    })
+    fireEvent.click(
+      screen.getAllByRole('button', { name: T.save }).at(-1) as HTMLElement,
+    )
+    await screen.findByText(T.saved)
+    expect(body(fetchMock, RESULT('12'))).toMatchObject({ reason: '정정' })
+  })
+
   it('shows the not-found view for an unknown audition', async () => {
     show('99', {
       [`GET ${AUDITIONS}`]: listOf([audition('12')], [done('21', 'PASSED')]),

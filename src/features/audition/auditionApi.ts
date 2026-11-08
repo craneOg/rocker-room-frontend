@@ -81,8 +81,8 @@ export const listAuditions = (
   })
 
 /**
- * AUDI-003 has no single-read API: the target is found in the list. ponytail: the first 100 of
- * each tab only; add a lookup API (or pass the row along) if a performance holds more.
+ * AUDI-003 has no single-read API (requested from the server): the target is found by paging
+ * through both tabs, 100 rows a page.
  */
 export const findAudition = async (
   clubId: string,
@@ -90,9 +90,15 @@ export const findAudition = async (
   auditionId: string,
 ) => {
   for (const tab of ['PENDING', 'DONE'] as const) {
-    const r = await listAuditions(clubId, performanceId, { tab }, 0, 100)
-    const found = r.items.find((a) => a.id === auditionId)
-    if (found) return found
+    let page = 0
+    let totalPages = 1
+    while (page < totalPages) {
+      const r = await listAuditions(clubId, performanceId, { tab }, page, 100)
+      const found = r.items.find((a) => a.id === auditionId)
+      if (found) return found
+      totalPages = r.totalPages
+      page += 1
+    }
   }
   return null
 }
@@ -215,7 +221,8 @@ const DAY = 86_400_000
 
 /**
  * API-105 requires a window; ponytail: from 30 days ago to one year ahead, audition schedules
- * only. Widen it (or page) if a performance plans further out.
+ * only; the server's limit on this window is unconfirmed (서버 미확인). Widen it (or page) if a
+ * performance plans further out.
  */
 export const listAuditionSchedules = async (
   clubId: string,

@@ -8,7 +8,6 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
-import { isApiError } from '../../shared/api/errors'
 import { feedback } from '../../shared/ui/feedbackBus'
 import { FormField } from '../../shared/ui/FormField'
 import { ErrorState, ListSkeleton } from '../../shared/ui/StateViews'
@@ -35,12 +34,6 @@ const APPLICANT_MAX = 50
 
 type Applicant = { id: string; name: string }
 
-/** `applicantPerformanceMemberIds[1]` -> 1; other fields -> null. */
-const applicantIndex = (field: string | undefined) => {
-  const m = /^applicantPerformanceMemberIds\[(\d+)\]$/.exec(field ?? '')
-  return m ? Number(m[1]) : null
-}
-
 /** AUDI-002: register a song audition, or a session audition for one or more applicants. */
 export function AuditionCreate() {
   const { clubId = '', performanceId = '' } = useParams()
@@ -62,8 +55,6 @@ export function AuditionCreate() {
   const [scheduleId, setScheduleId] = useState('')
   const [memo, setMemo] = useState('')
   const [tried, setTried] = useState(false)
-  // Duplicate targets of the last submit (A-06): 'song' or an applicant id.
-  const [pendingDup, setPendingDup] = useState<string[]>([])
 
   const detail = useQuery({
     queryKey: [...performanceKey(clubId, performanceId), 'detail'],
@@ -136,24 +127,13 @@ export function AuditionCreate() {
     },
     onError: (e) => {
       showRuleCopy(e)
-      if (isApiError(e, 'DUPLICATE')) {
-        const dups = e.details
-          .filter((d) => d.reason === 'AUDITION_ALREADY_PENDING')
-          .flatMap((d) => {
-            const i = applicantIndex(d.field)
-            if (i === null) return d.field === 'songId' ? ['song'] : []
-            const id = applicants[i]?.id
-            return id ? [id] : []
-          })
-        setPendingDup(dups)
-      }
+      // 409 DUPLICATE (A-06) carries no field: the global handler shows the server message.
     },
   })
 
   const submit = () => {
     setTried(true)
     if (invalid) return
-    setPendingDup([])
     create.mutate()
   }
 
@@ -244,9 +224,6 @@ export function AuditionCreate() {
           {tried && errors.song ? (
             <span className="audition-error">{`* ${errors.song}`}</span>
           ) : null}
-          {pendingDup.includes('song') ? (
-            <span className="audition-error">{`* ${T.pendingSong}`}</span>
-          ) : null}
         </section>
 
         {type === 'SESSION' ? (
@@ -259,9 +236,6 @@ export function AuditionCreate() {
                 <li key={a.id}>
                   <div className="start-card-text">
                     <Typography variant="body2">{a.name}</Typography>
-                    {pendingDup.includes(a.id) ? (
-                      <span className="audition-error">{`* ${T.pendingApplicant}`}</span>
-                    ) : null}
                   </div>
                   <Button
                     size="small"

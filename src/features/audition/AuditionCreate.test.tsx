@@ -165,29 +165,34 @@ describe('AUDI-002 AuditionCreate', () => {
     )
   })
 
-  it('marks a song that already waits for a result (A-06)', async () => {
-    show({
-      [`POST ${AUDITIONS}`]: () =>
-        failWith(409, 'DUPLICATE', [
-          { field: 'songId', reason: 'AUDITION_ALREADY_PENDING' },
-        ]),
-    })
+  const DUP_MESSAGE = '이미 심사 대기 중인 대상이에요'
+  const duplicate = () =>
+    new Response(
+      JSON.stringify({
+        error: {
+          code: 'DUPLICATE',
+          message: DUP_MESSAGE,
+          details: [{ reason: 'AUDITION_ALREADY_PENDING' }],
+        },
+      }),
+      { status: 409 },
+    )
+
+  it('shows the server message once for a duplicate song (A-06, no field)', async () => {
+    const { router } = show({ [`POST ${AUDITIONS}`]: duplicate })
     await ready()
     pickSong()
     submit()
-    await screen.findByText(`* ${T.pendingSong}`)
+    await screen.findByText(DUP_MESSAGE)
+    expect(screen.getAllByText(DUP_MESSAGE)).toHaveLength(1)
+    // The form stays for another try; nothing was registered.
+    expect(screen.queryByText(T.created)).toBeNull()
+    expect(router.state.location.pathname).toBe(PATH)
+    expect(screen.getByRole('button', { name: T.submit })).toBeTruthy()
   })
 
-  it('marks only the duplicated applicant row (A-06)', async () => {
-    show({
-      [`POST ${AUDITIONS}`]: () =>
-        failWith(409, 'DUPLICATE', [
-          {
-            field: 'applicantPerformanceMemberIds[1]',
-            reason: 'AUDITION_ALREADY_PENDING',
-          },
-        ]),
-    })
+  it('keeps the picked applicants when the whole request is a duplicate', async () => {
+    show({ [`POST ${AUDITIONS}`]: duplicate })
     await ready()
     toSession()
     pickSong()
@@ -196,9 +201,11 @@ describe('AUDI-002 AuditionCreate', () => {
       target: { value: '4' },
     })
     submit()
-    const note = await screen.findByText(`* ${T.pendingApplicant}`)
-    expect(note.closest('li')?.textContent).toContain('이도윤')
-    expect(screen.getAllByText(`* ${T.pendingApplicant}`)).toHaveLength(1)
+    await screen.findByText(DUP_MESSAGE)
+    expect(screen.getAllByText(DUP_MESSAGE)).toHaveLength(1)
+    expect(
+      screen.getByRole('button', { name: T.removeApplicant('이도윤') }),
+    ).toBeTruthy()
   })
 
   it.each(Object.keys(T.ruleCopy))(

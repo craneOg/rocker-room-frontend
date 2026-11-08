@@ -2,6 +2,7 @@ import { Button, TextArea, Typography } from '@montage-ui/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
+import { isApiError } from '../../shared/api/errors'
 import { feedback } from '../../shared/ui/feedbackBus'
 import { FormField } from '../../shared/ui/FormField'
 import { ReasonModal } from '../../shared/ui/ReasonModal'
@@ -26,7 +27,11 @@ import './audition.css'
 
 const COMMENT_MAX = 500
 
-/** 4-1: the follow-up the saved result suggests; it never changes the song or players itself (A-08). */
+/**
+ * 4-1: the follow-up the saved result suggests; it never changes the song or players itself (A-08).
+ * ponytail: whether the server changes the song status after a judgement is unconfirmed (서버 미확인);
+ * the dialog follows the `songStatus` the response carries.
+ */
 async function suggestFollowUp(
   saved: AuditionSaved,
   go: (path: string) => void,
@@ -106,7 +111,13 @@ function ResultForm({
       await invalidatePerformance(qc, clubId, performanceId)
       await suggestFollowUp(saved, (p) => void navigate(p), base)
     },
-    onError: () => setAsking(false),
+    onError: (e) => {
+      // 400 REASON_REQUIRED: the screen thought the performance was not LOCKED; ask for the reason.
+      setAsking(
+        isApiError(e, 'VALIDATION_ERROR') &&
+          e.details.some((d) => d.reason === 'REASON_REQUIRED'),
+      )
+    },
   })
 
   const submit = () => {

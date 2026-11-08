@@ -333,21 +333,12 @@ function createAuditionMock() {
         createdAt: day(0),
       }))
       // A-06: a pending row for the same target rejects the whole request.
-      const dup = made.flatMap((n, i) =>
-        rows.some((r) => !r.result && sameTarget(r, n))
-          ? [
-              {
-                field:
-                  type === 'SONG'
-                    ? 'songId'
-                    : `applicantPerformanceMemberIds[${i}]`,
-                reason: 'AUDITION_ALREADY_PENDING',
-              },
-            ]
-          : [],
+      // Like the server: reason only, no field (the position is not implemented there).
+      const dup = made.filter((n) =>
+        rows.some((r) => !r.result && sameTarget(r, n)),
       )
       if (dup.length > 0) {
-        fail(res, 409, 'DUPLICATE', dup)
+        fail(res, 409, 'DUPLICATE', [{ reason: 'AUDITION_ALREADY_PENDING' }])
         return true
       }
       rows = [...rows, ...made]

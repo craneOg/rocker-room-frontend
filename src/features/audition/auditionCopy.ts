@@ -43,8 +43,6 @@ export const AUDITION_COPY = {
   memoPlaceholder: '지원 동기, 곡 해석, 참고 링크 등',
   submit: '등록',
   created: '오디션을 등록했어요',
-  pendingSong: '이 곡은 이미 심사 대기 중이에요',
-  pendingApplicant: '이미 심사 대기 중이에요',
   needSong: '곡을 선택해 주세요',
   needPart: '파트를 선택해 주세요',
   needApplicants: '지원자를 1명 이상 선택해 주세요',
