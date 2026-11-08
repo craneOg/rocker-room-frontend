@@ -12,7 +12,6 @@ export type SetlistSong = {
   performanceId: string
   title: string
   artist: string
-  status: string
   assignedTeamId: string | null
   assignedTeamName: string | null
   /** null = confirmed song without a place in the setlist. */
@@ -43,7 +42,10 @@ export type OrderItem = {
   version: string
 }
 
-/** 409 STATE_CONFLICT(SETLIST_CHANGED) as an own error, so 4-2 replaces the global dialog. */
+/**
+ * 409 with reason SETLIST_CHANGED as an own error, so 4-2 replaces the global dialog. The spec says
+ * STATE_CONFLICT, the server answers VERSION_CONFLICT: both are taken until the server follows the spec.
+ */
 export class SetlistChangedError extends Error {
   constructor() {
     super('setlist changed')
@@ -64,7 +66,7 @@ export async function saveSetlistOrder(
     )
   } catch (e) {
     if (
-      isApiError(e, 'STATE_CONFLICT') &&
+      (isApiError(e, 'STATE_CONFLICT') || isApiError(e, 'VERSION_CONFLICT')) &&
       e.details.some((d) => d.reason === 'SETLIST_CHANGED')
     )
       throw new SetlistChangedError()

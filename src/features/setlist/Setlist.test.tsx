@@ -32,7 +32,6 @@ const song = (id: string, order: number | null, extra = {}) => ({
   performanceId: '31',
   title: `곡${id}`,
   artist: '아티스트',
-  status: 'CONFIRMED',
   assignedTeamId: '201',
   assignedTeamName: 'Crane Team',
   setlistOrder: order,
@@ -232,24 +231,68 @@ describe('SET-001 as an officer', () => {
     ).toBeNull()
   })
 
-  it('tells the officer when the confirmed songs changed meanwhile (4-2) and reloads the list', async () => {
-    let reads = 0
-    const { fetchMock } = open('CLUB_ADMIN', {
-      [`GET ${SETLIST}`]: () => {
-        reads += 1
-        return list(
-          reads > 1
-            ? [entry(song('2', 1)), entry(song('1', 2)), entry(song('4', null))]
-            : ITEMS,
-        )
-      },
+  it.each(['STATE_CONFLICT', 'VERSION_CONFLICT'])(
+    'tells the officer when the confirmed songs changed meanwhile (4-2, %s) and reloads the list',
+    async (code) => {
+      let reads = 0
+      const { fetchMock } = open('CLUB_ADMIN', {
+        [`GET ${SETLIST}`]: () => {
+          reads += 1
+          return list(
+            reads > 1
+              ? [
+                  entry(song('2', 1)),
+                  entry(song('1', 2)),
+                  entry(song('4', null)),
+                ]
+              : ITEMS,
+          )
+        },
+        [`PUT ${ORDER}`]: () =>
+          new Response(
+            JSON.stringify({
+              error: {
+                code,
+                message: 'conflict',
+                details: [{ reason: 'SETLIST_CHANGED' }],
+              },
+            }),
+            { status: 409 },
+          ),
+      })
+      await click(T.edit)
+      await click('위로 곡2')
+      await click(T.save)
+
+      await screen.findByText(T.changedTitle)
+      expect(screen.getByText(T.changedDescription)).toBeTruthy()
+      // Neither global dialog shows.
+      expect(screen.queryByText(COPY.versionConflictTitle)).toBeNull()
+      expect(screen.queryByText(COPY.stateConflictTitle)).toBeNull()
+      dialogButton(T.confirm)
+      await waitFor(() =>
+        expect(callsTo(fetchMock, SETLIST).length).toBeGreaterThan(1),
+      )
+      // Still editing, on the fresh list (곡2 first, 곡4 new) with a clean slate.
+      await waitFor(() => expect(rowsText()[0]).toContain('곡2'))
+      expect(screen.getByRole('button', { name: T.cancel })).toBeTruthy()
+      expect(screen.getByText('곡4 – 아티스트')).toBeTruthy()
+      expect(
+        (screen.getByRole('button', { name: T.save }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(true)
+    },
+  )
+
+  it('leaves a state conflict with another reason to the global dialog', async () => {
+    open('CLUB_ADMIN', {
       [`PUT ${ORDER}`]: () =>
         new Response(
           JSON.stringify({
             error: {
               code: 'STATE_CONFLICT',
-              message: 'conflict',
-              details: [{ reason: 'SETLIST_CHANGED' }],
+              message: 'x',
+              details: [{ reason: 'INVALID_STATE' }],
             },
           }),
           { status: 409 },
@@ -258,23 +301,8 @@ describe('SET-001 as an officer', () => {
     await click(T.edit)
     await click('위로 곡2')
     await click(T.save)
-
-    await screen.findByText(T.changedTitle)
-    expect(screen.getByText(T.changedDescription)).toBeTruthy()
-    // The global state-conflict dialog stays out.
-    expect(screen.queryByText(COPY.stateConflictTitle)).toBeNull()
-    dialogButton(T.confirm)
-    await waitFor(() =>
-      expect(callsTo(fetchMock, SETLIST).length).toBeGreaterThan(1),
-    )
-    // Still editing, on the fresh list (곡2 first, 곡4 new) with a clean slate.
-    await waitFor(() => expect(rowsText()[0]).toContain('곡2'))
-    expect(screen.getByRole('button', { name: T.cancel })).toBeTruthy()
-    expect(screen.getByText('곡4 – 아티스트')).toBeTruthy()
-    expect(
-      (screen.getByRole('button', { name: T.save }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(true)
+    await screen.findByText(COPY.stateConflictTitle)
+    expect(screen.queryByText(T.changedTitle)).toBeNull()
   })
 
   it('leaves a version conflict to the global dialog', async () => {

@@ -131,6 +131,8 @@ export function Availability() {
   const save = useMutation({
     mutationFn: () => {
       if (!season) throw new Error('no season')
+      // ponytail: the server replaces only the requested [from, to) — this screen sends the whole
+      // season at once; saving per week is a follow-up.
       return saveMyAvailability(clubId, performanceId, {
         from: toIso(dayStart(season.start)),
         to: toIso(dayStart(addDays(season.end, 1))),
@@ -148,6 +150,7 @@ export function Availability() {
     },
     onError: (e) => {
       // A 400 is shown next to the input in other screens; here there is no field, so a toast.
+      // OUTSIDE_RANGE / SLOT_NOT_ALIGNED would be a bug of this screen: the generic text is enough.
       if (isApiError(e, 'VALIDATION_ERROR'))
         feedback.toast(
           e.details.some((d) => d.reason === 'OUTSIDE_PRACTICE_SEASON')

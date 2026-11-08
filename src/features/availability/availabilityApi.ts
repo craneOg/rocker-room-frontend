@@ -24,7 +24,11 @@ export const getMyAvailability = (
     { query: { from, to } },
   )
 
-/** API-101: replaces the caller's slots in [from, to) atomically. */
+/**
+ * API-101: replaces the caller's slots in [from, to) atomically; at most 2000 slots, [] deletes
+ * the range. Spec 400 reason: OUTSIDE_PRACTICE_SEASON.
+ * ponytail: OUTSIDE_RANGE / SLOT_NOT_ALIGNED are server reasons not in the spec (confirm with the server).
+ */
 export const saveMyAvailability = (
   clubId: string,
   performanceId: string,
@@ -53,22 +57,24 @@ export type CommonTarget =
   | { kind: 'song'; songId: string }
   | { kind: 'all' }
 
+/** Only cells somebody can use are listed; a missing cell means 0 available (confirmed by the backend). */
 export type CommonSlot = {
   startAt: string
-  endAt: string
   availableCount: number
   /** Officers only. */
   availableMembers?: NamedMember[]
 }
 
 export type CommonAvailability = {
+  from?: string
+  to?: string
   participantCount: number
   respondedCount: number
-  /** The three below are left out for a caller who is not an officer (AV-04). */
+  /** The three below are missing altogether (not null) for a caller who is not an officer (AV-04). */
   participants?: NamedMember[]
   missingAvailabilityMemberIds?: string[]
   slots: CommonSlot[]
-  warnings: unknown[]
+  warnings?: unknown[]
 }
 
 /** API-103. A team member may only ask for their own team. */

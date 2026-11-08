@@ -221,7 +221,6 @@ export function createAvailabilityMock() {
                 performanceId: 'p71',
                 title: 'Mr. Brightside',
                 artist: 'The Killers',
-                status: 'CONFIRMED',
                 assignedTeamId: 't71',
                 assignedTeamName: 'Crane Team',
                 setlistOrder: 1,
@@ -279,6 +278,8 @@ export function createAvailabilityMock() {
             s >= t,
         )
       )
+        return fail(ctx, 400, 'VALIDATION_ERROR', 'INVALID_VALUE')
+      if (slots.length > 2000)
         return fail(ctx, 400, 'VALIDATION_ERROR', 'INVALID_VALUE')
       if (starts.some((s) => s < seasonFrom || s >= seasonTo))
         return fail(ctx, 400, 'VALIDATION_ERROR', 'OUTSIDE_PRACTICE_SEASON')
@@ -340,12 +341,13 @@ export function createAvailabilityMock() {
           const can = people.filter(([id]) => state.slots[id]?.has(t))
           return {
             startAt: iso(t),
-            endAt: iso(t + SLOT),
             availableCount: can.length,
             ...(admin ? { availableMembers: named(can) } : {}),
           }
         })
       return ok(ctx, {
+        from: iso(from),
+        to: iso(to),
         participantCount: people.length,
         respondedCount: people.length - missing.length,
         ...(admin
@@ -355,7 +357,6 @@ export function createAvailabilityMock() {
             }
           : {}),
         slots,
-        warnings: [],
       })
     }
     return false

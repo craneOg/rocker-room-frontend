@@ -123,7 +123,6 @@ export function createSetlistMock() {
     performanceId: pid,
     title: s.title,
     artist: s.artist,
-    status: 'CONFIRMED',
     assignedTeamId: s.team ? 't1' : null,
     assignedTeamName: s.team,
     setlistOrder: s.order,
