@@ -158,14 +158,24 @@ describe('withConfirmation', () => {
       code: 'CONFIRMATION_REQUIRED',
       message: 'x',
       details: [{ message: 'D1' }],
-      warnings: ['W1', 'W2'],
+      warnings: [
+        { type: 'MESSAGE', message: 'W1' },
+        {
+          type: 'PART_SHORTAGE',
+          partName: '기타',
+          requiredCount: 2,
+          assignedCount: 1,
+        },
+      ],
     })
     const run = vi.fn((confirmed: boolean) =>
       confirmed ? Promise.resolve('done') : Promise.reject(withWarnings),
     )
     await withConfirmation(run)
     expect(dialog).toHaveBeenCalledWith(
-      expect.objectContaining({ items: ['W1', 'W2'] }),
+      expect.objectContaining({
+        items: ['W1', '기타 파트가 1명 부족해요 (필요 2명, 현재 1명)'],
+      }),
     )
   })
 
@@ -177,14 +187,18 @@ describe('withConfirmation', () => {
         details: [],
         warnings: [
           'A',
-          { message: 'B', affectedCount: 2 },
-          { code: 'x' },
+          { type: 'SONG_COUNT_EXCEEDED', songCount: 3 },
+          { message: 'B' },
           7,
           '',
         ],
       },
     })
-    expect(e.warnings).toEqual(['A', 'B'])
+    expect(e.warnings).toEqual([
+      { type: 'MESSAGE', message: 'A' },
+      { type: 'SONG_COUNT_EXCEEDED', songCount: 3, message: undefined },
+      { type: 'UNKNOWN', message: 'B' },
+    ])
     expect(
       parseErrorBody(409, { error: { code: 'DUPLICATE' } }).warnings,
     ).toEqual([])

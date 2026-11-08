@@ -1,3 +1,5 @@
+import { parseWarnings, warningText, type ApiWarning } from './warnings'
+
 export const ERROR_CODES = [
   'VALIDATION_ERROR',
   'UNAUTHENTICATED',
@@ -24,8 +26,8 @@ export class ApiError extends Error {
   readonly status: number
   readonly code: ApiErrorCode
   readonly details: ErrorDetail[]
-  /** Messages of a CONFIRMATION_REQUIRED error's top-level `error.warnings`. */
-  readonly warnings: string[]
+  /** A CONFIRMATION_REQUIRED error's top-level `error.warnings`. */
+  readonly warnings: ApiWarning[]
   readonly requestId?: string
 
   constructor(init: {
@@ -33,7 +35,7 @@ export class ApiError extends Error {
     code: ApiErrorCode
     message: string
     details?: ErrorDetail[]
-    warnings?: string[]
+    warnings?: ApiWarning[]
     requestId?: string
   }) {
     super(init.message)
@@ -70,16 +72,7 @@ export function parseErrorBody(status: number, body: unknown): ApiError {
         reason: typeof d.reason === 'string' ? d.reason : undefined,
       }))
     : []
-  // ponytail: the API says `error.warnings` is a list but not its items: a string or `{message}` is read.
-  const warnings = Array.isArray(error?.warnings)
-    ? error.warnings.flatMap((w: unknown) =>
-        typeof w === 'string' && w
-          ? [w]
-          : isRecord(w) && typeof w.message === 'string' && w.message
-            ? [w.message]
-            : [],
-      )
-    : []
+  const warnings = parseWarnings(error?.warnings)
   return new ApiError({
     status,
     code: known ?? 'UNKNOWN',
@@ -114,8 +107,8 @@ export function fieldErrors(error: unknown): Record<string, string> {
   return result
 }
 
-/** CONFIRMATION_REQUIRED warning list: `error.warnings` (API spec), else `details[].message`. */
+/** CONFIRMATION_REQUIRED warning sentences: `error.warnings` (backend-confirmed), else `details[].message`. */
 export function confirmationWarnings(error: ApiError): string[] {
-  if (error.warnings.length > 0) return error.warnings
+  if (error.warnings.length > 0) return error.warnings.map(warningText)
   return error.details.flatMap((d) => (d.message ? [d.message] : []))
 }
