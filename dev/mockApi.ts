@@ -290,6 +290,23 @@ export function createMockApi() {
   const ok = (res: ServerResponse, data: unknown) => send(res, 200, { data })
   const fail = (res: ServerResponse, status: number, code: string) =>
     send(res, status, { error: { code, message: code } })
+  // Confirmed by the backend: `NOT_RESTORABLE` is a reason of 409 STATE_CONFLICT (APIs 132, 133).
+  const notRestorable = (
+    res: ServerResponse,
+    headers?: Record<string, string | string[]>,
+  ) =>
+    send(
+      res,
+      409,
+      {
+        error: {
+          code: 'STATE_CONFLICT',
+          message: 'STATE_CONFLICT',
+          details: [{ field: 'request', reason: 'NOT_RESTORABLE' }],
+        },
+      },
+      headers,
+    )
   const setCookie = (name: string, on: boolean) =>
     `${name}=${on ? 1 : ''}; Path=/; HttpOnly; SameSite=Lax${on ? '' : '; Max-Age=0'}`
 
@@ -369,7 +386,7 @@ export function createMockApi() {
         200,
         {
           data: {
-            loginResult: restore ? 'RESTORATION_REQUIRED' : 'LOGGED_IN',
+            loginResult: restore ? 'RESTORATION_REQUIRED' : 'EXISTING_USER',
             user: null,
             onboardingRequired: false,
           },
@@ -420,7 +437,7 @@ export function createMockApi() {
         })
     }
     if (path === '/api/v1/auth/recovery-info' && method === 'GET') {
-      if (!state.recovery) return fail(res, 409, 'NOT_RESTORABLE')
+      if (!state.recovery) return notRestorable(res)
       return ok(res, state.recovery)
     }
     if (
@@ -436,12 +453,9 @@ export function createMockApi() {
         !state.recovery ||
         (restoring && Date.parse(state.recovery.expiresAt) <= Date.now())
       )
-        return send(
-          res,
-          409,
-          { error: { code: 'NOT_RESTORABLE', message: 'NOT_RESTORABLE' } },
-          { 'Set-Cookie': setCookie(COOKIE_RESTORE, false) },
-        )
+        return notRestorable(res, {
+          'Set-Cookie': setCookie(COOKIE_RESTORE, false),
+        })
       state.user.name = restoring ? state.recovery.name : '새사용자'
       state.user.onboardingRequired = true
       state.recovery = null

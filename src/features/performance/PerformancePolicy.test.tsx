@@ -75,6 +75,26 @@ describe('PERF-004 PerformancePolicy', () => {
     })
   })
 
+  it('sends the team scope of candidate songs as TEAM_MEMBERS', async () => {
+    const { fetchMock } = open('DRAFT', {
+      [`PATCH ${PERF_URL}/policy`]: () =>
+        json({ policy: detail('DRAFT').policy, warnings: [] }),
+    })
+    await findScreen('PERF-004')
+    await screen.findByText(T.presetLine('팀 먼저'))
+    fireEvent.click(
+      card(T.features.candidate).getByRole('radio', {
+        name: new RegExp(T.scopeTeam),
+      }),
+    )
+    fireEvent.click(save())
+    await screen.findByText(COPY.saved)
+    expect(bodyOf(callsTo(fetchMock, `${PERF_URL}/policy`)[0])).toEqual({
+      version: '8',
+      candidateScope: 'TEAM_MEMBERS',
+    })
+  })
+
   it('sends a deadline as +09:00 and a limit as a number or null', async () => {
     const { fetchMock } = open('DRAFT', {
       [`PATCH ${PERF_URL}/policy`]: () =>

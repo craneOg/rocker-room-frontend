@@ -34,9 +34,9 @@ import {
 import type { PerformanceDetail } from './types'
 import './policy.css'
 
-// ponytail: the API leaves `candidateScope` as "enum"; the team value is assumed to be TEAM.
+// Confirmed by the backend: `candidateScope` is ALL_PARTICIPANTS or TEAM_MEMBERS.
 const SCOPE_ALL = 'ALL_PARTICIPANTS'
-const SCOPE_TEAM = 'TEAM'
+const SCOPE_TEAM = 'TEAM_MEMBERS'
 
 const STATE_OPTIONS = [
   { value: 'DISABLED', label: T.stateDisabled },

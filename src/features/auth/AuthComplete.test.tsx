@@ -46,7 +46,7 @@ function loginApi(opts: { restore?: boolean; me?: object } = {}) {
       // A withdrawn account gets the recovery-choice cookie only, never a session.
       signedIn = !opts.restore
       return json({
-        loginResult: opts.restore ? 'RESTORATION_REQUIRED' : 'LOGGED_IN',
+        loginResult: opts.restore ? 'RESTORATION_REQUIRED' : 'EXISTING_USER',
         user: null,
         onboardingRequired: false,
       })
@@ -74,7 +74,7 @@ describe('/auth/complete', () => {
       [`GET ${API_PATHS.memberships}`]: () => json({ items: [] }),
       [`POST ${API_PATHS.exchange}`]: () => {
         signedIn = true
-        return json({ loginResult: 'LOGGED_IN' })
+        return json({ loginResult: 'EXISTING_USER' })
       },
     })
     renderApp('/auth/complete')

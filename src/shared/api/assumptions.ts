@@ -39,7 +39,8 @@ export const AUTH_ERROR_QUERY_PARAM = 'error'
 // Assumed response shapes (types live in features/auth/api.ts):
 // - exchange: `{ loginResult }`; token fields are never read (HttpOnly cookies). Confirmed by the
 //   backend: `RESTORATION_REQUIRED` means a withdrawn account (a 10-minute choice cookie is set
-//   instead of the login cookies). The other values are not known, so only this one is compared.
+//   instead of the login cookies). The other values are NEW_USER and EXISTING_USER; only
+//   RESTORATION_REQUIRED is compared.
 // - handle availability: `{ available: boolean }`.
 // - Me: `name`, `handle` (null until onboarding), `profileImageUrl` (nullable).
 // - Membership (API-010, confirmed): see features/auth/api.ts.
