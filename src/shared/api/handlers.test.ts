@@ -7,7 +7,7 @@ import {
   warningsStore,
 } from '../ui/feedbackBus'
 import { extractWarnings } from './assumptions'
-import { ApiError, fieldErrors } from './errors'
+import { ApiError, fieldErrors, parseErrorBody } from './errors'
 import { createCaches, handleApiError, withConfirmation } from './handlers'
 
 const toast = vi.fn()
@@ -150,6 +150,58 @@ describe('withConfirmation', () => {
         confirmLabel: COPY.proceed,
       }),
     )
+  })
+
+  it('lists the warnings of error.warnings (strings or {message}) before details', async () => {
+    const withWarnings = new ApiError({
+      status: 409,
+      code: 'CONFIRMATION_REQUIRED',
+      message: 'x',
+      details: [{ message: 'D1' }],
+      warnings: [
+        { type: 'MESSAGE', message: 'W1' },
+        {
+          type: 'PART_SHORTAGE',
+          partName: '기타',
+          requiredCount: 2,
+          assignedCount: 1,
+        },
+      ],
+    })
+    const run = vi.fn((confirmed: boolean) =>
+      confirmed ? Promise.resolve('done') : Promise.reject(withWarnings),
+    )
+    await withConfirmation(run)
+    expect(dialog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: ['W1', '기타 파트가 1명 부족해요 (필요 2명, 현재 1명)'],
+      }),
+    )
+  })
+
+  it('parses error.warnings from the response body', () => {
+    const e = parseErrorBody(409, {
+      error: {
+        code: 'CONFIRMATION_REQUIRED',
+        message: 'm',
+        details: [],
+        warnings: [
+          'A',
+          { type: 'SONG_COUNT_EXCEEDED', songCount: 3 },
+          { message: 'B' },
+          7,
+          '',
+        ],
+      },
+    })
+    expect(e.warnings).toEqual([
+      { type: 'MESSAGE', message: 'A' },
+      { type: 'SONG_COUNT_EXCEEDED', songCount: 3, message: undefined },
+      { type: 'UNKNOWN', message: 'B' },
+    ])
+    expect(
+      parseErrorBody(409, { error: { code: 'DUPLICATE' } }).warnings,
+    ).toEqual([])
   })
 
   it('does not re-run when the user cancels', async () => {
