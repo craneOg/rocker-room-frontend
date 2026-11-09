@@ -1,0 +1,85 @@
+/* AUDI-001 ~ AUDI-004. */
+.audition-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-8);
+}
+
+.audition-filters select,
+.audition-form select {
+  min-width: 0;
+  max-width: 100%;
+  padding: var(--spacing-8);
+  border: 1px solid var(--semantic-line-neutral-tertiary);
+  border-radius: var(--radius-8);
+  background: var(--semantic-background-neutral-primary);
+  color: inherit;
+}
+
+.audition-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+}
+
+.audition-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  padding: var(--spacing-12) var(--spacing-16);
+  border: 1px solid var(--semantic-line-neutral-tertiary);
+  border-radius: var(--radius-12);
+}
+
+.audition-memo {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.audition-form,
+.audition-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
+}
+
+.audition-summary {
+  gap: var(--spacing-4);
+  padding: var(--spacing-12) var(--spacing-16);
+  border-radius: var(--radius-12);
+  background: var(--semantic-background-neutral-secondary);
+}
+
+.audition-radio {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-8);
+}
+
+.audition-applicants {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.audition-applicants li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-8);
+}
+
+.audition-error {
+  color: var(--semantic-foreground-negative-primary);
+  font-size: 12px;
+}
+
+.audition-earlier {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+}
