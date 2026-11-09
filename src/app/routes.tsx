@@ -238,12 +238,20 @@ export const routes: RouteObject[] = [
                       return { Component: TeamDetail }
                     },
                   },
+                  {
+                    path: `${PERF}/auditions/mine`,
+                    handle: { title: '내 오디션 결과', sub: true },
+                    lazy: async () => {
+                      const { MyAuditions } =
+                        await import('../features/audition/MyAuditions')
+                      return { Component: MyAuditions }
+                    },
+                  },
                   ...subScreens([
                     [`${PERF}/songs`, 'SONG-001'],
                     [`${PERF}/songs/new`, 'SONG-002'],
                     [`${PERF}/songs/:songId`, 'SONG-003'],
                     [`${PERF}/setlist`, 'SET-001'],
-                    [`${PERF}/auditions/mine`, 'AUDI-004'],
                     [`${PERF}/availability`, 'AVAIL-001'],
                     [`${PERF}/availability/common`, 'AVAIL-002'],
                     [`${PERF}/schedules`, 'SCHD-001'],
@@ -351,12 +359,36 @@ export const routes: RouteObject[] = [
                           return { Component: TeamReview }
                         },
                       },
+                      {
+                        path: `${PERF}/auditions`,
+                        handle: { title: '오디션', sub: true },
+                        lazy: async () => {
+                          const { AuditionList } =
+                            await import('../features/audition/AuditionList')
+                          return { Component: AuditionList }
+                        },
+                      },
+                      {
+                        path: `${PERF}/auditions/new`,
+                        handle: { title: '오디션 등록', sub: true },
+                        lazy: async () => {
+                          const { AuditionCreate } =
+                            await import('../features/audition/AuditionCreate')
+                          return { Component: AuditionCreate }
+                        },
+                      },
+                      {
+                        path: `${PERF}/auditions/:auditionId/result`,
+                        handle: { title: '심사 결과 입력', sub: true },
+                        lazy: async () => {
+                          const { AuditionResult } =
+                            await import('../features/audition/AuditionResult')
+                          return { Component: AuditionResult }
+                        },
+                      },
                       ...subScreens([
                         [`${PERF}/songs/status`, 'SONG-005'],
                         [`${PERF}/songs/:songId/players`, 'SONG-004'],
-                        [`${PERF}/auditions`, 'AUDI-001'],
-                        [`${PERF}/auditions/new`, 'AUDI-002'],
-                        [`${PERF}/auditions/:auditionId/result`, 'AUDI-003'],
                         [`${PERF}/schedules/new`, 'SCHD-003'],
                         [`${PERF}/schedules/:scheduleId/edit`, 'SCHD-003'],
                       ]),

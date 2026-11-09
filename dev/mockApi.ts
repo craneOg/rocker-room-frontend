@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { auditionMock } from './auditionMock.ts'
 import { handlePerformanceForm } from './performanceFormMock.ts'
 import { createPerformancePolicyMock } from './performancePolicyMock.ts'
 import { bodyCache, createPerformanceViewMock } from './performanceViewMock.ts'
@@ -570,6 +571,19 @@ export function createMockApi() {
     if (
       signedIn &&
       (await handleTeams({
+        req,
+        res,
+        url,
+        path,
+        method,
+        memberships: state.memberships,
+      }))
+    )
+      return
+
+    if (
+      signedIn &&
+      (await auditionMock({
         req,
         res,
         url,
