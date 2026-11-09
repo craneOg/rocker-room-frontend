@@ -246,6 +246,27 @@ describe('TEAM-004 saved application', () => {
     expect(body(fetchMock, `${T201}/submit`)).toEqual({ version: '2' })
   })
 
+  it('keeps 제출 off while the typed name is not saved yet', async () => {
+    openEdit(() => team())
+    const name = await screen.findByRole('textbox', { name: T.nameLabel })
+    const submit = () =>
+      screen.getByRole('button', { name: T.submit }) as HTMLButtonElement
+    expect(submit().disabled).toBe(false)
+    fireEvent.change(name, { target: { value: '다른 이름' } })
+    expect(submit().disabled).toBe(true)
+  })
+
+  it('shows the application of a finished performance as a record only', async () => {
+    openEdit(
+      () => team(),
+      {},
+      () => withTeamPolicy('OPEN', { status: 'FINISHED' }),
+    )
+    await screen.findByText('나')
+    expect(screen.queryByRole('button', { name: T.submit })).toBeNull()
+    expect(screen.queryByRole('textbox', { name: T.nameLabel })).toBeNull()
+  })
+
   it('does not submit when the confirmation is cancelled', async () => {
     const { fetchMock } = openEdit(() => team())
     await click(T.submit)

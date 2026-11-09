@@ -57,6 +57,8 @@ export type Write = {
   /** Toast after the write. */
   done: string
   onDone?: () => void
+  /** After a failed write (a chain may have saved part of it): the screen drops what it was holding. */
+  onFail?: () => void
 }
 
 /** One team write: refreshes the performance's queries, toasts, and reports a taken team name. */
@@ -69,13 +71,14 @@ export function useTeamWrite(c: TeamContext) {
       feedback.toast(w.done, 'positive')
       w.onDone?.()
     },
-    onError: async (e) => {
+    onError: async (e, w) => {
       // A write chain may have stopped half way (members added one by one): show what was saved.
       await refreshTeams(qc, c)
       const text = teamNameError(e)
       if (text !== undefined) feedback.toast(text, 'negative')
       else if (isIneligibleMember(e))
         feedback.toast(T.ineligibleMember, 'negative')
+      w.onFail?.()
     },
   })
 }

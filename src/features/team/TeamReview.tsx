@@ -188,7 +188,7 @@ function ReviewCard({
         </Button>
         <Button
           size="small"
-          disabled={!active || write.isPending}
+          disabled={!active || write.isPending || !d}
           onClick={() => void approve()}
         >
           {T.approve}

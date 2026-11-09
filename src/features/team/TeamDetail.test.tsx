@@ -304,6 +304,26 @@ describe('TEAM-002 officer edits', () => {
     )
   })
 
+  it('closes the picker when adding stops half way, so nothing is sent twice', async () => {
+    let posts = 0
+    openAdmin({
+      [`GET ${PERF}/members`]: () =>
+        memberPage(
+          [memberRow('2', '23', '이서연'), memberRow('3', '24', '박지호')],
+          { APPROVED: 2 },
+        ),
+      [`POST ${T201}/members`]: () =>
+        ++posts === 1 ? mutation('3', {}, [], 201) : apiError('DUPLICATE', 409),
+    })
+    fireEvent.click(await screen.findByText(`+ ${T.addMember}`))
+    fireEvent.click(await screen.findByRole('checkbox', { name: /이서연/ }))
+    fireEvent.click(await screen.findByRole('checkbox', { name: /박지호/ }))
+    await clickLast(T.pickerAdd)
+    await waitFor(() =>
+      expect(screen.queryByRole('checkbox', { name: /이서연/ })).toBeNull(),
+    )
+  })
+
   const pickOne = async () => {
     fireEvent.click(await screen.findByText(`+ ${T.addMember}`))
     fireEvent.click(await screen.findByRole('checkbox', { name: /이서연/ }))

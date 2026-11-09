@@ -224,7 +224,9 @@ function ApplyEdit({ c, teamId }: { c: Ctx; teamId: string }) {
 
   const { team, members } = d
   const iAmLeader = team.leaderMembershipId === c.myMembershipId
-  const draft = team.status === 'DRAFT' && iAmLeader
+  // A finished performance keeps its applications as a record only.
+  const draft =
+    team.status === 'DRAFT' && iAmLeader && c.perf?.status !== 'FINISHED'
   const name = typed ?? team.name
   const call = {
     clubId: c.clubId,
@@ -475,7 +477,12 @@ function ApplyEdit({ c, teamId }: { c: Ctx; teamId: string }) {
                 {T.saveDraft}
               </Button>
               <Button
-                disabled={name.trim() === '' || write.isPending}
+                // The submit request carries no name: an unsaved edit would be dropped.
+                disabled={
+                  name.trim() === '' ||
+                  name.trim() !== team.name ||
+                  write.isPending
+                }
                 onClick={() => void submit()}
               >
                 {T.submit}
@@ -483,6 +490,7 @@ function ApplyEdit({ c, teamId }: { c: Ctx; teamId: string }) {
               <Button
                 variant="outlined"
                 color="assistive"
+                loading={write.isPending}
                 onClick={() => void withdraw()}
               >
                 {T.deleteDraft}
@@ -494,16 +502,22 @@ function ApplyEdit({ c, teamId }: { c: Ctx; teamId: string }) {
               <Button
                 variant="outlined"
                 color="assistive"
+                loading={write.isPending}
                 onClick={() => go('unsubmit', T.unsubmitted)}
               >
                 {T.unsubmit}
               </Button>
-              <Button onClick={() => void withdraw()}>{T.withdrawApply}</Button>
+              <Button loading={write.isPending} onClick={() => void withdraw()}>
+                {T.withdrawApply}
+              </Button>
             </>
           ) : null}
           {(team.status === 'REJECTED' || team.status === 'WITHDRAWN') &&
           c.perf?.status === 'ACTIVE' ? (
-            <Button onClick={() => go('reopen', T.reopened)}>
+            <Button
+              loading={write.isPending}
+              onClick={() => go('reopen', T.reopened)}
+            >
               {T.menuReopen}
             </Button>
           ) : null}
@@ -529,6 +543,8 @@ function ApplyEdit({ c, teamId }: { c: Ctx; teamId: string }) {
                 ),
               done: T.memberAdded(picks.length),
               onDone: () => setPicking(false),
+              // Members are added one by one: after a half-way failure the picker starts over.
+              onFail: () => setPicking(false),
             })
           }
         />

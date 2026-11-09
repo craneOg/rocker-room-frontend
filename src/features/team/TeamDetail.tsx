@@ -103,12 +103,14 @@ export function TeamDetail() {
     call: (reason: string | undefined) => Promise<unknown>,
     done: string,
     onDone?: () => void,
+    onFail?: () => void,
   ) =>
     gate.ask(reasonForEdit, {
       title: T.lockedTitle,
       description: T.lockedHint,
       actionLabel: T.lockedAction,
-      run: (reason) => write.mutate({ run: () => call(reason), done, onDone }),
+      run: (reason) =>
+        write.mutate({ run: () => call(reason), done, onDone, onFail }),
     })
 
   const defaultTeam = async () => {
@@ -158,6 +160,8 @@ export function TeamDetail() {
           reason,
         ),
       T.memberAdded(picks.length),
+      () => setAdding(false),
+      // Members are added one by one: after a half-way failure the picker starts over.
       () => setAdding(false),
     )
 

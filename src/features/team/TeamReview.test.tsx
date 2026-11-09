@@ -139,6 +139,25 @@ describe('TEAM-005', () => {
     expect(body(fetchMock, `${T401}/approve`)).toEqual({ version: '5' })
   })
 
+  it('keeps 승인 off until the team detail has arrived', async () => {
+    let release: (() => void) | null = null
+    openReview({
+      [`GET ${T401}`]: () =>
+        new Promise((resolve) => {
+          release = () => resolve(DETAIL())
+        }),
+    })
+    const approve = async () =>
+      (await screen.findByRole('button', {
+        name: T.approve,
+      })) as HTMLButtonElement
+    expect((await approve()).disabled).toBe(true)
+    await waitFor(() => expect(release).not.toBeNull())
+    release!()
+    await screen.findByText(/참여 희망 1명 포함/)
+    expect((await approve()).disabled).toBe(false)
+  })
+
   it('does not approve when the confirmation is cancelled', async () => {
     const { fetchMock } = openReview()
     await screen.findByText(/참여 희망 1명 포함/)
