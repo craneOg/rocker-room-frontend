@@ -69,7 +69,9 @@ export function TeamCardLink({ team, base }: { team: TeamCard; base: string }) {
         ) : null}
         <Typography variant="caption1">
           {[
-            T.assignedSongs(team.assignedSongCount),
+            team.assignedSongCount === null
+              ? null
+              : T.assignedSongs(team.assignedSongCount),
             team.candidateSongCount === null
               ? null
               : T.candidateSongs(team.candidateSongCount),

@@ -433,7 +433,7 @@ export function TeamDetail() {
                   <Typography variant="body2" weight="bold">
                     {s.title}
                   </Typography>
-                  <Badge kind="song" value={s.status} />
+                  {s.status ? <Badge kind="song" value={s.status} /> : null}
                   {s.evaluation ? (
                     <Typography variant="caption1">
                       {T.voteSummary(s.evaluation.voteCount)}

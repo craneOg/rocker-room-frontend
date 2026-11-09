@@ -20,10 +20,11 @@ export type PartCount = {
   count: number
 }
 
-/** Item of API-061. The candidate song count is null for anyone who is neither a member nor an officer. */
+/** Item of API-061. Both song counts are null for anyone who is neither a member nor an officer. */
 export type TeamCard = {
   id: string
-  performanceId: string
+  /** Optional: in the spec, not yet sent by the server (issue #30). */
+  performanceId?: string
   name: string
   status: TeamStatus
   isDefault: boolean
@@ -33,7 +34,7 @@ export type TeamCard = {
   leaderDisplayName: string | null
   memberCount: number
   partSummary: PartCount[]
-  assignedSongCount: number
+  assignedSongCount: number | null
   candidateSongCount: number | null
   isMine: boolean
   version: string
@@ -62,7 +63,8 @@ export type TeamView = Omit<
 export type TeamMemberRow = {
   /** The team-member row ID (teamMemberId): the path of the member edit / remove APIs. */
   id: string
-  teamId: string
+  /** Optional: in the spec, not yet sent by the server (issue #30). */
+  teamId?: string
   membershipId: string
   performanceMemberId: string
   displayName: string
@@ -77,10 +79,12 @@ export type TeamMemberRow = {
 
 export type TeamSong = {
   id: string
-  performanceId: string
+  /** Optional: in the spec, not yet sent by the server (issue #30). */
+  performanceId?: string
   title: string
   artist: string | null
-  status: 'PROPOSED' | 'CONFIRMED' | 'REJECTED' | 'WITHDRAWN'
+  /** Optional: not yet sent by the server (issue #30); the badge is left out without it. */
+  status?: 'PROPOSED' | 'CONFIRMED' | 'REJECTED' | 'WITHDRAWN'
   assignedTeamId: string | null
   setlistOrder: number | null
   version: string

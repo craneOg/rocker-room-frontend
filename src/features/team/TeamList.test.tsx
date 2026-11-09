@@ -175,4 +175,19 @@ describe('TEAM-001 for members', () => {
     await screen.findByText('담당 곡 1곡')
     expect(screen.queryByText(/후보곡/)).toBeNull()
   })
+
+  it('hides both song counts when the server sends null', async () => {
+    open(URL, 'MEMBER', {
+      [`GET ${TEAMS}`]: () =>
+        teamPage([
+          card('201', 'Crane Team', {
+            assignedSongCount: null,
+            candidateSongCount: null,
+          }),
+        ]),
+    })
+    await screen.findByText('Crane Team')
+    expect(screen.queryByText(/담당 곡/)).toBeNull()
+    expect(screen.queryByText(/null/)).toBeNull()
+  })
 })
