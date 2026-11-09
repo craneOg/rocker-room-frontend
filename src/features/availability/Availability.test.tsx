@@ -143,6 +143,22 @@ describe('AVAIL-001 for a confirmed participant', () => {
     await waitFor(() => expect(screen.queryByText(T.dirtyBar)).toBeNull())
   })
 
+  it('does not let the member paint before the saved slots have arrived', async () => {
+    let release: (() => void) | null = null
+    open('MEMBER', {
+      [`GET ${ME}`]: () =>
+        new Promise((resolve) => {
+          release = () => resolve(json({ items: SAVED }))
+        }),
+    })
+    await findScreen('AVAIL-001')
+    await waitFor(() => expect(release).not.toBeNull())
+    expect(cell('10.14(수) 20:00').disabled).toBe(true)
+    release!()
+    await loaded()
+    expect(cell('10.14(수) 20:00').disabled).toBe(false)
+  })
+
   it('sends an empty list when everything is erased', async () => {
     const { fetchMock } = open('MEMBER', {
       [`PUT ${ME}`]: () => json({ items: [] }),

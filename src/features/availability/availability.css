@@ -88,10 +88,6 @@
   cursor: not-allowed;
 }
 
-.avail-cell[data-on] {
-  background: var(--semantic-foreground-brand-primary);
-}
-
 .avail-cell[data-level='1'] {
   background: #e6e6e6;
 }
@@ -105,6 +101,10 @@
 .avail-cell[data-level='4'] {
   background: #4d4d4d;
   color: #fff;
+}
+
+.avail-cell[data-on] {
+  background: var(--semantic-foreground-brand-primary);
 }
 
 .avail-cell[data-strong] {

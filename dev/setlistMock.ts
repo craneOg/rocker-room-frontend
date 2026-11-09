@@ -92,7 +92,7 @@ const initial = (): Record<string, { version: number; songs: Song[] }> => ({
 })
 
 export function createSetlistMock() {
-  const state = initial()
+  let state = initial()
   const statusOf: Record<string, string> = { p1: 'ACTIVE', p3: 'LOCKED' }
 
   const send = (ctx: MockCtx, status: number, body?: unknown) => {
@@ -231,5 +231,9 @@ export function createSetlistMock() {
     return false
   }
 
-  return handle
+  return Object.assign(handle, {
+    reset: () => {
+      state = initial()
+    },
+  })
 }

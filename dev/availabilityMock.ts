@@ -57,7 +57,7 @@ const seed = () => {
 }
 
 export function createAvailabilityMock() {
-  const state = seed()
+  let state = seed()
 
   const send = (ctx: MockCtx, status: number, body?: unknown) => {
     ctx.res.writeHead(status, { 'Content-Type': 'application/json' })
@@ -362,5 +362,9 @@ export function createAvailabilityMock() {
     return false
   }
 
-  return handle
+  return Object.assign(handle, {
+    reset: () => {
+      state = seed()
+    },
+  })
 }

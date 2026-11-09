@@ -93,13 +93,14 @@ export function Availability() {
   })
   const viewingOther = target !== ME
   const hasOwn = mine.data != null
+  const slotsKey = [
+    ...availabilityKey(clubId, performanceId),
+    target,
+    season?.start,
+    season?.end,
+  ]
   const slotsQuery = useQuery({
-    queryKey: [
-      ...availabilityKey(clubId, performanceId),
-      target,
-      season?.start,
-      season?.end,
-    ],
+    queryKey: slotsKey,
     queryFn: async () => {
       if (!season) return { items: [] }
       const from = toIso(dayStart(season.start))
@@ -126,7 +127,9 @@ export function Availability() {
         : policy?.availabilityState !== 'OPEN' || passed
           ? T.readOnlyClosed
           : null
-  const canEdit = !viewingOther && blockedBy === null
+  // Painting before the server slots arrive would build the edit on an empty set, and saving
+  // replaces the whole season: the stored slots would be deleted.
+  const canEdit = !viewingOther && blockedBy === null && slotsQuery.isSuccess
 
   const save = useMutation({
     mutationFn: () => {
@@ -143,7 +146,9 @@ export function Availability() {
         ),
       })
     },
-    onSuccess: async () => {
+    onSuccess: async (saved) => {
+      // Keep the saved slots in the cache even if the refetch below fails.
+      qc.setQueryData(slotsKey, saved)
       await invalidatePerformance(qc, clubId, performanceId)
       setEdit(null)
       feedback.toast(T.saved, 'positive')
