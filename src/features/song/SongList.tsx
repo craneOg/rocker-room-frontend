@@ -77,9 +77,13 @@ function SongItem({
   const candidate = song.status === 'PROPOSED'
   // Input rows exist while the feature is on; a closed one shows no buttons.
   const voteOn =
-    candidate && policy !== undefined && policy.voteState === 'OPEN'
+    candidate &&
+    policy !== undefined &&
+    isOpen(policy.voteState, policy.voteDeadline)
   const playOn =
-    candidate && policy !== undefined && policy.playabilityState === 'OPEN'
+    candidate &&
+    policy !== undefined &&
+    isOpen(policy.playabilityState, policy.playabilityDeadline)
   return (
     <li className="song-card">
       <div className="song-card-head">

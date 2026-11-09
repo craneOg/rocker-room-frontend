@@ -325,6 +325,7 @@ export function createMockApi() {
     if (method === 'POST' && path === '/api/__mock/reset') {
       state = initialState()
       perfMock.reset()
+      songMock.reset()
       return send(res, 204, undefined, {
         'Set-Cookie': [
           setCookie(COOKIE_SESSION, false),

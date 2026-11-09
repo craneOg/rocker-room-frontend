@@ -482,9 +482,15 @@ function RequirementsSheet(p: SheetProps) {
     () =>
       saveRequirements(clubId, performanceId, songId, {
         version: detail.song.version,
-        items: ctx.activeParts
-          .filter((x) => (counts[x.id] ?? 0) > 0)
-          .map((x) => ({ partId: x.id, requiredCount: counts[x.id] ?? 0 })),
+        items: [
+          ...ctx.activeParts
+            .filter((x) => (counts[x.id] ?? 0) > 0)
+            .map((x) => ({ partId: x.id, requiredCount: counts[x.id] ?? 0 })),
+          // The PUT replaces everything: a part that was deactivated has no row here and must stay.
+          ...detail.requirements.filter(
+            (r) => !ctx.activeParts.some((x) => x.id === r.partId),
+          ),
+        ],
         ...(locked ? { reason: reason.trim() } : {}),
       }),
     T.requirementsSaved,
@@ -575,6 +581,9 @@ function TeamSheet(p: SheetProps) {
           onChange={(e) => setTeamId(e.target.value)}
         >
           {locked ? null : <option value="">{T.noTeam}</option>}
+          {locked && !approved.some((t) => t.id === teamId) ? (
+            <option value="">{T.scopePlaceholder}</option>
+          ) : null}
           {approved.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}

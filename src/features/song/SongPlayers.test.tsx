@@ -330,14 +330,11 @@ describe('SONG-004 team from players', () => {
     })) as HTMLInputElement
     await waitFor(() => expect(name.value).toBe('3팀'))
     expect(screen.getByText(T.teamHint)).toBeTruthy()
-    fireEvent.change(screen.getByRole('combobox', { name: T.teamLeader }), {
-      target: { value: '' },
-    })
     await waitFor(() =>
       expect(screen.getByRole('option', { name: '정규채' })).toBeTruthy(),
     )
     fireEvent.change(screen.getByRole('combobox', { name: T.teamLeader }), {
-      target: { value: '' },
+      target: { value: '21' },
     })
     const dialog = screen.getByRole('dialog')
     fireEvent.click(within(dialog).getByRole('button', { name: T.teamCreate }))
@@ -346,7 +343,7 @@ describe('SONG-004 team from players', () => {
       sourceSongId: '41',
       version: '8',
       name: '3팀',
-      leaderMembershipId: null,
+      leaderMembershipId: '21',
     })
   })
 

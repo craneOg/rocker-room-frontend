@@ -128,6 +128,8 @@ function PartAnswer({
   const needsReason = answer === 'IMPOSSIBLE' || answer === 'UNDECIDED'
   const send = (a: Answer, r: string) => {
     setSaved(false)
+    // A changed answer drops the old reason on the server: drop it on the screen too.
+    if (a !== answer) setReason(r)
     save.mutate({ answer: a, reason: a === 'POSSIBLE' || r === '' ? null : r })
   }
   return (

@@ -188,6 +188,33 @@ describe('SONG-002 as a member', () => {
     await screen.findByText('* 주소를 확인해 주세요')
   })
 
+  it('drops the server error of a field once it is edited', async () => {
+    openSong(PATH, 'MEMBER', {
+      routes: routes({
+        [`POST ${SONGS}`]: () =>
+          new Response(
+            JSON.stringify({
+              error: {
+                code: 'VALIDATION_ERROR',
+                message: 'x',
+                details: [
+                  { field: 'referenceUrl', message: '주소를 확인해 주세요' },
+                ],
+              },
+            }),
+            { status: 400 },
+          ),
+      }),
+    })
+    await type(T.fieldTitle, '곡')
+    await submit()
+    await screen.findByText('* 주소를 확인해 주세요')
+    await type(T.fieldLink, 'https://example.com/fixed')
+    await waitFor(() =>
+      expect(screen.queryByText('* 주소를 확인해 주세요')).toBeNull(),
+    )
+  })
+
   it('shows the duplicate-song warning banner after saving (S-04)', async () => {
     const { router } = openSong(PATH, 'MEMBER', {
       routes: routes({

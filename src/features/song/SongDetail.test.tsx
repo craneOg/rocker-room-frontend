@@ -1267,6 +1267,41 @@ describe('SONG-003 requirements and team editing', () => {
     })
   })
 
+  it('keeps the requirement of a part that is no longer active', async () => {
+    const { fetchMock } = openSong(PATH, 'CLUB_ADMIN', {
+      routes: base(
+        { version: '8' },
+        {
+          requirements: [
+            { partId: '4', requiredCount: 1 },
+            { partId: '99', requiredCount: 2 },
+          ],
+        },
+        {
+          [`PUT ${S}/requirements`]: () =>
+            json({ songVersion: '9', items: [] }),
+        },
+      ),
+    })
+    await click(T.requirementsEdit)
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(
+      await within(dialog).findByRole('button', {
+        name: T.stepperPlus('보컬'),
+      }),
+    )
+    fireEvent.click(within(dialog).getByRole('button', { name: T.save }))
+    await screen.findByText(T.requirementsSaved)
+    expect(body(fetchMock, `${S}/requirements`)).toEqual({
+      version: '8',
+      items: [
+        { partId: '4', requiredCount: 1 },
+        { partId: '5', requiredCount: 1 },
+        { partId: '99', requiredCount: 2 },
+      ],
+    })
+  })
+
   it('needs a reason for requirement changes in a locked performance', async () => {
     const { fetchMock } = openSong(PATH, 'CLUB_ADMIN', {
       perf: { status: 'LOCKED' },

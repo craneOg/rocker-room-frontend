@@ -62,9 +62,13 @@ const ROSTER: Record<string, { pm: string; member: string }[]> = {
   ],
 }
 const SELF_PM: Record<string, string> = { p1: 'pm1' }
-const TEAMS: Record<string, { id: string; name: string; status: string }[]> = {
+const initialTeams = (): Record<
+  string,
+  { id: string; name: string; status: string }[]
+> => ({
   p1: [{ id: 't1', name: 'Crane Team', status: 'APPROVED' }],
-}
+})
+let TEAMS = initialTeams()
 
 const nameOf = (member: string) =>
   NAMES[Number(member.replace(/\D/g, '')) - 1] ?? member
@@ -193,6 +197,11 @@ const initial = (): Song[] => [
 export function createSongMock() {
   let songs = initial()
   let seq = 100
+  const reset = () => {
+    songs = initial()
+    seq = 100
+    TEAMS = initialTeams()
+  }
 
   const send = (res: ServerResponse, status: number, body?: unknown) => {
     res.writeHead(status, { 'Content-Type': 'application/json' })
@@ -340,7 +349,7 @@ export function createSongMock() {
       })
   }
 
-  return async function handle(ctx: MockCtx): Promise<boolean> {
+  const handle = async function handle(ctx: MockCtx): Promise<boolean> {
     const { res, url, path, method } = ctx
     const m =
       /^\/api\/v1\/clubs\/c10\/performances\/([^/]+)\/(songs|evaluations|teams)(?:\/(.*))?$/.exec(
@@ -960,4 +969,5 @@ export function createSongMock() {
     }
     return false
   }
+  return Object.assign(handle, { reset })
 }

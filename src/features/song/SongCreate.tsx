@@ -155,6 +155,9 @@ export function SongCreate() {
     (!scopeRequired || teamValue !== '') &&
     lockedReady
 
+  const clearError = (key: string) =>
+    setErrors(({ [key]: _cleared, ...rest }) => rest)
+
   const submit = () => {
     setErrors({})
     if (locked) setAsking(true)
@@ -181,7 +184,10 @@ export function SongCreate() {
           placeholder={T.fieldTitle}
           aria-label={T.fieldTitle}
           disabled={exhausted}
-          onChange={(e) => setF({ ...f, title: e.target.value })}
+          onChange={(e) => {
+            setF({ ...f, title: e.target.value })
+            clearError('title')
+          }}
         />
       </FormField>
       <FormField label={T.fieldArtist} error={errors.artist}>
@@ -191,7 +197,10 @@ export function SongCreate() {
           placeholder={T.fieldArtist}
           aria-label={T.fieldArtist}
           disabled={exhausted}
-          onChange={(e) => setF({ ...f, artist: e.target.value })}
+          onChange={(e) => {
+            setF({ ...f, artist: e.target.value })
+            clearError('artist')
+          }}
         />
       </FormField>
       <FormField
@@ -204,7 +213,10 @@ export function SongCreate() {
           placeholder={T.linkPlaceholder}
           aria-label={T.fieldLink}
           disabled={exhausted}
-          onChange={(e) => setF({ ...f, link: e.target.value })}
+          onChange={(e) => {
+            setF({ ...f, link: e.target.value })
+            clearError('referenceUrl')
+          }}
         />
       </FormField>
       <FormField label={T.fieldMemo} error={errors.memo}>
@@ -215,7 +227,10 @@ export function SongCreate() {
           placeholder={T.memoPlaceholder}
           aria-label={T.fieldMemo}
           disabled={exhausted}
-          onChange={(e) => setF({ ...f, memo: e.target.value.slice(0, 500) })}
+          onChange={(e) => {
+            setF({ ...f, memo: e.target.value.slice(0, 500) })
+            clearError('memo')
+          }}
         />
       </FormField>
       <p className="reason-counter">{`${f.memo.length} / 500`}</p>

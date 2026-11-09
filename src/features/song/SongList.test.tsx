@@ -367,6 +367,8 @@ describe('SONG-001 vote and playability entry', () => {
     })
     await screen.findByText(/꿈의 아이/)
     expect(screen.queryByRole('button', { name: T.approve })).toBeNull()
+    // A closed deadline is not a missing right: no "not eligible" for an eligible member.
+    expect(screen.queryByText(T.notEligible)).toBeNull()
   })
 })
 
