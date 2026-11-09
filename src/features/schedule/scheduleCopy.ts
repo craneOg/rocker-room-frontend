@@ -98,6 +98,7 @@ export const SCHEDULE_COPY = {
   unconfirmNotice: '임시로 바꾸면 부원에게 이 일정이 보이지 않아요.',
   save: '저장',
   saved: '일정을 저장했어요',
+  multiDay: '여러 날에 걸친 일정은 아직 이 화면에서 고칠 수 없어요.',
   endedPerformance:
     '종료되거나 취소된 공연에는 일정을 만들거나 고칠 수 없어요.',
   hardErrorsTitle: '저장할 수 없어요',

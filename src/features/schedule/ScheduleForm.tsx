@@ -243,10 +243,13 @@ function FormBody({
     placeholderData: keepPreviousData,
     gcTime: 0,
   })
-  const warnings: ScheduleWarning[] = (preview.data?.warnings ?? []).filter(
+  // keepPreviousData also serves the last answer after the query is turned off.
+  const previewData =
+    endAfterStart && hasTarget && form.date !== '' ? preview.data : undefined
+  const warnings: ScheduleWarning[] = (previewData?.warnings ?? []).filter(
     (w) => w.scheduleId === undefined || w.scheduleId !== editId,
   )
-  const hardErrors = preview.data?.hardErrors ?? []
+  const hardErrors = previewData?.hardErrors ?? []
 
   const save = useMutation({
     mutationFn: async () => {
@@ -450,15 +453,15 @@ function FormBody({
 
       <section className="schd-section" aria-label={T.previewTitle}>
         <Typography variant="body1" weight="bold" as="h2">
-          {preview.data
-            ? T.attendees(preview.data.participants.length)
+          {previewData
+            ? T.attendees(previewData.participants.length)
             : T.previewTitle}
         </Typography>
         {preview.isError ? (
           <ErrorState onRetry={() => void preview.refetch()} />
-        ) : preview.data ? (
+        ) : previewData ? (
           <ul className="schd-people">
-            {preview.data.participants.map((p) => (
+            {previewData.participants.map((p) => (
               <li key={p.membershipId} className="schd-person">
                 {p.displayName}
               </li>
@@ -482,7 +485,7 @@ function FormBody({
             ))}
           </ul>
         ) : null}
-        {preview.data && warnings.length === 0 ? (
+        {previewData && warnings.length === 0 ? (
           <Typography variant="body2">{T.noOverlap}</Typography>
         ) : (
           <ul className="warning-list">
@@ -543,6 +546,8 @@ export function ScheduleForm() {
     queryKey: [...scheduleKey(clubId, performanceId), scheduleId, 'detail'],
     queryFn: () => getSchedule(clubId, performanceId, scheduleId ?? ''),
     enabled: scheduleId !== undefined,
+    // The form restarts when the version changes (below): a silent refetch would drop the draft.
+    refetchOnReconnect: false,
   })
   const perf = useQuery({
     queryKey: [...performanceKey(clubId, performanceId), 'detail'],
@@ -570,6 +575,14 @@ export function ScheduleForm() {
     return (
       <div className="schd" data-screen-id="SCHD-003">
         <Typography variant="body1">{T.endedPerformance}</Typography>
+      </div>
+    )
+  // The form has one date: a schedule over several days would lose its end date on save.
+  const stored = detail.data?.schedule
+  if (stored && dateOf(stored.startAt) !== dateOf(stored.endAt))
+    return (
+      <div className="schd" data-screen-id="SCHD-003">
+        <Typography variant="body1">{T.multiDay}</Typography>
       </div>
     )
   return (

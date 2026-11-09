@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { API_PATHS } from '../../shared/api/assumptions'
 import { findScreen, json, setupDom } from '../../test/harness'
-import { lastQuery, membership } from '../performance/viewTestKit'
+import { lastQuery, membership, perf } from '../performance/viewTestKit'
 import {
   event,
   freezeToday,
@@ -201,6 +201,33 @@ describe('SCHD-001 ScheduleCalendar', () => {
     )
     await waitFor(() =>
       expect(lastQuery(fetchMock, CLUB).get('teamId')).toBe('101'),
+    )
+  })
+
+  it('a day of the previous month moves the month with it', async () => {
+    openSchedule('/calendar', 'MEMBER', { [`GET ${MINE}`]: items(event()) })
+    await ready()
+    fireEvent.click(screen.getByRole('button', { name: T.viewMonth }))
+    fireEvent.click(await screen.findByRole('gridcell', { name: /^09\.30/ }))
+    await screen.findByText('2026년 9월')
+  })
+
+  it('looks at every page of the performances for the add target', async () => {
+    const page = (n: number, items: unknown[]) =>
+      json({ items, page: n, size: 20, totalElements: 21, totalPages: 2 })
+    openSchedule('/calendar', 'CLUB_ADMIN', {
+      [`GET ${MINE}`]: items(),
+      [`GET ${CLUB}`]: items(),
+      [`GET /api/v1/clubs/10/performances`]: (url) =>
+        String(url).includes('page=1')
+          ? page(1, [perf({ id: '33', title: '둘째 쪽 공연' })])
+          : page(0, [perf({ id: '32', title: '지난', status: 'FINISHED' })]),
+    })
+    await ready()
+    fireEvent.click(screen.getByRole('button', { name: T.scopeClub }))
+    const add = await screen.findByRole('link', { name: T.addSchedule })
+    expect(add.getAttribute('href')).toBe(
+      '/clubs/10/performances/33/schedules/new',
     )
   })
 

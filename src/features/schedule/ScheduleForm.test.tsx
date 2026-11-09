@@ -310,6 +310,37 @@ describe('SCHD-003 ScheduleForm (create)', () => {
     expect(callsTo(fetchMock, VALIDATE).length).toBeGreaterThan(0)
   })
 
+  it('drops the preview once the target is cleared again', async () => {
+    await openNew()
+    pick('Crane Team')
+    await screen.findByText(T.attendees(2))
+    pick('Crane Team')
+    await waitFor(() => expect(screen.queryByText(T.attendees(2))).toBeNull())
+    expect(screen.queryByText('정규채')).toBeNull()
+  })
+
+  it('reads only well-formed warning fields instead of crashing', async () => {
+    await openNew({
+      [`POST ${VALIDATE}`]: () =>
+        json({
+          hardErrors: [],
+          warnings: [
+            {
+              type: 'OVERLAP',
+              scheduleId: 7,
+              title: '겹치는 합주',
+              startAt: 5,
+              endAt: null,
+              participants: [null, 'x', { displayName: 3 }],
+            },
+          ],
+          participants: [],
+        }),
+    })
+    pick('Crane Team')
+    await screen.findByText(/겹치는 합주/)
+  })
+
   it('hard errors of the check ({type, message}) show their message and block the save', async () => {
     await openNew({
       [`POST ${VALIDATE}`]: () =>
@@ -431,6 +462,20 @@ describe('SCHD-003 ScheduleForm (edit)', () => {
       resource: { ...detailOf().schedule, status, version: '4' },
       warnings: [],
     })
+
+  it('does not open a schedule over several days: it would lose the end date', async () => {
+    openSchedule(
+      EDIT,
+      'CLUB_ADMIN',
+      rules({
+        [`GET ${ONE}`]: () =>
+          json(detailOf({ endAt: '2026-10-16T01:00:00+09:00' })),
+        [`GET ${ONE}/conflicts`]: () => json({ items: [] }),
+      }),
+    )
+    await screen.findByText(T.multiDay)
+    expect(screen.queryByDisplayValue('정기 합주')).toBeNull()
+  })
 
   it('fills the form from the schedule and patches without the status', async () => {
     const { fetchMock } = await openEdit(

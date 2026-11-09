@@ -207,7 +207,19 @@ export function ScheduleCalendar() {
   const club = scope === 'club'
   const performances = useQuery({
     queryKey: ['club', clubId, 'performances', 'calendar-options'],
-    queryFn: () => listPerformances(clubId, {}, 0),
+    // Every page: the filter and the new-schedule target must not stop at the first 20.
+    queryFn: async () => {
+      const first = await listPerformances(clubId, {}, 0)
+      const rest = await Promise.all(
+        Array.from({ length: Math.max(first.totalPages - 1, 0) }, (_, i) =>
+          listPerformances(clubId, {}, i + 1),
+        ),
+      )
+      return {
+        ...first,
+        items: [...first.items, ...rest.flatMap((p) => p.items)],
+      }
+    },
     enabled: club && clubId !== '',
   })
   const teams = useQuery({
@@ -296,7 +308,11 @@ export function ScheduleCalendar() {
                       .join(' ')}
                     aria-pressed={d === pickedDay}
                     aria-label={`${shortDate(d)} ${T.dayCount(n)}`}
-                    onClick={() => setPickedDay(d)}
+                    onClick={() => {
+                      setPickedDay(d)
+                      // A day of the next / previous month moves the month too.
+                      if (d.slice(0, 7) !== anchor.slice(0, 7)) setAnchor(d)
+                    }}
                   >
                     <span>{Number(d.slice(8, 10))}</span>
                     {n ? <span className="schd-dot">{n}</span> : null}

@@ -53,7 +53,26 @@ export type ScheduleWarning = ApiWarning & {
   participants?: Person[]
 }
 
-const warningsOf = (raw: unknown) => parseWarnings(raw) as ScheduleWarning[]
+/** The warning fields are not final in the backend: keep only what has the shape the screens read. */
+const warningsOf = (raw: unknown): ScheduleWarning[] =>
+  parseWarnings(raw).map((w) => {
+    const text = (v: unknown) => (typeof v === 'string' ? v : undefined)
+    return {
+      ...w,
+      scheduleId: text(w.scheduleId),
+      title: text(w.title),
+      startAt: text(w.startAt),
+      endAt: text(w.endAt),
+      participants: Array.isArray(w.participants)
+        ? w.participants.filter(
+            (p): p is Person =>
+              typeof p === 'object' &&
+              p !== null &&
+              typeof (p as Person).displayName === 'string',
+          )
+        : undefined,
+    }
+  })
 
 /** A blocking item of a check: `{type, message}` (backend-confirmed; the type list is open). */
 export type HardError = { type: string; message: string }
