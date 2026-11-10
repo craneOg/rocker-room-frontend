@@ -220,6 +220,87 @@ export const routes: RouteObject[] = [
                     },
                   },
                   {
+                    path: `${PERF}/songs`,
+                    handle: { title: '곡', sub: true },
+                    lazy: async () => {
+                      const { SongList } =
+                        await import('../features/song/SongList')
+                      return { Component: SongList }
+                    },
+                  },
+                  {
+                    path: `${PERF}/songs/new`,
+                    handle: { title: '후보곡 제안', sub: true },
+                    lazy: async () => {
+                      const { SongCreate } =
+                        await import('../features/song/SongCreate')
+                      return { Component: SongCreate }
+                    },
+                  },
+                  {
+                    path: `${PERF}/songs/:songId`,
+                    handle: { title: '곡 상세', sub: true },
+                    lazy: async () => {
+                      const { SongDetail } =
+                        await import('../features/song/SongDetail')
+                      return { Component: SongDetail }
+                    },
+                  },
+                  {
+                    path: `${PERF}/teams`,
+                    handle: { title: '팀', sub: true },
+                    lazy: async () => {
+                      const { TeamList } =
+                        await import('../features/team/TeamList')
+                      return { Component: TeamList }
+                    },
+                  },
+                  {
+                    path: `${PERF}/teams/apply`,
+                    handle: { title: '팀 신청', sub: true },
+                    lazy: async () => {
+                      const { TeamApply } =
+                        await import('../features/team/TeamApply')
+                      return { Component: TeamApply }
+                    },
+                  },
+                  {
+                    path: `${PERF}/teams/:teamId`,
+                    handle: { title: '팀 상세', sub: true },
+                    lazy: async () => {
+                      const { TeamDetail } =
+                        await import('../features/team/TeamDetail')
+                      return { Component: TeamDetail }
+                    },
+                  },
+                  {
+                    path: `${PERF}/setlist`,
+                    handle: { title: '세트리스트', sub: true },
+                    lazy: async () => {
+                      const { Setlist } =
+                        await import('../features/setlist/Setlist')
+                      return { Component: Setlist }
+                    },
+                  },
+                  {
+                    path: `${PERF}/availability`,
+                    handle: { title: '합주 가능 시간', sub: true },
+                    lazy: async () => {
+                      const { Availability } =
+                        await import('../features/availability/Availability')
+                      return { Component: Availability }
+                    },
+                  },
+                  {
+                    path: `${PERF}/availability/common`,
+                    handle: { title: '공통 가능 시간', sub: true },
+                    lazy: async () => {
+                      const { AvailabilityCommon } =
+                        await import('../features/availability/AvailabilityCommon')
+                      return { Component: AvailabilityCommon }
+                    },
+                  },
+                  {
                     path: `${PERF}/auditions/mine`,
                     handle: { title: '내 오디션 결과', sub: true },
                     lazy: async () => {
@@ -228,17 +309,7 @@ export const routes: RouteObject[] = [
                       return { Component: MyAuditions }
                     },
                   },
-                  ...subScreens([
-                    [`${PERF}/teams`, 'TEAM-001'],
-                    [`${PERF}/teams/apply`, 'TEAM-004'],
-                    [`${PERF}/teams/:teamId`, 'TEAM-002'],
-                    [`${PERF}/songs`, 'SONG-001'],
-                    [`${PERF}/songs/new`, 'SONG-002'],
-                    [`${PERF}/songs/:songId`, 'SONG-003'],
-                    [`${PERF}/setlist`, 'SET-001'],
-                    [`${PERF}/availability`, 'AVAIL-001'],
-                    [`${PERF}/availability/common`, 'AVAIL-002'],
-                  ]),
+                  ...subScreens([]),
                   {
                     path: `${PERF}/schedules`,
                     handle: { title: '캘린더', sub: true },
@@ -342,6 +413,42 @@ export const routes: RouteObject[] = [
                         },
                       },
                       {
+                        path: `${PERF}/teams/new`,
+                        handle: { title: '팀 만들기', sub: true },
+                        lazy: async () => {
+                          const { TeamCreate } =
+                            await import('../features/team/TeamCreate')
+                          return { Component: TeamCreate }
+                        },
+                      },
+                      {
+                        path: `${PERF}/teams/review`,
+                        handle: { title: '팀 심사', sub: true },
+                        lazy: async () => {
+                          const { TeamReview } =
+                            await import('../features/team/TeamReview')
+                          return { Component: TeamReview }
+                        },
+                      },
+                      {
+                        path: `${PERF}/songs/status`,
+                        handle: { title: '투표·가불 현황', sub: true },
+                        lazy: async () => {
+                          const { SongStatus } =
+                            await import('../features/song/SongStatus')
+                          return { Component: SongStatus }
+                        },
+                      },
+                      {
+                        path: `${PERF}/songs/:songId/players`,
+                        handle: { title: '연주자 배정', sub: true },
+                        lazy: async () => {
+                          const { SongPlayers } =
+                            await import('../features/song/SongPlayers')
+                          return { Component: SongPlayers }
+                        },
+                      },
+                      {
                         path: `${PERF}/auditions`,
                         handle: { title: '오디션', sub: true },
                         lazy: async () => {
@@ -386,12 +493,6 @@ export const routes: RouteObject[] = [
                           return { Component: ScheduleForm }
                         },
                       },
-                      ...subScreens([
-                        [`${PERF}/teams/new`, 'TEAM-003'],
-                        [`${PERF}/teams/review`, 'TEAM-005'],
-                        [`${PERF}/songs/status`, 'SONG-005'],
-                        [`${PERF}/songs/:songId/players`, 'SONG-004'],
-                      ]),
                     ],
                   },
                 ],

@@ -1,0 +1,215 @@
+/* SONG-001..005 */
+.song-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-12);
+}
+
+.song-list,
+.song-plain-list,
+.song-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.song-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+  padding: var(--spacing-12) var(--spacing-16);
+  border: 1px solid var(--semantic-line-neutral-tertiary);
+  border-radius: var(--radius-12);
+}
+
+.song-card-head,
+.song-summary,
+.song-actions,
+.song-row,
+.song-picker-row,
+.song-bottom,
+.song-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
+.song-title {
+  color: inherit;
+  text-decoration: none;
+}
+
+.song-summary {
+  font-size: 13px;
+  color: var(--semantic-foreground-neutral-secondary);
+}
+
+.song-grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.song-bottom {
+  position: sticky;
+  bottom: var(--spacing-16);
+  justify-content: flex-end;
+}
+
+.song-link-button {
+  padding: var(--spacing-8) var(--spacing-12);
+  border: 1px solid var(--semantic-line-neutral-tertiary);
+  border-radius: var(--radius-full);
+  color: inherit;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.song-filters,
+.song-field,
+.song-section,
+.song-header,
+.song-part-answer,
+.song-part-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+}
+
+.song-section {
+  padding-top: var(--spacing-12);
+  border-top: 1px solid var(--semantic-line-neutral-tertiary);
+}
+
+.song-field select,
+.song-filters select {
+  min-height: 44px;
+  padding: 0 var(--spacing-12);
+  border: 1px solid var(--semantic-line-neutral-tertiary);
+  border-radius: var(--radius-8);
+  background: var(--semantic-background-neutral-primary);
+  color: inherit;
+  font: inherit;
+}
+
+.song-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--spacing-4) var(--spacing-12);
+  margin: 0;
+}
+
+.song-facts dt {
+  color: var(--semantic-foreground-neutral-secondary);
+}
+
+.song-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.song-note,
+.song-warning,
+.song-confirm {
+  margin: 0;
+  padding: var(--spacing-12);
+  border-radius: var(--radius-8);
+  background: var(--semantic-background-neutral-secondary);
+}
+
+.song-bar {
+  position: sticky;
+  bottom: var(--spacing-16);
+  justify-content: flex-end;
+}
+
+.song-chip summary {
+  cursor: pointer;
+}
+
+.song-chip {
+  padding: 0 var(--spacing-8);
+  border-radius: var(--radius-full);
+  background: var(--semantic-background-neutral-secondary);
+  font-size: 13px;
+}
+
+.song-score {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+  font-size: 13px;
+}
+
+.song-score progress {
+  flex: 1;
+}
+
+.song-picker-list {
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.song-menu summary {
+  padding: 0 var(--spacing-8);
+}
+
+.song-table-wrap {
+  overflow-x: auto;
+}
+
+.song-table {
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.song-table th,
+.song-table td {
+  padding: var(--spacing-8);
+  border: 1px solid var(--semantic-line-neutral-tertiary);
+  text-align: left;
+  white-space: nowrap;
+}
+
+/* The song column and the header row stay in view while the table scrolls. */
+.song-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--semantic-background-neutral-primary);
+}
+
+.song-table tbody th {
+  position: sticky;
+  left: 0;
+  background: var(--semantic-background-neutral-primary);
+}
+
+.song-cell {
+  min-width: 44px;
+  min-height: 32px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.song-mini {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 var(--spacing-12);
+  border: 1px solid var(--semantic-line-neutral-tertiary);
+  border-radius: var(--radius-8);
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.song-mini:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

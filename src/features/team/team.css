@@ -1,0 +1,75 @@
+/* TEAM-001 ~ TEAM-005. */
+.team-select {
+  min-height: 36px;
+  padding: 0 var(--spacing-8);
+  border: 1px solid var(--semantic-line-neutral-tertiary);
+  border-radius: var(--radius-8);
+  background: var(--semantic-background-neutral-primary);
+  color: inherit;
+}
+
+.team-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
+.team-card {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.team-banner {
+  padding: var(--spacing-12) var(--spacing-16);
+  border-radius: var(--radius-12);
+  background: var(--semantic-background-neutral-secondary);
+}
+
+.team-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+  padding: var(--spacing-8) 0;
+}
+
+.team-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  min-width: 0;
+}
+
+.team-row-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+.team-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
+.team-bar-fill {
+  height: 8px;
+  min-width: 8px;
+  border-radius: var(--radius-full);
+  background: var(--semantic-foreground-brand-primary);
+}
+
+.team-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-8);
+}
+
+.team-review-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+  padding-top: var(--spacing-8);
+}
