@@ -1,9 +1,12 @@
 import {
   addDays,
   dayOfSlot,
+  dayStart,
   inSeason,
+  sameSet,
   slotsOfRange,
   seasonWeeks,
+  toIso,
 } from './availabilityTime'
 
 // Pure edits of the painted-slot set. `season` bounds every edit: nothing outside it is painted.
@@ -65,4 +68,30 @@ export function applyRepeat(
         next.add(t)
     }
   return next
+}
+
+/** One API-101 request: the slots of [from, to), at most one week (the server takes up to 31 days). */
+export type WeekSave = { from: string; to: string; slots: number[] }
+
+/**
+ * The weeks of the season whose slots differ from the saved ones, as one request each. The server
+ * replaces only [from, to), so a week that did not change is not sent and nothing else is touched.
+ */
+export function changedWeekSaves(
+  season: Season,
+  working: Set<number>,
+  saved: Set<number>,
+): WeekSave[] {
+  const inRange = (slots: Set<number>, from: number, to: number) =>
+    new Set([...slots].filter((t) => t >= from && t < to))
+  return seasonWeeks(season.start, season.end).flatMap((monday) => {
+    const firstDay = monday < season.start ? season.start : monday
+    const lastDay =
+      addDays(monday, 6) > season.end ? season.end : addDays(monday, 6)
+    const from = dayStart(firstDay)
+    const to = dayStart(addDays(lastDay, 1))
+    const mine = inRange(working, from, to)
+    if (sameSet(mine, inRange(saved, from, to))) return []
+    return [{ from: toIso(from), to: toIso(to), slots: [...mine] }]
+  })
 }

@@ -23,6 +23,7 @@ import {
 import { AVAIL_COPY as T } from './availabilityCopy'
 import {
   applyRepeat,
+  changedWeekSaves,
   clearWeek,
   copyPreviousWeek,
   type Repeat,
@@ -130,32 +131,36 @@ export function Availability() {
           ? T.readOnlyClosed
           : null
   // Painting before the server slots arrive would build the edit on an empty set, and saving
-  // replaces the whole season: the stored slots would be deleted.
+  // replaces the edited weeks: the stored slots would be deleted.
   const canEdit = !viewingOther && blockedBy === null && slotsQuery.isSuccess
 
   const save = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       if (!season) throw new Error('no season')
-      // ponytail: the server replaces only the requested [from, to) — this screen sends the whole
-      // season at once; saving per week is a follow-up.
-      return saveMyAvailability(clubId, performanceId, {
-        from: toIso(dayStart(season.start)),
-        to: toIso(dayStart(addDays(season.end, 1))),
-        slots: itemsFromSlots(
+      // The server replaces only [from, to) and takes up to 31 days: one request per changed week.
+      for (const w of changedWeekSaves(season, working, server))
+        await saveMyAvailability(clubId, performanceId, {
+          from: w.from,
+          to: w.to,
+          slots: itemsFromSlots(w.slots),
+        })
+    },
+    onSuccess: async () => {
+      // Keep the saved slots in the cache even if the refetch below fails.
+      qc.setQueryData(slotsKey, {
+        items: itemsFromSlots(
           [...working].filter((t) =>
-            inSeason(dayOfSlot(t), season.start, season.end),
+            inSeason(dayOfSlot(t), season?.start ?? '', season?.end ?? ''),
           ),
         ),
       })
-    },
-    onSuccess: async (saved) => {
-      // Keep the saved slots in the cache even if the refetch below fails.
-      qc.setQueryData(slotsKey, saved)
       await invalidatePerformance(qc, clubId, performanceId)
       setEdit(null)
       feedback.toast(T.saved, 'positive')
     },
     onError: (e) => {
+      // Weeks before the failed one are saved: show what the server has now.
+      void invalidatePerformance(qc, clubId, performanceId)
       // A 400 is shown next to the input in other screens; here there is no field, so a toast.
       // OUTSIDE_RANGE / SLOT_NOT_ALIGNED would be a bug of this screen: the generic text is enough.
       if (isApiError(e, 'VALIDATION_ERROR'))

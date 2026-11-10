@@ -122,7 +122,7 @@ describe('AVAIL-001 for a confirmed participant', () => {
     expect(on('10.14(수) 21:00')).toBe(true)
   })
 
-  it('toggles a cell from the keyboard and saves the whole season in one request', async () => {
+  it('toggles a cell from the keyboard and saves only the changed week', async () => {
     const { fetchMock } = open('MEMBER', {
       [`PUT ${ME}`]: () => json({ items: [] }),
     })
@@ -134,13 +134,37 @@ describe('AVAIL-001 for a confirmed participant', () => {
     text(T.save)
 
     await screen.findByText(T.saved)
+    // The week 10.12 ~ 10.18 only: the server replaces [from, to) and takes up to 31 days.
     expect(body(fetchMock, ME)).toEqual({
-      from: SEASON_FROM,
-      to: SEASON_TO,
+      from: '2026-10-12T00:00:00+09:00',
+      to: '2026-10-19T00:00:00+09:00',
       slots: [slot('2026-10-14', '20:00', '20:30'), ...SAVED],
     })
     expect(writes(fetchMock, ME)).toHaveLength(1)
     await waitFor(() => expect(screen.queryByText(T.dirtyBar)).toBeNull())
+  })
+
+  it('sends one request per changed week and leaves the other weeks alone', async () => {
+    const { fetchMock } = open('MEMBER', {
+      [`PUT ${ME}`]: () => json({ items: [] }),
+    })
+    await loaded()
+    fireEvent.click(cell('10.14(수) 20:00'))
+    fireEvent.click(
+      screen.getByRole('button', { name: new RegExp(T.nextWeek) }),
+    )
+    fireEvent.click(await screen.findByLabelText('10.20(화) 19:00'))
+    text(T.save)
+    await screen.findByText(T.saved)
+    const sent = writes(fetchMock, ME).map(([, i]) =>
+      JSON.parse(String(i?.body)),
+    )
+    expect(
+      sent.map((b: { from: string; to: string }) => [b.from, b.to]),
+    ).toEqual([
+      ['2026-10-12T00:00:00+09:00', '2026-10-19T00:00:00+09:00'],
+      ['2026-10-19T00:00:00+09:00', '2026-10-26T00:00:00+09:00'],
+    ])
   })
 
   it('does not let the member paint before the saved slots have arrived', async () => {
