@@ -239,6 +239,33 @@ export const routes: RouteObject[] = [
                     },
                   },
                   {
+                    path: `${PERF}/setlist`,
+                    handle: { title: '세트리스트', sub: true },
+                    lazy: async () => {
+                      const { Setlist } =
+                        await import('../features/setlist/Setlist')
+                      return { Component: Setlist }
+                    },
+                  },
+                  {
+                    path: `${PERF}/availability`,
+                    handle: { title: '합주 가능 시간', sub: true },
+                    lazy: async () => {
+                      const { Availability } =
+                        await import('../features/availability/Availability')
+                      return { Component: Availability }
+                    },
+                  },
+                  {
+                    path: `${PERF}/availability/common`,
+                    handle: { title: '공통 가능 시간', sub: true },
+                    lazy: async () => {
+                      const { AvailabilityCommon } =
+                        await import('../features/availability/AvailabilityCommon')
+                      return { Component: AvailabilityCommon }
+                    },
+                  },
+                  {
                     path: `${PERF}/auditions/mine`,
                     handle: { title: '내 오디션 결과', sub: true },
                     lazy: async () => {
@@ -251,9 +278,6 @@ export const routes: RouteObject[] = [
                     [`${PERF}/songs`, 'SONG-001'],
                     [`${PERF}/songs/new`, 'SONG-002'],
                     [`${PERF}/songs/:songId`, 'SONG-003'],
-                    [`${PERF}/setlist`, 'SET-001'],
-                    [`${PERF}/availability`, 'AVAIL-001'],
-                    [`${PERF}/availability/common`, 'AVAIL-002'],
                     [`${PERF}/schedules`, 'SCHD-001'],
                     [`${PERF}/schedules/:scheduleId`, 'SCHD-002'],
                   ]),

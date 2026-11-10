@@ -66,6 +66,7 @@ const initial = () => ({
     ['p2', '겨울 버스킹 (준비 중)', null, null, 'DRAFT', false],
     ['p3', '신입생 환영 공연', day(7), '야외 무대', 'LOCKED', false],
     ['p4', '지난 봄 공연', day(-60), '소극장', 'FINISHED', false],
+    ['p71', '합주 가능 시간 데모', day(30), '합주실', 'ACTIVE', false],
   ].map(([id, title, performDate, location, status, applicationOpen]) => ({
     id,
     title,
