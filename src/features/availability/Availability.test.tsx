@@ -501,4 +501,18 @@ describe('AVAIL-001 for an officer', () => {
     fireEvent.change(picker, { target: { value: 'me' } })
     await screen.findByText(T.dirtyBar)
   })
+
+  it("still asks before leaving while another member's slots are shown", async () => {
+    const { router } = openAdmin()
+    await loaded()
+    fireEvent.click(cell('10.14(수) 20:00'))
+    const picker = await screen.findByLabelText(T.viewTarget)
+    await screen.findByRole('option', { name: '정규채' })
+    fireEvent.change(picker, { target: { value: '77' } })
+    await screen.findByText(T.memberReadOnly('정규채'))
+    await act(async () => {
+      void router.navigate('/clubs/10')
+    })
+    await screen.findByText(T.leaveTitle)
+  })
 })

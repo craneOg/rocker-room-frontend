@@ -113,8 +113,9 @@ export function Availability() {
   })
   const server = slotsFromItems(slotsQuery.data?.items ?? [])
   const working = !viewingOther && edit ? edit : server
-  // Own edits only: while another member is shown, `server` is theirs and nothing may be saved.
-  const dirty = !viewingOther && edit !== null && !sameSet(edit, server)
+  // Unsaved own edits. While another member is shown `server` is theirs, so the edit itself
+  // counts (the leave warning stays); the save bar below is for the own view only.
+  const dirty = edit !== null && (viewingOther || !sameSet(edit, server))
 
   // 3 / AV-01: who may paint now.
   const deadline = policy?.availabilityDeadline
@@ -352,7 +353,7 @@ export function Availability() {
         </>
       ) : null}
 
-      {dirty ? (
+      {dirty && !viewingOther ? (
         <div className="avail-bar" role="group" aria-label={T.dirtyBar}>
           <Typography variant="body2">{T.dirtyBar}</Typography>
           <Button
