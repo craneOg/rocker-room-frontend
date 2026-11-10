@@ -167,6 +167,57 @@ describe('AVAIL-001 for a confirmed participant', () => {
     ])
   })
 
+  it('keeps comparing with what the server really has after a week failed half way', async () => {
+    // The server's slots follow the PUTs: week 10.12 goes through, week 10.19 fails once.
+    let stored = [...SAVED]
+    let puts = 0
+    const { fetchMock } = open('MEMBER', {
+      [`GET ${ME}`]: () => json({ items: stored }),
+      [`PUT ${ME}`]: (_, init) => {
+        const sent = JSON.parse(String(init?.body)) as {
+          from: string
+          to: string
+          slots: (typeof SAVED)[number][]
+        }
+        if (++puts === 2) return apiError('INTERNAL_SERVER_ERROR', 500)
+        stored = [
+          ...stored.filter(
+            (s) =>
+              Date.parse(s.startAt) < Date.parse(sent.from) ||
+              Date.parse(s.startAt) >= Date.parse(sent.to),
+          ),
+          ...sent.slots,
+        ]
+        return json({ items: sent.slots })
+      },
+    })
+    await loaded()
+    fireEvent.click(cell('10.14(수) 20:00'))
+    fireEvent.click(
+      screen.getByRole('button', { name: new RegExp(T.nextWeek) }),
+    )
+    fireEvent.click(await screen.findByLabelText('10.20(화) 19:00'))
+    text(T.save)
+    await waitFor(() => expect(puts).toBe(2))
+    // Back to the first week and undo the cell that the server already has.
+    fireEvent.click(
+      screen.getByRole('button', { name: new RegExp(T.prevWeek) }),
+    )
+    fireEvent.click(await screen.findByLabelText('10.14(수) 20:00'))
+    text(T.save)
+    await waitFor(() => expect(puts).toBeGreaterThanOrEqual(3))
+    const resent = writes(fetchMock, ME).map(([, i]) =>
+      JSON.parse(String(i?.body)),
+    )
+    // The undo of the already saved week is sent again, not dropped as "unchanged".
+    expect(
+      resent.some(
+        (b: { from: string; slots: unknown[] }) =>
+          b.from === '2026-10-12T00:00:00+09:00' && b.slots.length === 2,
+      ),
+    ).toBe(true)
+  })
+
   it('does not let the member paint before the saved slots have arrived', async () => {
     let release = null as (() => void) | null
     open('MEMBER', {

@@ -138,12 +138,20 @@ export function Availability() {
     mutationFn: async () => {
       if (!season) throw new Error('no season')
       // The server replaces only [from, to) and takes up to 31 days: one request per changed week.
-      for (const w of changedWeekSaves(season, working, server))
+      // `saved` follows each week that went through, so a later week failing leaves the cache
+      // (and the next save's comparison) true to the server without waiting for a refetch.
+      const saved = new Set(server)
+      for (const w of changedWeekSaves(season, working, server)) {
         await saveMyAvailability(clubId, performanceId, {
           from: w.from,
           to: w.to,
           slots: itemsFromSlots(w.slots),
         })
+        const [from, to] = [Date.parse(w.from), Date.parse(w.to)]
+        for (const t of [...saved]) if (t >= from && t < to) saved.delete(t)
+        for (const t of w.slots) saved.add(t)
+        qc.setQueryData(slotsKey, { items: itemsFromSlots(saved) })
+      }
     },
     onSuccess: async () => {
       // Keep the saved slots in the cache even if the refetch below fails.
@@ -159,7 +167,7 @@ export function Availability() {
       feedback.toast(T.saved, 'positive')
     },
     onError: (e) => {
-      // Weeks before the failed one are saved: show what the server has now.
+      // Weeks before the failed one are saved (the cache already says so); confirm with the server.
       void invalidatePerformance(qc, clubId, performanceId)
       // A 400 is shown next to the input in other screens; here there is no field, so a toast.
       // OUTSIDE_RANGE / SLOT_NOT_ALIGNED would be a bug of this screen: the generic text is enough.
