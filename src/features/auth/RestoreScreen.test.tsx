@@ -236,7 +236,13 @@ describe('AUTH-004 RestoreScreen', () => {
       )
     const notRestorable = () =>
       new Response(
-        JSON.stringify({ error: { code: 'NOT_RESTORABLE', message: 'x' } }),
+        JSON.stringify({
+          error: {
+            code: 'STATE_CONFLICT',
+            message: 'x',
+            details: [{ field: 'request', reason: 'NOT_RESTORABLE' }],
+          },
+        }),
         { status: 409 },
       )
     const anonymous = {
@@ -296,7 +302,7 @@ describe('AUTH-004 RestoreScreen', () => {
       },
     )
 
-    it('shows a separate message and goes to / on 409 NOT_RESTORABLE', async () => {
+    it('shows a separate message and goes to / on 409 STATE_CONFLICT with reason NOT_RESTORABLE', async () => {
       const { router } = openRestore({
         ...anonymous,
         [`POST ${API_PATHS.restore}`]: notRestorable,
