@@ -136,7 +136,15 @@ export const routes: RouteObject[] = [
                   return { Component: MyProfile }
                 },
               },
-              { path: '/calendar', ...screen('SCHD-001') },
+              {
+                path: '/calendar',
+                handle: { title: '캘린더' },
+                lazy: async () => {
+                  const { ScheduleCalendar } =
+                    await import('../features/schedule/ScheduleCalendar')
+                  return { Component: ScheduleCalendar }
+                },
+              },
               {
                 path: '/me',
                 handle: { title: 'MY-001' },
@@ -301,10 +309,25 @@ export const routes: RouteObject[] = [
                       return { Component: MyAuditions }
                     },
                   },
-                  ...subScreens([
-                    [`${PERF}/schedules`, 'SCHD-001'],
-                    [`${PERF}/schedules/:scheduleId`, 'SCHD-002'],
-                  ]),
+                  ...subScreens([]),
+                  {
+                    path: `${PERF}/schedules`,
+                    handle: { title: '캘린더', sub: true },
+                    lazy: async () => {
+                      const { ScheduleCalendar } =
+                        await import('../features/schedule/ScheduleCalendar')
+                      return { Component: ScheduleCalendar }
+                    },
+                  },
+                  {
+                    path: `${PERF}/schedules/:scheduleId`,
+                    handle: { title: '일정 상세', sub: true },
+                    lazy: async () => {
+                      const { ScheduleDetail } =
+                        await import('../features/schedule/ScheduleDetail')
+                      return { Component: ScheduleDetail }
+                    },
+                  },
                   {
                     path: 'leave',
                     handle: { title: '동아리 나가기', sub: true },
@@ -452,10 +475,24 @@ export const routes: RouteObject[] = [
                           return { Component: AuditionResult }
                         },
                       },
-                      ...subScreens([
-                        [`${PERF}/schedules/new`, 'SCHD-003'],
-                        [`${PERF}/schedules/:scheduleId/edit`, 'SCHD-003'],
-                      ]),
+                      {
+                        path: `${PERF}/schedules/new`,
+                        handle: { title: '일정 만들기', sub: true },
+                        lazy: async () => {
+                          const { ScheduleForm } =
+                            await import('../features/schedule/ScheduleForm')
+                          return { Component: ScheduleForm }
+                        },
+                      },
+                      {
+                        path: `${PERF}/schedules/:scheduleId/edit`,
+                        handle: { title: '일정 수정', sub: true },
+                        lazy: async () => {
+                          const { ScheduleForm } =
+                            await import('../features/schedule/ScheduleForm')
+                          return { Component: ScheduleForm }
+                        },
+                      },
                     ],
                   },
                 ],

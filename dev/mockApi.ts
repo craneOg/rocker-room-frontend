@@ -3,6 +3,7 @@ import { createAvailabilityMock } from './availabilityMock.ts'
 import { auditionMock } from './auditionMock.ts'
 import { handlePerformanceForm } from './performanceFormMock.ts'
 import { createPerformancePolicyMock } from './performancePolicyMock.ts'
+import { createScheduleMock } from './scheduleMock.ts'
 import { bodyCache, createPerformanceViewMock } from './performanceViewMock.ts'
 import { createSetlistMock } from './setlistMock.ts'
 import { createSongMock } from './songMock.ts'
@@ -281,6 +282,7 @@ export function createMockApi() {
   const perfMock = createPerformanceViewMock()
   const setlistMock = createSetlistMock()
   const availabilityMock = createAvailabilityMock()
+  const scheduleMock = createScheduleMock()
   const songMock = createSongMock()
 
   const hasCookie = (req: IncomingMessage, name: string) =>
@@ -333,6 +335,7 @@ export function createMockApi() {
       setlistMock.reset()
       availabilityMock.reset()
       songMock.reset()
+      scheduleMock.reset()
       return send(res, 204, undefined, {
         'Set-Cookie': [
           setCookie(COOKIE_SESSION, false),
@@ -573,6 +576,19 @@ export function createMockApi() {
             (m) => m.clubId === id && m.status === 'ACTIVE',
           ),
       })
+    )
+      return
+
+    if (
+      signedIn &&
+      (await scheduleMock({
+        req,
+        res,
+        url,
+        path,
+        method,
+        memberships: state.memberships,
+      }))
     )
       return
 
