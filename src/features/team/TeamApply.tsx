@@ -312,7 +312,11 @@ function ApplyEdit({ c, teamId }: { c: Ctx; teamId: string }) {
             value={name}
             maxLength={100}
             aria-label={T.nameLabel}
-            onChange={(e) => setTyped(e.target.value)}
+            onChange={(e) => {
+              setTyped(e.target.value)
+              // The name error belongs to the text that was sent: editing it clears the error.
+              if (write.error) write.reset()
+            }}
           />
         </FormField>
       ) : (
@@ -353,6 +357,7 @@ function ApplyEdit({ c, teamId }: { c: Ctx; teamId: string }) {
                       value={m.partId}
                       options={optionsFor([])}
                       onChange={(partId) =>
+                        !write.isPending &&
                         write.mutate({
                           run: () =>
                             changeMemberPart(
@@ -379,6 +384,7 @@ function ApplyEdit({ c, teamId }: { c: Ctx; teamId: string }) {
                     </summary>
                     <button
                       type="button"
+                      disabled={write.isPending}
                       onClick={() =>
                         write.mutate({
                           run: () =>
@@ -399,6 +405,7 @@ function ApplyEdit({ c, teamId }: { c: Ctx; teamId: string }) {
                     </button>
                     <button
                       type="button"
+                      disabled={write.isPending}
                       onClick={() =>
                         write.mutate({
                           run: () =>

@@ -120,6 +120,19 @@ describe('TEAM-002 view', () => {
     expect(screen.getByRole('img', { name: '드럼 2' })).toBeTruthy()
   })
 
+  it('offers a retry when only the performance failed to load', async () => {
+    let healthy = false
+    openAdmin({
+      [`GET ${PERF}`]: () =>
+        healthy ? withTeamPolicy('OPEN') : apiError('INTERNAL_ERROR', 500),
+    })
+    await screen.findByText(T.loadFailedRetry)
+    healthy = true
+    fireEvent.click(screen.getByRole('button', { name: T.loadFailedRetry }))
+    await findScreen('TEAM-002')
+    await screen.findByText('Crane Team')
+  })
+
   it('gives a plain member no edit controls', async () => {
     open(URL, 'MEMBER', { [`GET ${T201}`]: () => teamDetail() })
     await screen.findByText('정규채')

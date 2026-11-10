@@ -140,7 +140,7 @@ describe('TEAM-005', () => {
   })
 
   it('keeps 승인 off until the team detail has arrived', async () => {
-    let release: (() => void) | null = null
+    let release = null as (() => void) | null
     openReview({
       [`GET ${T401}`]: () =>
         new Promise((resolve) => {

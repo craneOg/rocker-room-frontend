@@ -66,8 +66,13 @@ export function TeamDetail() {
   if (query.isPending || !c.perf)
     return (
       <div className="start" data-screen-id="TEAM-002">
-        {query.isError ? (
-          <ErrorState onRetry={() => void query.refetch()} />
+        {query.isError || c.detail.isError ? (
+          <ErrorState
+            onRetry={() => {
+              if (query.isError) void query.refetch()
+              if (c.detail.isError) void c.detail.refetch()
+            }}
+          />
         ) : (
           <ListSkeleton />
         )}

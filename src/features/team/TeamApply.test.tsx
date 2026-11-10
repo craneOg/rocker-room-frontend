@@ -234,6 +234,21 @@ describe('TEAM-004 saved application', () => {
     expect(body(fetchMock, T201)).toEqual({ version: '2', name: '새 팀' })
   })
 
+  it('clears the name error of a saved application once the name is edited', async () => {
+    openEdit(() => team(), {
+      [`PATCH ${T201}`]: () =>
+        reasoned('VALIDATION_ERROR', 400, 'NAME_REQUIRED'),
+    })
+    const name = await screen.findByRole('textbox', { name: T.nameLabel })
+    fireEvent.change(name, { target: { value: '새 이름' } })
+    await click(T.saveDraft)
+    await screen.findByText(`* ${T.nameRequired}`)
+    fireEvent.change(name, { target: { value: '새 이름 2' } })
+    await waitFor(() =>
+      expect(screen.queryByText(`* ${T.nameRequired}`)).toBeNull(),
+    )
+  })
+
   it('submits after a confirmation that summarizes members and songs', async () => {
     const { fetchMock } = openEdit(() => team(), {
       [`POST ${T201}/submit`]: () => mutation('3', { status: 'SUBMITTED' }),
