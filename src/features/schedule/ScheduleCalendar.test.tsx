@@ -287,6 +287,22 @@ describe('SCHD-001 ScheduleCalendar', () => {
     await screen.findByText(T.empty)
   })
 
+  it('lists a schedule that began last month and runs into this one', async () => {
+    openSchedule('/calendar', 'MEMBER', {
+      [`GET ${MINE}`]: items(
+        event({
+          title: '밤샘 합주',
+          startAt: '2026-09-30T22:00:00+09:00',
+          endAt: '2026-10-01T01:00:00+09:00',
+        }),
+      ),
+    })
+    await ready()
+    fireEvent.click(screen.getByRole('button', { name: T.viewList }))
+    await screen.findByRole('link', { name: /밤샘 합주/ })
+    expect(screen.queryByText(T.empty)).toBeNull()
+  })
+
   it('RANGE_TOO_LARGE asks for a shorter period', async () => {
     openSchedule('/calendar', 'MEMBER', {
       [`GET ${MINE}`]: () =>
