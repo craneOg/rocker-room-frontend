@@ -5,6 +5,7 @@ import { handlePerformanceForm } from './performanceFormMock.ts'
 import { createPerformancePolicyMock } from './performancePolicyMock.ts'
 import { bodyCache, createPerformanceViewMock } from './performanceViewMock.ts'
 import { createSetlistMock } from './setlistMock.ts'
+import { handleTeams } from './teamMock.ts'
 
 // Dev-server-only mock backend (`npm run dev:mock`). In-memory state, plain Node handler.
 // Paths and shapes mirror src/shared/api/assumptions.ts. Never imported by src/.
@@ -569,6 +570,20 @@ export function createMockApi() {
             (m) => m.clubId === id && m.status === 'ACTIVE',
           ),
       })
+    )
+      return
+
+    // TEAM-001 ~ 005 (teams t1 ~ t9). Before the view mock, whose team read knows only t1.
+    if (
+      signedIn &&
+      (await handleTeams({
+        req,
+        res,
+        url,
+        path,
+        method,
+        memberships: state.memberships,
+      }))
     )
       return
 
