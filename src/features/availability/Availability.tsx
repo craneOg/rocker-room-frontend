@@ -113,7 +113,8 @@ export function Availability() {
   })
   const server = slotsFromItems(slotsQuery.data?.items ?? [])
   const working = !viewingOther && edit ? edit : server
-  const dirty = edit !== null && !sameSet(edit, server)
+  // Own edits only: while another member is shown, `server` is theirs and nothing may be saved.
+  const dirty = !viewingOther && edit !== null && !sameSet(edit, server)
 
   // 3 / AV-01: who may paint now.
   const deadline = policy?.availabilityDeadline

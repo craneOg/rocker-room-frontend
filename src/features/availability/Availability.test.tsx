@@ -144,7 +144,7 @@ describe('AVAIL-001 for a confirmed participant', () => {
   })
 
   it('does not let the member paint before the saved slots have arrived', async () => {
-    let release: (() => void) | null = null
+    let release = null as (() => void) | null
     open('MEMBER', {
       [`GET ${ME}`]: () =>
         new Promise((resolve) => {
@@ -485,5 +485,20 @@ describe('AVAIL-001 for an officer', () => {
     // Back to my own times.
     fireEvent.change(picker, { target: { value: 'me' } })
     await waitFor(() => expect(on('10.15(목) 18:00')).toBe(true))
+  })
+
+  it("does not offer to save my edit over another member's slots", async () => {
+    openAdmin()
+    await loaded()
+    fireEvent.click(cell('10.14(수) 20:00'))
+    await screen.findByText(T.dirtyBar)
+    const picker = await screen.findByLabelText(T.viewTarget)
+    await screen.findByRole('option', { name: '정규채' })
+    fireEvent.change(picker, { target: { value: '77' } })
+    await screen.findByText(T.memberReadOnly('정규채'))
+    expect(screen.queryByText(T.dirtyBar)).toBeNull()
+    // The edit is still mine when I come back.
+    fireEvent.change(picker, { target: { value: 'me' } })
+    await screen.findByText(T.dirtyBar)
   })
 })
