@@ -201,9 +201,8 @@ export function createPerformancePolicyMock() {
         fail(409, 'CONFIRMATION_REQUIRED', {
           warnings: [
             {
-              type: 'VOTES_DELETED',
+              type: 'VOTES_REMOVED',
               message: `투표 ${p.votes}건이 삭제돼요.`,
-              affectedCount: p.votes,
             },
           ],
         })

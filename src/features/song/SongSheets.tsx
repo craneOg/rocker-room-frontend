@@ -399,6 +399,10 @@ function EditSheet(p: SheetProps) {
   if (f.memo.trim() !== (song.memo ?? '')) patch.memo = f.memo.trim() || null
   const linkOk = validLink(f.link.trim())
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({})
+  const edit = (key: keyof typeof f, errorKey: string, value: string) => {
+    setF({ ...f, [key]: value })
+    setServerErrors(({ [errorKey]: _cleared, ...rest }) => rest)
+  }
   const qc = useQueryClient()
   const run = useMutation({
     mutationFn: () =>
@@ -430,7 +434,7 @@ function EditSheet(p: SheetProps) {
           value={f.title}
           maxLength={200}
           aria-label={T.fieldTitle}
-          onChange={(e) => setF({ ...f, title: e.target.value })}
+          onChange={(e) => edit('title', 'title', e.target.value)}
         />
       </FormField>
       <FormField label={T.fieldArtist} error={serverErrors.artist}>
@@ -438,7 +442,7 @@ function EditSheet(p: SheetProps) {
           value={f.artist}
           maxLength={200}
           aria-label={T.fieldArtist}
-          onChange={(e) => setF({ ...f, artist: e.target.value })}
+          onChange={(e) => edit('artist', 'artist', e.target.value)}
         />
       </FormField>
       <FormField
@@ -450,7 +454,7 @@ function EditSheet(p: SheetProps) {
           maxLength={500}
           placeholder={T.linkPlaceholder}
           aria-label={T.fieldLink}
-          onChange={(e) => setF({ ...f, link: e.target.value })}
+          onChange={(e) => edit('link', 'referenceUrl', e.target.value)}
         />
       </FormField>
       <FormField label={T.fieldMemo} error={serverErrors.memo}>
@@ -460,7 +464,7 @@ function EditSheet(p: SheetProps) {
           minRows={2}
           placeholder={T.memoPlaceholder}
           aria-label={T.fieldMemo}
-          onChange={(e) => setF({ ...f, memo: e.target.value })}
+          onChange={(e) => edit('memo', 'memo', e.target.value)}
         />
       </FormField>
     </ActionModal>

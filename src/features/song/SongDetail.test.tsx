@@ -774,6 +774,39 @@ describe('SONG-003 proposer and officer menu', () => {
     })
   })
 
+  it('drops a server field error of the edit form once the field is edited', async () => {
+    openSong(PATH, 'CLUB_ADMIN', {
+      routes: base(
+        { title: '곡 제목', version: '8' },
+        {},
+        {
+          [`PATCH ${S}`]: () =>
+            new Response(
+              JSON.stringify({
+                error: {
+                  code: 'VALIDATION_ERROR',
+                  message: 'x',
+                  details: [
+                    { field: 'artist', message: '가수를 확인해 주세요' },
+                  ],
+                },
+              }),
+              { status: 400 },
+            ),
+        },
+      ),
+    })
+    fireEvent.click(await screen.findByText(T.menuEdit))
+    const artist = await screen.findByRole('textbox', { name: T.fieldArtist })
+    fireEvent.change(artist, { target: { value: '새 가수' } })
+    await inDialog(T.save)
+    await screen.findByText('* 가수를 확인해 주세요')
+    fireEvent.change(artist, { target: { value: '새 가수 2' } })
+    await waitFor(() =>
+      expect(screen.queryByText('* 가수를 확인해 주세요')).toBeNull(),
+    )
+  })
+
   it('refuses a non-https link in the edit form', async () => {
     openSong(PATH, 'CLUB_ADMIN', { routes: base() })
     fireEvent.click(await screen.findByText(T.menuEdit))
