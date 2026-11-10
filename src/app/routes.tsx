@@ -123,9 +123,16 @@ export const routes: RouteObject[] = [
                   return { Component: ClubSearch }
                 },
               },
+              {
+                path: '/me/membership',
+                lazy: async () => {
+                  const { MyMembership } =
+                    await import('../features/my/MyMembership')
+                  return { Component: MyMembership }
+                },
+              },
               ...subScreens([
                 ['/clubs/new', 'CLUB-001'],
-                ['/me/membership', 'MY-003'],
                 ['/me/withdrawal', 'MY-004'],
               ]),
               {

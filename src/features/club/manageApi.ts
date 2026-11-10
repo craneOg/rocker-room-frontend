@@ -77,6 +77,13 @@ export const setMemberParts = (
   partIds: string[],
 ) => api.put<unknown>(`${memberPath(clubId, membershipId)}/parts`, { partIds })
 
+/** API-029: the display name in this club, 0~50 chars; null clears it (the service name shows). */
+export const setMyDisplayName = (
+  clubId: string,
+  membershipId: string,
+  displayName: string | null,
+) => api.patch<unknown>(memberPath(clubId, membershipId), { displayName })
+
 export type SettableStatus = 'ACTIVE' | 'ON_LEAVE' | 'GRADUATED'
 
 /** API-162 / 160 / 161: one action endpoint per target status. */
