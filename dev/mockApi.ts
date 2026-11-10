@@ -1,9 +1,12 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { createAvailabilityMock } from './availabilityMock.ts'
 import { auditionMock } from './auditionMock.ts'
 import { handlePerformanceForm } from './performanceFormMock.ts'
 import { createPerformancePolicyMock } from './performancePolicyMock.ts'
 import { bodyCache, createPerformanceViewMock } from './performanceViewMock.ts'
+import { createSetlistMock } from './setlistMock.ts'
 import { createSongMock } from './songMock.ts'
+import { handleTeams } from './teamMock.ts'
 
 // Dev-server-only mock backend (`npm run dev:mock`). In-memory state, plain Node handler.
 // Paths and shapes mirror src/shared/api/assumptions.ts. Never imported by src/.
@@ -276,6 +279,8 @@ export function createMockApi() {
   let state = initialState()
   const performancePolicy = createPerformancePolicyMock()
   const perfMock = createPerformanceViewMock()
+  const setlistMock = createSetlistMock()
+  const availabilityMock = createAvailabilityMock()
   const songMock = createSongMock()
 
   const hasCookie = (req: IncomingMessage, name: string) =>
@@ -325,6 +330,8 @@ export function createMockApi() {
     if (method === 'POST' && path === '/api/__mock/reset') {
       state = initialState()
       perfMock.reset()
+      setlistMock.reset()
+      availabilityMock.reset()
       songMock.reset()
       return send(res, 204, undefined, {
         'Set-Cookie': [
@@ -568,6 +575,33 @@ export function createMockApi() {
       })
     )
       return
+
+    // TEAM-001 ~ 005 (teams t1 ~ t9). Before the view mock, whose team read knows only t1.
+    if (
+      signedIn &&
+      (await handleTeams({
+        req,
+        res,
+        url,
+        path,
+        method,
+        memberships: state.memberships,
+      }))
+    )
+      return
+
+    // SET-001 / AVAIL-001 / AVAIL-002 (setlist and availability of p1 / p3, everything of p71). Before the view mock.
+    if (signedIn) {
+      const ctx = {
+        req,
+        res,
+        url,
+        path,
+        method,
+        memberships: state.memberships,
+      }
+      if ((await setlistMock(ctx)) || (await availabilityMock(ctx))) return
+    }
 
     // SONG-001..005 (songs, evaluations, team reads of c10). Before the view mock, which would answer 404 for them.
     if (
