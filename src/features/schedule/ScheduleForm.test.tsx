@@ -463,18 +463,40 @@ describe('SCHD-003 ScheduleForm (edit)', () => {
       warnings: [],
     })
 
-  it('does not open a schedule over several days: it would lose the end date', async () => {
-    openSchedule(
-      EDIT,
-      'CLUB_ADMIN',
-      rules({
-        [`GET ${ONE}`]: () =>
-          json(detailOf({ endAt: '2026-10-16T01:00:00+09:00' })),
-        [`GET ${ONE}/conflicts`]: () => json({ items: [] }),
-      }),
+  it('keeps the end date of a schedule over midnight, also when the date is moved', async () => {
+    const { fetchMock } = await openEdit(
+      { endAt: '2026-10-16T01:00:00+09:00' },
+      { [`PATCH ${ONE}`]: patched('TENTATIVE') },
     )
-    await screen.findByText(T.multiDay)
-    expect(screen.queryByDisplayValue('정기 합주')).toBeNull()
+    // 01:00 is before 18:00, but the end is on the next day: no error.
+    expect(screen.queryByText(`* ${T.endBeforeStart}`)).toBeNull()
+    fireEvent.change(screen.getByLabelText(T.titleField), {
+      target: { value: '바뀐 제목' },
+    })
+    await screen.findByText(T.attendees(2))
+    fireEvent.click(saveButton())
+    await screen.findByText(T.saved)
+    expect(body(fetchMock, ONE)).toMatchObject({
+      startAt: '2026-10-15T18:00:00+09:00',
+      endAt: '2026-10-16T01:00:00+09:00',
+    })
+  })
+
+  it('moves the end date along with the start date', async () => {
+    const { fetchMock } = await openEdit(
+      { endAt: '2026-10-16T01:00:00+09:00' },
+      { [`PATCH ${ONE}`]: patched('TENTATIVE') },
+    )
+    fireEvent.change(screen.getByLabelText(T.dateField), {
+      target: { value: '2026-10-20' },
+    })
+    await screen.findByText(T.attendees(2))
+    fireEvent.click(saveButton())
+    await screen.findByText(T.saved)
+    expect(body(fetchMock, ONE)).toMatchObject({
+      startAt: '2026-10-20T18:00:00+09:00',
+      endAt: '2026-10-21T01:00:00+09:00',
+    })
   })
 
   it('fills the form from the schedule and patches without the status', async () => {

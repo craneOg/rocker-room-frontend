@@ -273,6 +273,20 @@ describe('SCHD-001 ScheduleCalendar', () => {
     await screen.findByText(T.empty)
   })
 
+  it("says nothing is scheduled in the list when the events are all of the grid's outer days", async () => {
+    openSchedule('/calendar', 'MEMBER', {
+      [`GET ${MINE}`]: items(
+        event({
+          startAt: '2026-09-28T18:00:00+09:00',
+          endAt: '2026-09-28T20:00:00+09:00',
+        }),
+      ),
+    })
+    await ready()
+    fireEvent.click(screen.getByRole('button', { name: T.viewList }))
+    await screen.findByText(T.empty)
+  })
+
   it('RANGE_TOO_LARGE asks for a shorter period', async () => {
     openSchedule('/calendar', 'MEMBER', {
       [`GET ${MINE}`]: () =>

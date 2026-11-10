@@ -348,7 +348,10 @@ export function ScheduleCalendar() {
             />
           ))
         )}
-        {events.length === 0 ? <EmptyState description={T.empty} /> : null}
+        {/* The list shows this month only: events of the grid's outer days leave it empty too. */}
+        {(view === 'list' ? listDays.length : events.length) === 0 ? (
+          <EmptyState description={T.empty} />
+        ) : null}
       </>
     )
   }

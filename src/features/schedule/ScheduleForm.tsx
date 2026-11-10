@@ -55,6 +55,8 @@ type Form = {
   date: string
   start: string
   end: string
+  /** Days between the start date and the end date: 0 unless an existing schedule runs past midnight. */
+  spanDays: number
   location: string
   forAll: boolean
   teamIds: string[]
@@ -111,6 +113,13 @@ function initialForm(
       date: dateOf(s.startAt),
       start: clockOf(s.startAt),
       end: clockOf(s.endAt),
+      spanDays: Math.max(
+        0,
+        Math.round(
+          (Date.parse(dateOf(s.endAt)) - Date.parse(dateOf(s.startAt))) /
+            86_400_000,
+        ),
+      ),
       location: s.location ?? '',
       forAll: s.forAllParticipants,
       teamIds: s.teamIds,
@@ -130,6 +139,7 @@ function initialForm(
     date: prefill.get('date') ?? win?.date ?? kstToday(),
     start: prefill.get('start') ?? win?.start ?? '19:00',
     end: prefill.get('end') ?? win?.end ?? '21:00',
+    spanDays: 0,
     location: '',
     // Teams / songs in the query win over "all participants".
     forAll:
@@ -147,7 +157,8 @@ const bodyOf = (f: Form): ScheduleBody => ({
   eventType: f.eventType,
   status: f.status,
   startAt: inKst(f.date, f.start),
-  endAt: inKst(f.date, f.end),
+  // The end date keeps its distance from the start date, so a schedule over midnight stays one.
+  endAt: inKst(addDays(f.date, f.spanDays), f.end),
   title: f.title.trim() === '' ? null : f.title.trim(),
   location: f.location.trim() === '' ? null : f.location.trim(),
   memo: f.memo.trim() === '' ? null : f.memo.trim(),
@@ -229,7 +240,7 @@ function FormBody({
     ),
   ].slice(0, 3)
 
-  const endAfterStart = form.end > form.start
+  const endAfterStart = form.spanDays > 0 || form.end > form.start
   const hasTarget =
     form.forAll || form.teamIds.length > 0 || form.songIds.length > 0
   const body = bodyOf(form)
@@ -575,14 +586,6 @@ export function ScheduleForm() {
     return (
       <div className="schd" data-screen-id="SCHD-003">
         <Typography variant="body1">{T.endedPerformance}</Typography>
-      </div>
-    )
-  // The form has one date: a schedule over several days would lose its end date on save.
-  const stored = detail.data?.schedule
-  if (stored && dateOf(stored.startAt) !== dateOf(stored.endAt))
-    return (
-      <div className="schd" data-screen-id="SCHD-003">
-        <Typography variant="body1">{T.multiDay}</Typography>
       </div>
     )
   return (
