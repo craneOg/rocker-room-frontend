@@ -303,6 +303,29 @@ describe('SCHD-001 ScheduleCalendar', () => {
     expect(screen.queryByText(T.empty)).toBeNull()
   })
 
+  it('lists only the schedules of a last-month day that run into this month', async () => {
+    openSchedule('/calendar', 'MEMBER', {
+      [`GET ${MINE}`]: items(
+        event({
+          id: '411',
+          title: '밤샘 합주',
+          startAt: '2026-09-30T22:00:00+09:00',
+          endAt: '2026-10-01T01:00:00+09:00',
+        }),
+        event({
+          id: '412',
+          title: '지난달 끝난 합주',
+          startAt: '2026-09-30T18:00:00+09:00',
+          endAt: '2026-09-30T20:00:00+09:00',
+        }),
+      ),
+    })
+    await ready()
+    fireEvent.click(screen.getByRole('button', { name: T.viewList }))
+    await screen.findByRole('link', { name: /밤샘 합주/ })
+    expect(screen.queryByRole('link', { name: /지난달 끝난 합주/ })).toBeNull()
+  })
+
   it('RANGE_TOO_LARGE asks for a shorter period', async () => {
     openSchedule('/calendar', 'MEMBER', {
       [`GET ${MINE}`]: () =>

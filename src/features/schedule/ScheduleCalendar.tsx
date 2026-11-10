@@ -275,14 +275,14 @@ export function ScheduleCalendar() {
   } else if (calendar.isPending) body = <ListSkeleton rows={4} />
   else {
     const monthStart = `${anchor.slice(0, 8)}01`
-    // A schedule that began before this month but runs into it is listed under its start day.
-    const listDays = [...byDay.keys()]
-      .filter(
-        (d) =>
-          d < addMonths(monthStart, 1) &&
-          (d >= monthStart ||
-            (byDay.get(d) ?? []).some((e) => dateOf(e.endAt) >= monthStart)),
+    // A schedule that began before this month but runs into it is listed under its start day;
+    // the others of that day are not this month's.
+    const listEvents = (d: string) =>
+      (byDay.get(d) ?? []).filter(
+        (e) => d >= monthStart || dateOf(e.endAt) >= monthStart,
       )
+    const listDays = [...byDay.keys()]
+      .filter((d) => d < addMonths(monthStart, 1) && listEvents(d).length > 0)
       .sort()
     body = (
       <>
@@ -348,7 +348,7 @@ export function ScheduleCalendar() {
             <DayList
               key={d}
               day={d}
-              events={byDay.get(d) ?? []}
+              events={listEvents(d)}
               tagOf={tagOf}
               showEmpty={false}
             />
