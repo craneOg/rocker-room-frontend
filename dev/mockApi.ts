@@ -5,6 +5,7 @@ import { handlePerformanceForm } from './performanceFormMock.ts'
 import { createPerformancePolicyMock } from './performancePolicyMock.ts'
 import { bodyCache, createPerformanceViewMock } from './performanceViewMock.ts'
 import { createSetlistMock } from './setlistMock.ts'
+import { createSongMock } from './songMock.ts'
 import { handleTeams } from './teamMock.ts'
 
 // Dev-server-only mock backend (`npm run dev:mock`). In-memory state, plain Node handler.
@@ -280,6 +281,7 @@ export function createMockApi() {
   const perfMock = createPerformanceViewMock()
   const setlistMock = createSetlistMock()
   const availabilityMock = createAvailabilityMock()
+  const songMock = createSongMock()
 
   const hasCookie = (req: IncomingMessage, name: string) =>
     (req.headers.cookie ?? '').split(/;\s*/).includes(`${name}=1`)
@@ -330,6 +332,7 @@ export function createMockApi() {
       perfMock.reset()
       setlistMock.reset()
       availabilityMock.reset()
+      songMock.reset()
       return send(res, 204, undefined, {
         'Set-Cookie': [
           setCookie(COOKIE_SESSION, false),
@@ -599,6 +602,20 @@ export function createMockApi() {
       }
       if ((await setlistMock(ctx)) || (await availabilityMock(ctx))) return
     }
+
+    // SONG-001..005 (songs, evaluations, team reads of c10). Before the view mock, which would answer 404 for them.
+    if (
+      signedIn &&
+      (await songMock({
+        req,
+        res,
+        url,
+        path,
+        method,
+        memberships: state.memberships,
+      }))
+    )
+      return
 
     if (
       signedIn &&
