@@ -124,6 +124,15 @@ export const routes: RouteObject[] = [
                 },
               },
               {
+                path: '/me/withdrawal',
+                handle: { title: 'MY-004', sub: true },
+                lazy: async () => {
+                  const { MyWithdrawal } =
+                    await import('../features/my/MyWithdrawal')
+                  return { Component: MyWithdrawal }
+                },
+              },
+              {
                 path: '/me/membership',
                 lazy: async () => {
                   const { MyMembership } =
@@ -140,7 +149,6 @@ export const routes: RouteObject[] = [
                   return { Component: ClubCreate }
                 },
               },
-              ...subScreens([['/me/withdrawal', 'MY-004']]),
               {
                 path: '/me/profile',
                 handle: { title: 'MY-002', sub: true },
@@ -512,13 +520,50 @@ export const routes: RouteObject[] = [
               },
               {
                 element: <RequireSuperAdmin />,
-                children: subScreens([
-                  ['/admin', 'SADM-001'],
-                  ['/admin/clubs', 'SADM-002'],
-                  ['/admin/clubs/:clubId', 'SADM-003'],
-                  ['/admin/users', 'SADM-004'],
-                  ['/admin/audit-logs', 'SADM-005'],
-                ]),
+                children: [
+                  {
+                    lazy: async () => {
+                      const { AdminLayout } =
+                        await import('../features/admin/AdminBits')
+                      return { Component: AdminLayout }
+                    },
+                    children: [
+                      {
+                        path: '/admin',
+                        lazy: async () => {
+                          const { AdminOverview } =
+                            await import('../features/admin/AdminOverview')
+                          return { Component: AdminOverview }
+                        },
+                      },
+                      {
+                        path: '/admin/clubs',
+                        lazy: async () => {
+                          const { AdminClubs } =
+                            await import('../features/admin/AdminClubs')
+                          return { Component: AdminClubs }
+                        },
+                      },
+                      ...subScreens([['/admin/clubs/:clubId', 'SADM-003']]),
+                      {
+                        path: '/admin/users',
+                        lazy: async () => {
+                          const { AdminUsers } =
+                            await import('../features/admin/AdminUsers')
+                          return { Component: AdminUsers }
+                        },
+                      },
+                      {
+                        path: '/admin/audit-logs',
+                        lazy: async () => {
+                          const { AuditLogs } =
+                            await import('../features/admin/AuditLogs')
+                          return { Component: AuditLogs }
+                        },
+                      },
+                    ],
+                  },
+                ],
               },
             ],
           },
