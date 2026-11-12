@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { applyRepeat, clearWeek, copyPreviousWeek } from './availabilityEdit'
+import {
+  applyRepeat,
+  changedWeekSaves,
+  clearWeek,
+  copyPreviousWeek,
+} from './availabilityEdit'
 import { slotAt } from './availabilityTime'
 
 const season = { start: '2026-10-06', end: '2026-10-20' }
@@ -46,5 +51,41 @@ describe('availabilityEdit', () => {
       season,
     )
     expect(week.size).toBe(2)
+  })
+})
+
+describe('changedWeekSaves', () => {
+  const season = { start: '2026-10-06', end: '2026-10-25' }
+  const at = (day: string, h: number) =>
+    Date.parse(`${day}T${String(h).padStart(2, '0')}:00:00+09:00`)
+
+  it('sends nothing when nothing changed', () => {
+    const same = new Set([at('2026-10-14', 20)])
+    expect(changedWeekSaves(season, same, new Set(same))).toEqual([])
+  })
+
+  it('sends only the changed weeks, each cut to the season and at most 7 days', () => {
+    const saved = new Set([at('2026-10-08', 18)])
+    const working = new Set([
+      at('2026-10-08', 18),
+      at('2026-10-07', 19),
+      at('2026-10-22', 19),
+    ])
+    const sent = changedWeekSaves(season, working, saved)
+    expect(sent.map((w) => [w.from, w.to, w.slots.length])).toEqual([
+      ['2026-10-06T00:00:00+09:00', '2026-10-12T00:00:00+09:00', 2],
+      ['2026-10-19T00:00:00+09:00', '2026-10-26T00:00:00+09:00', 1],
+    ])
+  })
+
+  it('sends an empty week to delete its slots', () => {
+    const saved = new Set([at('2026-10-14', 20)])
+    expect(changedWeekSaves(season, new Set(), saved)).toEqual([
+      {
+        from: '2026-10-12T00:00:00+09:00',
+        to: '2026-10-19T00:00:00+09:00',
+        slots: [],
+      },
+    ])
   })
 })
