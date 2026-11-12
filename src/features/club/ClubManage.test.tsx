@@ -515,6 +515,80 @@ describe('CLUB-103 officer actions', () => {
     )
   })
 
+  describe('withdrawing the only officer', () => {
+    const soleOfficer = (extra: Record<string, Route> = {}) =>
+      open('/clubs/10/members/21', 'CLUB_ADMIN', {
+        [`GET ${BASE}/memberships/21`]: () =>
+          json({
+            ...member('21', '정규채', { role: 'CLUB_ADMIN' }),
+            performances: [],
+          }),
+        [`GET ${at('/withdraw-preview')}`]: () =>
+          json({
+            target: {
+              membershipId: '21',
+              displayName: '정규채',
+              role: 'CLUB_ADMIN',
+            },
+            succession: {
+              type: 'DESIGNATED_OR_EARLIEST',
+              candidateMembershipId: '22',
+              candidateName: '김도윤',
+            },
+            performanceImpacts: [],
+            teamLeaderCandidates: [],
+            warnings: [],
+          }),
+        [`GET ${BASE}/memberships`]: () =>
+          page([
+            member('21', '정규채', { role: 'CLUB_ADMIN' }),
+            member('22', '김도윤'),
+            member('23', '이서준'),
+            member('24', '박관리', { role: 'CLUB_ADMIN' }),
+          ]),
+        [`POST ${at('/withdraw')}`]: () => json({}),
+        ...extra,
+      })
+
+    it('sends the chosen successor, and lists no officers as candidates', async () => {
+      const { fetchMock } = soleOfficer()
+      await click(M.withdraw)
+      await screen.findByText(new RegExp(M.withdrawSuccessionTo('김도윤')))
+      const select = await screen.findByRole('combobox', {
+        name: M.changeOfficerSuccessor,
+      })
+      expect(
+        Array.from(select.querySelectorAll('option')).map((o) => o.value),
+      ).toEqual(['22', '23'])
+      fireEvent.change(select, { target: { value: '23' } })
+      await screen.findByText(new RegExp(M.withdrawSuccessionTo('이서준')))
+      await click(M.withdrawConfirm)
+
+      await screen.findByText(M.withdrawn)
+      expect(body(fetchMock, at('/withdraw'))).toEqual({
+        teamLeaderSuccessors: [],
+        successorMembershipId: '23',
+      })
+      expect(
+        callsTo(fetchMock, `${BASE}/memberships`).some(([url]) =>
+          String(url).includes('status=ACTIVE'),
+        ),
+      ).toBe(true)
+    })
+
+    it('leaves the successor to the server when it is not changed', async () => {
+      const { fetchMock } = soleOfficer()
+      await click(M.withdraw)
+      await screen.findByRole('combobox', { name: M.changeOfficerSuccessor })
+      await click(M.withdrawConfirm)
+
+      await screen.findByText(M.withdrawn)
+      expect(body(fetchMock, at('/withdraw'))).toEqual({
+        teamLeaderSuccessors: [],
+      })
+    })
+  })
+
   it('offers only role revocation and a leave link on the own page', async () => {
     open('/clubs/10/members/m9', 'CLUB_ADMIN', {
       [`GET ${BASE}/memberships/m9`]: () =>

@@ -10,7 +10,7 @@ import { Link, useNavigate } from 'react-router'
 import { COPY } from '../../shared/ui/copy'
 import { feedback } from '../../shared/ui/feedbackBus'
 import { ReasonModal } from '../../shared/ui/ReasonModal'
-import { listParts, type MemberDetail } from './api'
+import { listMembers, listParts, type MemberDetail } from './api'
 import { MEMBER_COPY as T } from './copy'
 import {
   changeMemberStatus,
@@ -346,13 +346,42 @@ function WithdrawDialog({ clubId, member, onClose, qc }: DialogProps) {
   // teamId -> chosen successor; teams not chosen here use the preview's first candidate.
   const [chosen, setChosen] = useState<Record<string, string>>({})
   const data = preview.data
+  const needsOfficer = data?.target.role === 'CLUB_ADMIN' && !!data.succession
+  // Officer candidates: the preview names one person only, so the list comes from API-020.
+  const officers = useQuery({
+    queryKey: ['club-member', clubId, member.id, 'officer-candidates'],
+    queryFn: ({ signal }) =>
+      listMembers(
+        clubId,
+        { status: ['ACTIVE'], memberType: 'REGULAR' },
+        0,
+        signal,
+        100,
+      ),
+    enabled: needsOfficer,
+    gcTime: 0,
+  })
+  const [officerPick, setOfficerPick] = useState<string>()
+  const officerCandidates = (officers.data?.items ?? []).filter(
+    (c) => c.role !== 'CLUB_ADMIN' && c.id !== member.id,
+  )
+  const defaultOfficer = data?.succession?.candidateMembershipId
+  const officerId = officerPick ?? defaultOfficer
+  const pickedOfficer = officerCandidates.find((c) => c.id === officerId)
   const leaderTeams = data?.teamLeaderCandidates ?? []
   const successors = leaderTeams.flatMap((t) => {
     const id = chosen[t.teamId] ?? t.candidates[0]?.membershipId
     return id === undefined ? [] : [{ teamId: t.teamId, membershipId: id }]
   })
   const kick = useMutation({
-    mutationFn: () => withdrawMember(clubId, member.id, successors),
+    mutationFn: () =>
+      withdrawMember(
+        clubId,
+        member.id,
+        successors,
+        // Sent only when changed: otherwise the server's own pick stands.
+        officerPick && officerPick !== defaultOfficer ? officerPick : undefined,
+      ),
     onSuccess: async () => {
       await done(qc, clubId, M.withdrawn)
       onClose()
@@ -406,10 +435,27 @@ function WithdrawDialog({ clubId, member, onClose, qc }: DialogProps) {
               </li>
             )
           })}
-          {data.target.role === 'CLUB_ADMIN' && data.succession ? (
+          {needsOfficer && data.succession ? (
             <li>
               {M.withdrawSuccession}{' '}
-              {M.withdrawSuccessionTo(data.succession.candidateName)}
+              {M.withdrawSuccessionTo(
+                pickedOfficer
+                  ? memberName(pickedOfficer)
+                  : data.succession.candidateName,
+              )}
+              {officerCandidates.length > 1 ? (
+                <select
+                  aria-label={M.changeOfficerSuccessor}
+                  value={officerId}
+                  onChange={(e) => setOfficerPick(e.target.value)}
+                >
+                  {officerCandidates.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {memberName(c)}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
             </li>
           ) : null}
         </ul>

@@ -116,7 +116,7 @@ export const changeMemberType = (
 
 export type WithdrawPreview = {
   target: { membershipId: string; displayName: string; role: string }
-  /** Successor of a sole officer (U-05); assumed null/absent when none is needed. */
+  /** Default successor of a sole officer (U-05), one person only; null/absent when none is needed. */
   succession?: {
     type: string
     candidateMembershipId: string
@@ -148,9 +148,12 @@ export const withdrawMember = (
   clubId: string,
   membershipId: string,
   teamLeaderSuccessors: { teamId: string; membershipId: string }[],
+  /** The new officer when the target is the only one; omitted: the server picks (U-05). */
+  successorMembershipId?: string,
 ) =>
   api.post<unknown>(`${memberPath(clubId, membershipId)}/withdraw`, {
     teamLeaderSuccessors,
+    successorMembershipId,
   })
 
 export type BulkAction =
