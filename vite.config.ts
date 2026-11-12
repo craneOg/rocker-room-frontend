@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import react from '@vitejs/plugin-react'
 import type { Plugin } from 'vite'
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 import { createMockApi } from './dev/mockApi.ts'
 
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8')) as {
@@ -23,5 +23,9 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
   server: { proxy: { '/api': 'http://localhost:8080' } },
-  test: { environment: 'jsdom' },
+  // Nested agent worktrees under .claude/ hold full copies of the sources: keep them out of the run.
+  test: {
+    environment: 'jsdom',
+    exclude: [...configDefaults.exclude, '.claude/**'],
+  },
 })

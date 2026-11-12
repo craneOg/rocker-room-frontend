@@ -63,7 +63,7 @@ const initialState = () => ({
     profileImageUrl: null as string | null,
     profileImagePublic: true,
     onboardingRequired: true,
-    isSuperAdmin: false,
+    isSuperAdmin: true,
   },
   memberships: [
     {
