@@ -576,6 +576,37 @@ describe('CLUB-103 officer actions', () => {
       ).toBe(true)
     })
 
+    it('lists candidates from every page and offers a retry when the list fails', async () => {
+      let failFirst = true
+      const pageOf = (n: number, items: unknown[]) =>
+        json({ items, page: n, size: 100, totalElements: 101, totalPages: 2 })
+      const { fetchMock } = soleOfficer({
+        [`GET ${BASE}/memberships`]: (url) => {
+          if (failFirst) return apiError('INTERNAL_ERROR', 500)
+          return String(url).includes('page=1')
+            ? pageOf(1, [member('99', '둘째장')])
+            : pageOf(0, [member('22', '김도윤')])
+        },
+      })
+      await click(M.withdraw)
+      const retry = await screen.findByRole('button', { name: COPY.retry })
+      failFirst = false
+      fireEvent.click(retry)
+      const select = await screen.findByRole('combobox', {
+        name: M.changeOfficerSuccessor,
+      })
+      expect(
+        Array.from(select.querySelectorAll('option')).map((o) => o.value),
+      ).toEqual(['22', '99'])
+      fireEvent.change(select, { target: { value: '99' } })
+      await click(M.withdrawConfirm)
+      await screen.findByText(M.withdrawn)
+      expect(body(fetchMock, at('/withdraw'))).toEqual({
+        teamLeaderSuccessors: [],
+        successorMembershipId: '99',
+      })
+    })
+
     it('leaves the successor to the server when it is not changed', async () => {
       const { fetchMock } = soleOfficer()
       await click(M.withdraw)

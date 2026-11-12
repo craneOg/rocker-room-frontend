@@ -350,19 +350,22 @@ function WithdrawDialog({ clubId, member, onClose, qc }: DialogProps) {
   // Officer candidates: the preview names one person only, so the list comes from API-020.
   const officers = useQuery({
     queryKey: ['club-member', clubId, member.id, 'officer-candidates'],
-    queryFn: ({ signal }) =>
-      listMembers(
-        clubId,
-        { status: ['ACTIVE'], memberType: 'REGULAR' },
-        0,
-        signal,
-        100,
-      ),
+    // Every page: a candidate (the default one too) must not fall off the first 100.
+    queryFn: async ({ signal }) => {
+      const filter = { status: ['ACTIVE'], memberType: 'REGULAR' }
+      const first = await listMembers(clubId, filter, 0, signal, 100)
+      const rest = await Promise.all(
+        Array.from({ length: Math.max(first.totalPages - 1, 0) }, (_, i) =>
+          listMembers(clubId, filter, i + 1, signal, 100),
+        ),
+      )
+      return [first, ...rest].flatMap((p) => p.items)
+    },
     enabled: needsOfficer,
     gcTime: 0,
   })
   const [officerPick, setOfficerPick] = useState<string>()
-  const officerCandidates = (officers.data?.items ?? []).filter(
+  const officerCandidates = (officers.data ?? []).filter(
     (c) => c.role !== 'CLUB_ADMIN' && c.id !== member.id,
   )
   const defaultOfficer = data?.succession?.candidateMembershipId
@@ -443,6 +446,15 @@ function WithdrawDialog({ clubId, member, onClose, qc }: DialogProps) {
                   ? memberName(pickedOfficer)
                   : data.succession.candidateName,
               )}
+              {officers.isError ? (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => void officers.refetch()}
+                >
+                  {COPY.retry}
+                </Button>
+              ) : null}
               {officerCandidates.length > 1 ? (
                 <select
                   aria-label={M.changeOfficerSuccessor}
