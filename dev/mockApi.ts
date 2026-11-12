@@ -546,6 +546,89 @@ export function createMockApi() {
         },
       })
     }
+    // MY-004 (API-134 preview, API-009 withdrawal): an officer of c10 with three kinds of team,
+    // and a club left without a successor.
+    if (path === '/api/v1/me/withdrawal-preview' && method === 'GET')
+      return ok(res, {
+        clubs: [
+          {
+            clubId: 'c10',
+            clubName: '크레인 밴드',
+            role: 'CLUB_ADMIN',
+            succession: {
+              type: 'DESIGNATED_OR_EARLIEST',
+              candidateUserId: 'u3',
+              candidates: [
+                { membershipId: 'u3', userId: 'u3', displayName: '정규채' },
+                { membershipId: 'u4', userId: 'u4', displayName: '김도윤' },
+              ],
+            },
+            teamLeaderTransfers: [
+              {
+                performanceId: 'p1',
+                performanceName: '가을 정기공연',
+                teamId: 't1',
+                teamName: 'Crane Team',
+                teamStatus: 'APPROVED',
+                defaultMembershipId: 'u2',
+                candidates: [
+                  { membershipId: 'u2', displayName: '송예림' },
+                  { membershipId: 'u5', displayName: '이서연' },
+                ],
+              },
+              {
+                performanceId: 'p1',
+                performanceName: '가을 정기공연',
+                teamId: 't2',
+                teamName: '2팀',
+                teamStatus: 'SUBMITTED',
+                defaultMembershipId: 'u5',
+                candidates: [{ membershipId: 'u5', displayName: '이서연' }],
+              },
+              {
+                performanceId: 'p1',
+                performanceName: '가을 정기공연',
+                teamId: 't3',
+                teamName: '3팀',
+                teamStatus: 'DRAFT',
+                defaultMembershipId: null,
+                candidates: [],
+              },
+            ],
+          },
+          {
+            clubId: 'c5',
+            clubName: '노을밴드',
+            role: 'CLUB_ADMIN',
+            succession: {
+              type: 'NONE',
+              candidateUserId: null,
+              candidates: [],
+            },
+            teamLeaderTransfers: [],
+          },
+        ],
+        warnings: [],
+      })
+    if (path === '/api/v1/me/withdrawal' && method === 'POST') {
+      const body = await readBody(req)
+      if (body.confirmed !== true)
+        return send(res, 409, {
+          error: {
+            code: 'CONFIRMATION_REQUIRED',
+            message: 'CONFIRMATION_REQUIRED',
+            details: [{ reason: 'WITHDRAWAL_CONFIRMATION_REQUIRED' }],
+            warnings: [],
+          },
+        })
+      // The account is gone: the session ends, like a logout.
+      return send(
+        res,
+        200,
+        { data: { successions: { clubs: [], teams: [] } } },
+        { 'Set-Cookie': setCookie(COOKIE_SESSION, false) },
+      )
+    }
     if (path === '/api/v1/me/memberships' && method === 'GET')
       return ok(res, { items: state.memberships })
 
