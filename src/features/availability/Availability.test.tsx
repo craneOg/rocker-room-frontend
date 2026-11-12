@@ -171,8 +171,12 @@ describe('AVAIL-001 for a confirmed participant', () => {
     // The server's slots follow the PUTs: week 10.12 goes through, week 10.19 fails once.
     let stored = [...SAVED]
     let puts = 0
+    let gets = 0
     const { fetchMock } = open('MEMBER', {
-      [`GET ${ME}`]: () => json({ items: stored }),
+      // Refetches after the first read never finish: the cache update alone must keep the
+      // comparison true to the server.
+      [`GET ${ME}`]: () =>
+        ++gets === 1 ? json({ items: stored }) : new Promise(() => {}),
       [`PUT ${ME}`]: (_, init) => {
         const sent = JSON.parse(String(init?.body)) as {
           from: string
