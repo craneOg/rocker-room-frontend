@@ -78,6 +78,8 @@ export const ADMIN_COPY = {
     searchable: '검색 공개',
     metrics: '지표',
     lastActive: '최근 활동일',
+    memberTotal: '전체 회원',
+    performanceTotal: '전체 공연',
     memberStatus: {
       active: '활동',
       onLeave: '휴학',
@@ -112,7 +114,9 @@ export const ADMIN_COPY = {
   // SADM-003 emergency replacement
   replace: '비상 임원 교체',
   replaceBlocked:
-    '다른 활동 임원이 있어 비상 교체를 할 수 없어요. 임원끼리 권한을 정리해 주세요.',
+    '활동 중인 임원이 있어 비상 교체를 할 수 없어요. 활동 중인 임원이 없을 때만 쓸 수 있어요.',
+  replaceNotice:
+    '활동 중인 임원이 없을 때 쓰는 비상 수단이에요. 후임만 임원이 돼요.',
   replaceSteps: ['사유', '후임 선택', '권한 해제 안내', '확인'],
   replaceStep: (n: number, total: number) => `${n} / ${total}단계`,
   replaceNext: '다음',
@@ -120,10 +124,11 @@ export const ADMIN_COPY = {
   replaceRun: '교체 실행',
   replaceReason: '교체 사유를 입력해 주세요',
   replaceSuccessor: '후임으로 지정할 멤버를 골라 주세요',
-  replaceNoCandidate:
-    '후임으로 지정할 활동 멤버가 없어요. 비활성 상태로 두고 복구 요청을 검토하세요.',
+  replaceNoCandidate: '후임으로 지정할 수 있는 활동 정회원이 없어요.',
+  replaceMore: '후보 더 보기',
   // ponytail: the notice and the summary wording are drafts (the spec gives none).
-  replaceRelease: '교체하면 기존 임원의 임원 권한이 자동으로 해제돼요.',
+  replaceRelease:
+    '교체하면 기존 임원의 임원 권한이 모두 자동으로 해제되고, 후임만 임원이 돼요.',
   replaceSummaryReason: '사유',
   replaceSummarySuccessor: '후임',
   replaceSummaryReleased: '권한이 해제되는 임원',

@@ -142,17 +142,19 @@ export const reactivateClub = (
     confirmed: confirmed || undefined,
   })
 
-// ponytail: API-121 emergency replacement is not implemented on the server; the path and the
-// body (`successorMembershipId`) are guesses (tmp/backend-questions.md, SADM-003). Fix when BE answers.
+// API-121 emergency replacement (Super Admin; the server is not built yet, the contract is the
+// backend's). It only runs while no officer is ACTIVE: the successor gets the officer role and every
+// previous officer is released, so one officer is left. 422 RULE_VIOLATION reasons:
+// SUCCESSOR_NOT_ELIGIBLE, OTHER_ACTIVE_ADMIN_EXISTS. `reason` has no confirmed length rule yet.
 export const replaceClubAdmin = (
   clubId: string,
   reason: string,
-  successorMembershipId: string,
+  newAdminMembershipId: string,
 ) =>
-  api.post<unknown>(`/api/v1/admin/clubs/${clubId}/replace-admin`, {
-    reason,
-    successorMembershipId,
-  })
+  api.post<{ admins: unknown[] }>(
+    `/api/v1/admin/clubs/${clubId}/replace-admin`,
+    { newAdminMembershipId, reason },
+  )
 
 export type AdminUser = {
   id: string

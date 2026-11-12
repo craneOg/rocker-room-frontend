@@ -58,13 +58,12 @@ const LOGS = Array.from({ length: 60 }, (_, i) => ({
   createdAt: iso(i / 4),
 }))
 
-// SADM-003: admins per club (by adminCount; club 5, 10, ... has one), kept in memory.
+// SADM-003: admins per club (adminCount of them), kept in memory; the list reads the same state.
 const adminsOf = new Map<string, Record<string, unknown>[]>()
 const admins = (c: (typeof CLUBS)[number]) => {
   let list = adminsOf.get(c.id)
   if (!list) {
-    const n = Number(c.id) % 5 === 0 && c.adminCount > 0 ? 1 : c.adminCount
-    list = Array.from({ length: n }, (_, i) => ({
+    list = Array.from({ length: c.adminCount }, (_, i) => ({
       membershipId: `${c.id}0${i}`,
       userId: `${c.id}0${i}`,
       displayName: `임원 ${c.id}-${i + 1}`,
@@ -166,7 +165,10 @@ export async function handleAdmin(ctx: MockCtx): Promise<boolean> {
   if (path === '/api/v1/admin/clubs' && method === 'GET') {
     const term = (q.get('q') ?? '').toLowerCase()
     const status = q.get('status')
-    const rows = CLUBS.filter(
+    const rows = CLUBS.map((c) => ({
+      ...c,
+      adminCount: admins(c).length,
+    })).filter(
       (c) =>
         (!term || c.name.toLowerCase().includes(term) || c.id === term) &&
         (!status || c.status === status) &&
@@ -251,18 +253,26 @@ export async function handleAdmin(ctx: MockCtx): Promise<boolean> {
         send(res, { id: target.id, status: target.status })
       }
     } else {
-      // ponytail: body and response are guesses (API-121 is not on the server).
-      adminsOf.set(target.id, [
-        {
-          membershipId: String(body.successorMembershipId),
-          userId: String(body.successorMembershipId),
-          displayName: '새 임원',
-          handle: 'new_admin',
-          status: 'ACTIVE',
-          lastActiveAt: iso(0),
-        },
-      ])
-      send(res, { clubId: target.id })
+      // API-121 (backend contract): only while no officer is ACTIVE; the successor becomes the only officer.
+      if (admins(target).some((a) => a.status === 'ACTIVE')) {
+        fail(422, 'RULE_VIOLATION', {
+          details: [{ field: 'request', reason: 'OTHER_ACTIVE_ADMIN_EXISTS' }],
+        })
+      } else {
+        const id = String(body.newAdminMembershipId)
+        const next = [
+          {
+            membershipId: id,
+            userId: id,
+            displayName: '새 임원',
+            handle: 'new_admin',
+            status: 'ACTIVE',
+            lastActiveAt: iso(0),
+          },
+        ]
+        adminsOf.set(target.id, next)
+        send(res, { admins: next })
+      }
     }
     return true
   }

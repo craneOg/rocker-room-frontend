@@ -1,5 +1,5 @@
 import { Button, TextArea, Typography } from '@montage-ui/core'
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { COPY } from '../../shared/ui/copy'
 import { ErrorState } from '../../shared/ui/StateViews'
@@ -28,21 +28,23 @@ export function AdminReplaceAdmin({
   const [reason, setReason] = useState('')
   const [successor, setSuccessor] = useState('')
 
-  // ponytail: first 100 active members only, no search or paging; add them when a club exceeds it.
-  // Whether a Super Admin may call the club member API is unconfirmed (tmp/backend-questions.md).
-  const members = useQuery({
+  // API-020 is open to the Super Admin (backend-confirmed); officers are filtered out here.
+  const members = useInfiniteQuery({
     queryKey: ['admin', 'club', clubId, 'successors'],
-    queryFn: ({ signal }) =>
+    queryFn: ({ pageParam, signal }) =>
       listMembers(
         clubId,
         { status: ['ACTIVE'], memberType: 'REGULAR' },
-        0,
+        pageParam,
         signal,
         100,
       ),
+    initialPageParam: 0,
+    getNextPageParam: (last) =>
+      last.page + 1 < last.totalPages ? last.page + 1 : undefined,
     enabled: step === 1,
   })
-  const candidates = (members.data?.items ?? []).filter(
+  const candidates = (members.data?.pages.flatMap((p) => p.items) ?? []).filter(
     (m) =>
       m.role !== 'CLUB_ADMIN' &&
       m.memberType === 'REGULAR' &&
@@ -85,7 +87,7 @@ export function AdminReplaceAdmin({
           <ErrorState onRetry={() => void members.refetch()} />
         ) : members.isPending ? (
           <Typography variant="body2">{COPY.loading}</Typography>
-        ) : candidates.length === 0 ? (
+        ) : candidates.length === 0 && !members.hasNextPage ? (
           <Typography variant="body2">{T.replaceNoCandidate}</Typography>
         ) : (
           <>
@@ -100,6 +102,16 @@ export function AdminReplaceAdmin({
                 hint: m.handle ? `@${m.handle}` : undefined,
               }))}
             />
+            {members.hasNextPage ? (
+              <Button
+                variant="outlined"
+                color="assistive"
+                loading={members.isFetchingNextPage}
+                onClick={() => void members.fetchNextPage()}
+              >
+                {T.replaceMore}
+              </Button>
+            ) : null}
           </>
         )
       ) : step === 2 ? (

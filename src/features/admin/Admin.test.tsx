@@ -504,23 +504,61 @@ describe('SADM-003 AdminClubDetail', () => {
     })
   })
 
-  it('blocks the emergency replacement while two officers are active', async () => {
-    open('/admin/clubs/10', { [`GET ${D}`]: () => json(detail()) })
+  it('blocks the emergency replacement while any officer is active', async () => {
+    open('/admin/clubs/10', {
+      [`GET ${D}`]: () => json(detail({ admins: [adminRow('21')] })),
+    })
     const button = await screen.findByRole('button', { name: T.replace })
     expect(button.hasAttribute('disabled')).toBe(true)
     expect(screen.getByText(T.replaceBlocked)).toBeTruthy()
   })
 
+  it('shows the member and performance totals besides the per-status numbers', async () => {
+    open('/admin/clubs/10', { [`GET ${D}`]: () => json(detail()) })
+    const metrics = await screen.findByRole('region', {
+      name: T.detail.metrics,
+    })
+    expect(
+      within(metrics).getByText(T.detail.memberTotal).nextElementSibling
+        ?.textContent,
+    ).toBe('9')
+    expect(
+      within(metrics).getByText(T.detail.performanceTotal).nextElementSibling
+        ?.textContent,
+    ).toBe('5')
+  })
+
+  it('finds a successor on a later page before saying there is nobody', async () => {
+    open('/admin/clubs/10', {
+      [`GET ${D}`]: () => json(detail({ admins: [] })),
+      [`GET /api/v1/clubs/10/memberships`]: (url) =>
+        new URL(url, 'http://x').searchParams.get('page') === '1'
+          ? page([member('41')], { page: 1, totalPages: 2 })
+          : page([member('40', { role: 'CLUB_ADMIN' })], { totalPages: 2 }),
+    })
+    fireEvent.click(await screen.findByRole('button', { name: T.replace }))
+    await typeReason('사유')
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: T.replaceNext,
+      }),
+    )
+    fireEvent.click(await screen.findByRole('button', { name: T.replaceMore }))
+    expect(await screen.findByText('후보41')).toBeTruthy()
+    expect(screen.queryByText(T.replaceNoCandidate)).toBeNull()
+  })
+
   it('replaces the officer in four steps with an eligible member', async () => {
     const fetchMock = open('/admin/clubs/10', {
-      [`GET ${D}`]: () => json(detail({ admins: [adminRow('21')] })),
+      [`GET ${D}`]: () =>
+        json(detail({ admins: [adminRow('21', { status: 'ON_LEAVE' })] })),
       [`GET /api/v1/clubs/10/memberships`]: () =>
         page([
           member('31'),
           member('32', { role: 'CLUB_ADMIN' }),
           member('33', { memberType: 'GUEST' }),
         ]),
-      [`POST ${D}/replace-admin`]: () => json({}),
+      [`POST ${D}/replace-admin`]: () => json({ admins: [] }),
     })
     fireEvent.click(await screen.findByRole('button', { name: T.replace }))
     await typeReason('임원 연락 두절')
@@ -543,7 +581,7 @@ describe('SADM-003 AdminClubDetail', () => {
     await screen.findByText(T.replaced)
     expect(bodyOf(fetchMock, `${D}/replace-admin`)).toEqual({
       reason: '임원 연락 두절',
-      successorMembershipId: '31',
+      newAdminMembershipId: '31',
     })
   })
 

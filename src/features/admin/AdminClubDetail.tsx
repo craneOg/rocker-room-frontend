@@ -74,7 +74,8 @@ export function AdminClubDetail() {
   const active = d?.club.status === 'ACTIVE'
   const activeAdmins =
     d?.admins.filter((a) => a.status === 'ACTIVE').length ?? 0
-  const canReplace = activeAdmins < 2
+  // API-121 runs only while no officer is active (else 422 OTHER_ACTIVE_ADMIN_EXISTS).
+  const canReplace = activeAdmins === 0
 
   return (
     <div data-screen-id="SADM-003" className="admin-body">
@@ -129,6 +130,11 @@ export function AdminClubDetail() {
               {T.detail.metrics}
             </Typography>
             <div className="admin-tiles">
+              <Tile label={T.detail.memberTotal} value={d.counts.members} />
+              <Tile
+                label={T.detail.performanceTotal}
+                value={d.counts.performances}
+              />
               {keys(T.detail.memberStatus).map((k) => (
                 <Tile
                   key={k}
@@ -205,9 +211,9 @@ export function AdminClubDetail() {
             </Button>
           </section>
           <Typography variant="caption1">{T.inactiveNotice}</Typography>
-          {canReplace ? null : (
-            <Typography variant="caption1">{T.replaceBlocked}</Typography>
-          )}
+          <Typography variant="caption1">
+            {canReplace ? T.replaceNotice : T.replaceBlocked}
+          </Typography>
 
           <ReasonModal
             open={dialog?.kind === 'status'}
