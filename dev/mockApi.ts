@@ -62,6 +62,9 @@ const initialState = () => ({
     name: string
     code: string
     description: string
+    clubType: string
+    isSearchable: boolean
+    themeColor: string | null
   }[],
   user: {
     id: '1',
@@ -670,13 +673,19 @@ export function createMockApi() {
             details: [{ field: 'name', reason: 'CLUB_NAME_TAKEN' }],
           },
         })
-      const id = `c${Date.now()}`
-      const joinCode = body.issueJoinCode ? 'MOCK234567' : null
+      const id = `c${Date.now()}${state.createdClubs.length}`
+      // A distinct code per club (the join link resolves by code); reset drops them with the state.
+      const joinCode = body.issueJoinCode
+        ? `MOCK${String(state.createdClubs.length + 1).padStart(6, '2')}`
+        : null
       state.createdClubs.push({
         id,
         name,
         code: joinCode ?? '',
         description: String(body.description ?? ''),
+        clubType: String(body.clubType ?? 'CLUB'),
+        isSearchable: body.isSearchable === true,
+        themeColor: (body.themeColor as string | undefined) ?? null,
       })
       state.memberships.push({
         id: `m${Date.now()}`,
@@ -877,16 +886,18 @@ export function createMockApi() {
           : m
       const members = MEMBERS.map(self)
       const admin = own.role === 'CLUB_ADMIN'
+      // A club made through API-011 answers with the settings it was saved with.
+      const made = state.createdClubs.find((c) => c.id === club.id)
       if (!sub)
         return ok(res, {
           id: club.id,
           name: club.name,
           description: club.description,
-          clubType: clubMeta.clubType,
+          clubType: made?.clubType ?? clubMeta.clubType,
           status: 'ACTIVE',
-          isSearchable: true,
+          isSearchable: made ? made.isSearchable : true,
           profileImageUrl: null,
-          themeColor: '#1A2B3C',
+          themeColor: made ? made.themeColor : '#1A2B3C',
           createdAt: ago(90),
           updatedAt: ago(2),
         })
