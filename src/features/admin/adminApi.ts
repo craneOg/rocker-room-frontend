@@ -33,7 +33,7 @@ export type Overview = {
     invitationAccepted: number
     invitationExpired: number
   }
-  /** `reason` values are not listed by the server: unknown ones are shown as they are. */
+  /** `reason`: NO_ADMIN or ADMIN_INACTIVE_180D (BE-confirmed); an unknown one is shown as it is. */
   attention: {
     clubId: string
     clubName: string

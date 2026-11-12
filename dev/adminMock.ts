@@ -108,7 +108,7 @@ export async function handleAdmin(ctx: MockCtx): Promise<boolean> {
         {
           clubId: '4',
           clubName: '샘플 동아리 4',
-          reason: 'ADMIN_INACTIVE_OVER_180_DAYS',
+          reason: 'ADMIN_INACTIVE_180D',
           lastAdminActiveAt: iso(200),
         },
       ],

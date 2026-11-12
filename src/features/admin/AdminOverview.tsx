@@ -124,7 +124,9 @@ export function AdminOverview() {
               {o.attention.map((a) => (
                 <li key={`${a.clubId}-${a.reason}`}>
                   <Link to={`/admin/clubs/${a.clubId}`}>{a.clubName}</Link>
-                  <Typography variant="body2">{a.reason}</Typography>
+                  <Typography variant="body2">
+                    {T.attentionReason[a.reason] ?? a.reason}
+                  </Typography>
                   <Typography variant="caption1">
                     {dateText(a.lastAdminActiveAt)}
                   </Typography>
