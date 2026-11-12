@@ -923,6 +923,17 @@ export function createMockApi() {
       if (!m) return fail(res, 404, 'NOT_FOUND')
       const body = await readBody(req)
       const live = ['ACTIVE', 'ON_LEAVE', 'GRADUATED'].includes(m.status)
+      if (!action && method === 'PATCH') {
+        // API-029: only your own display name.
+        if (m.id !== 'u1') return fail(res, 403, 'FORBIDDEN')
+        const next = body.displayName
+        if (next !== null && typeof next !== 'string')
+          return fail(res, 400, 'VALIDATION_ERROR')
+        if (typeof next === 'string' && next.length > 50)
+          return fail(res, 400, 'VALIDATION_ERROR')
+        m.displayName = next
+        return ok(res, memberView(m, true))
+      }
       if (action === 'role' && method === 'PUT') {
         if (body.role === 'CLUB_ADMIN') {
           if (
