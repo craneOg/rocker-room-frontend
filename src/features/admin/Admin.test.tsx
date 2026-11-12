@@ -444,6 +444,32 @@ describe('SADM-003 AdminClubDetail', () => {
     })
   })
 
+  it('keeps a later force-logout box open when an earlier state change finishes', async () => {
+    let finish: (r: Response) => void = () => {}
+    open('/admin/clubs/10', {
+      [`GET ${D}`]: () => json(detail()),
+      [`POST ${D}/deactivate`]: () =>
+        new Promise<Response>((resolve) => (finish = resolve)),
+    })
+    fireEvent.click(await screen.findByRole('button', { name: T.deactivate }))
+    await typeReason('운영 정책 위반')
+    fireEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', {
+        name: T.deactivate,
+      }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: COPY.cancel }))
+
+    fireEvent.click(screen.getByLabelText(T.detail.rowMenu('임원21')))
+    fireEvent.click(screen.getAllByRole('button', { name: T.forceLogout })[0]!)
+    await typeReason('계정 탈취 의심')
+    finish(json({}))
+    await screen.findByText(T.deactivated)
+    expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe(
+      '계정 탈취 의심',
+    )
+  })
+
   it('deactivates with a required reason', async () => {
     const fetchMock = open('/admin/clubs/10', {
       [`GET ${D}`]: () => json(detail()),

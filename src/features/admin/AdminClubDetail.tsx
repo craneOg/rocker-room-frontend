@@ -42,8 +42,15 @@ export function AdminClubDetail() {
     queryKey: ['admin', 'club', clubId],
     queryFn: ({ signal }) => getAdminClub(clubId, signal),
   })
-  const done = (message: string) => {
-    setDialog(null)
+  // A finished request closes only its own dialog, not one opened after it.
+  const closeIf = (kind: Dialog['kind'], userId?: string) =>
+    setDialog((d) =>
+      d?.kind === kind && (d.kind !== 'logout' || d.userId === userId)
+        ? null
+        : d,
+    )
+  const done = (kind: Dialog['kind'], message: string) => {
+    closeIf(kind)
     feedback.toast(message, 'positive')
     void queryClient.invalidateQueries({ queryKey: ['admin'] })
   }
@@ -54,18 +61,19 @@ export function AdminClubDetail() {
         : withConfirmation((confirmed) =>
             reactivateClub(clubId, reason, confirmed),
           ),
-    onSuccess: (_, { active }) => done(active ? T.deactivated : T.reactivated),
+    onSuccess: (_, { active }) =>
+      done('status', active ? T.deactivated : T.reactivated),
   })
   const replace = useMutation({
     mutationFn: ({ reason, id }: { reason: string; id: string }) =>
       replaceClubAdmin(clubId, reason, id),
-    onSuccess: () => done(T.replaced),
+    onSuccess: () => done('replace', T.replaced),
   })
   const logout = useMutation({
     mutationFn: ({ userId, reason }: { userId: string; reason: string }) =>
       forceLogout(userId, reason),
-    onSuccess: () => {
-      setDialog(null)
+    onSuccess: (_, { userId }) => {
+      closeIf('logout', userId)
       feedback.toast(T.forceLoggedOut, 'positive')
     },
   })

@@ -7,7 +7,7 @@ import { createScheduleMock } from './scheduleMock.ts'
 import { bodyCache, createPerformanceViewMock } from './performanceViewMock.ts'
 import { createSetlistMock } from './setlistMock.ts'
 import { createSongMock } from './songMock.ts'
-import { handleAdmin } from './adminMock.ts'
+import { handleAdmin, resetAdmin } from './adminMock.ts'
 import { handleTeams } from './teamMock.ts'
 
 // Dev-server-only mock backend (`npm run dev:mock`). In-memory state, plain Node handler.
@@ -349,6 +349,7 @@ export function createMockApi() {
     // Test controls: choose how the next login ends, or reset all state.
     if (method === 'POST' && path === '/api/__mock/reset') {
       state = initialState()
+      resetAdmin()
       perfMock.reset()
       setlistMock.reset()
       availabilityMock.reset()

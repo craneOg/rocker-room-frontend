@@ -58,6 +58,8 @@ const LOGS = Array.from({ length: 60 }, (_, i) => ({
   createdAt: iso(i / 4),
 }))
 
+const INITIAL_STATUS = new Map(CLUBS.map((c) => [c.id, c.status]))
+
 // SADM-003: admins per club (adminCount of them), kept in memory; the list reads the same state.
 const adminsOf = new Map<string, Record<string, unknown>[]>()
 const admins = (c: (typeof CLUBS)[number]) => {
@@ -75,6 +77,12 @@ const admins = (c: (typeof CLUBS)[number]) => {
   }
   return list
 }
+/** `/api/__mock/reset`: back to the sample officers and club states. */
+export const resetAdmin = () => {
+  adminsOf.clear()
+  for (const c of CLUBS) c.status = INITIAL_STATUS.get(c.id) ?? c.status
+}
+
 const readBody = async (ctx: MockCtx) => {
   let raw = ''
   for await (const chunk of ctx.req) raw += String(chunk)
