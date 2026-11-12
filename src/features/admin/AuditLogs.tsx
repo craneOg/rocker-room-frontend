@@ -1,6 +1,6 @@
 import { Button, TextField, Typography } from '@montage-ui/core'
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   EmptyState,
   ErrorState,
@@ -23,6 +23,15 @@ const actionText = (a: string) => (T.actions[a] ? `${T.actions[a]} (${a})` : a)
 export function AuditLogs() {
   const [filter, setFilter] = useState(NONE)
   const [open, setOpen] = useState<AuditLog | null>(null)
+  const sheet = useRef<HTMLElement>(null)
+  const opener = useRef<HTMLElement | null>(null)
+  useEffect(() => {
+    if (open) sheet.current?.focus()
+  }, [open])
+  const close = () => {
+    setOpen(null)
+    opener.current?.focus()
+  }
   const list = useInfiniteQuery({
     queryKey: ['admin', 'audit', filter],
     queryFn: ({ pageParam, signal }) =>
@@ -90,7 +99,13 @@ export function AuditLogs() {
         <ul className="admin-list">
           {rows.map((r) => (
             <li key={r.id}>
-              <button type="button" onClick={() => setOpen(r)}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  opener.current = e.currentTarget
+                  setOpen(r)
+                }}
+              >
                 {actionText(r.action)}
               </button>
               <span>{dateTimeText(r.createdAt)}</span>
@@ -116,7 +131,12 @@ export function AuditLogs() {
       ) : null}
 
       {open ? (
-        <section role="dialog" aria-label={actionText(open.action)}>
+        <section
+          ref={sheet}
+          tabIndex={-1}
+          role="dialog"
+          aria-label={actionText(open.action)}
+        >
           <Typography variant="body1" weight="bold">
             {actionText(open.action)}
           </Typography>
@@ -132,11 +152,7 @@ export function AuditLogs() {
               ))}
             </tbody>
           </table>
-          <Button
-            variant="outlined"
-            color="assistive"
-            onClick={() => setOpen(null)}
-          >
+          <Button variant="outlined" color="assistive" onClick={close}>
             {T.close}
           </Button>
         </section>

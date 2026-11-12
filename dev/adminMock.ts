@@ -156,7 +156,7 @@ export async function handleAdmin(ctx: MockCtx): Promise<boolean> {
         {
           clubId: '4',
           clubName: '샘플 동아리 4',
-          reason: 'ADMIN_INACTIVE_OVER_180_DAYS',
+          reason: 'ADMIN_INACTIVE_180D',
           lastAdminActiveAt: iso(200),
         },
       ],
@@ -289,8 +289,19 @@ export async function handleAdmin(ctx: MockCtx): Promise<boolean> {
     return true
   }
   if (path === '/api/v1/admin/audit-logs' && method === 'GET') {
-    const action = q.get('action')
-    const rows = LOGS.filter((l) => !action || l.action === action)
+    const [action, clubId, actor] = ['action', 'clubId', 'actorUserId'].map(
+      (k) => q.get(k),
+    )
+    const from = q.get('from') ? Date.parse(q.get('from')!) : -Infinity
+    const to = q.get('to') ? Date.parse(q.get('to')!) : Infinity
+    const rows = LOGS.filter(
+      (l) =>
+        (!action || l.action === action) &&
+        (!clubId || l.clubId === clubId) &&
+        (!actor || l.actorUserId === actor) &&
+        Date.parse(l.createdAt) >= from &&
+        Date.parse(l.createdAt) <= to,
+    )
     send(res, paged(rows, page, size))
     return true
   }

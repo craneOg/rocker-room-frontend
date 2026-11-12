@@ -31,8 +31,8 @@ export function AdminUsers() {
   const logout = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       forceLogout(id, reason),
-    onSuccess: () => {
-      setTarget(null)
+    onSuccess: (_, { id }) => {
+      setTarget((t) => (t?.id === id ? null : t))
       feedback.toast(T.forceLoggedOut, 'positive')
     },
   })

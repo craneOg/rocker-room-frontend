@@ -17,6 +17,8 @@ export const ADMIN_COPY = {
   },
   period: (d: number) => `${d}일`,
   trendTitle: '추이',
+  trendTable: '추이를 표로 보기',
+  trendDate: '날짜',
   trend: {
     newUsers: '신규 가입자',
     newClubs: '동아리 생성',
@@ -33,6 +35,10 @@ export const ADMIN_COPY = {
     invitationExpired: '초대 만료',
   },
   attentionTitle: '주의 대상',
+  attentionReason: {
+    NO_ADMIN: '임원이 없어요',
+    ADMIN_INACTIVE_180D: '임원이 180일 이상 활동하지 않았어요',
+  } as Record<string, string>,
   attentionEmpty: '주의할 동아리가 없어요',
   noAdminClubs: (n: number) => `임원이 없는 동아리 ${n}`,
   idleClubs: (n: number) => `임원이 180일 이상 활동하지 않은 동아리 ${n}`,

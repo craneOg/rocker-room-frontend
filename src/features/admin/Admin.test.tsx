@@ -10,6 +10,7 @@ import {
   stubApi,
   type Route,
 } from '../../test/harness'
+import { COPY } from '../../shared/ui/copy'
 import { ADMIN_COPY as T } from './adminCopy'
 
 setupDom()
@@ -168,6 +169,17 @@ describe('SADM-001 AdminOverview', () => {
   })
 })
 
+describe('SADM-001 trend table', () => {
+  it('gives the trend as a table of the same numbers', async () => {
+    open('/admin', { [`GET ${A}/overview`]: () => json(overview()) })
+    await findScreen('SADM-001')
+    await screen.findByText('1,412')
+    const table = screen.getByRole('table', { hidden: true })
+    expect(within(table).getAllByRole('row', { hidden: true })).toHaveLength(3)
+    expect(within(table).getByText('4')).toBeTruthy()
+  })
+})
+
 describe('SADM-002 AdminClubs', () => {
   it('lists clubs and sends the search and the filters', async () => {
     const fetchMock = open('/admin/clubs', {
@@ -260,6 +272,43 @@ describe('SADM-004 AdminUsers', () => {
     expect(await screen.findByText(T.userNotFound)).toBeTruthy()
     expect(lastQuery(fetchMock, `${A}/users`).get('userId')).toBe('77')
   })
+
+  it('does not close the reason box of another user when an earlier request finishes', async () => {
+    let finish: (r: Response) => void = () => {}
+    open('/admin/users', {
+      [`GET ${A}/users`]: (url) =>
+        page([
+          new URL(url, 'http://x').searchParams.get('handle') === 'yerim'
+            ? user
+            : { ...user, id: '6', name: '정규채', handle: 'gyuchae' },
+        ]),
+      [`POST ${A}/users/5/force-logout`]: () =>
+        new Promise<Response>((resolve) => (finish = resolve)),
+    })
+    await findScreen('SADM-004')
+    const search = (text: string) => {
+      fireEvent.change(screen.getByLabelText(T.userSearchPlaceholder), {
+        target: { value: text },
+      })
+      fireEvent.click(screen.getByRole('button', { name: T.userSearch }))
+    }
+    search('@yerim')
+    await screen.findByText('@yerim')
+    fireEvent.click(screen.getByRole('button', { name: T.forceLogout }))
+    fireEvent.change(await screen.findByRole('textbox'), {
+      target: { value: '의심' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: T.forceLogout }))
+    fireEvent.click(screen.getByRole('button', { name: COPY.cancel }))
+
+    search('@gyuchae')
+    await screen.findByText('@gyuchae')
+    fireEvent.click(screen.getByRole('button', { name: T.forceLogout }))
+    const box = await screen.findByRole('textbox')
+    finish(json({ userId: '5', revoked: true }))
+    await screen.findByText(T.forceLoggedOut)
+    expect(screen.getByRole('textbox')).toBe(box)
+  })
 })
 
 describe('SADM-005 AuditLogs', () => {
@@ -295,6 +344,19 @@ describe('SADM-005 AuditLogs', () => {
     const sheet = await screen.findByRole('dialog')
     expect(within(sheet).getByText('before')).toBeTruthy()
     expect(within(sheet).getByText('INACTIVE')).toBeTruthy()
+  })
+
+  it('moves focus into the detail sheet and back to the record on close', async () => {
+    open('/admin/audit-logs', {
+      [`GET ${A}/audit-logs`]: () => page([log('1')]),
+    })
+    await findScreen('SADM-005')
+    const record = await screen.findByRole('button', { name: /동아리 비활성/ })
+    fireEvent.click(record)
+    const sheet = await screen.findByRole('dialog')
+    await waitFor(() => expect(document.activeElement).toBe(sheet))
+    fireEvent.click(within(sheet).getByRole('button', { name: T.close }))
+    expect(document.activeElement).toBe(record)
   })
 })
 
