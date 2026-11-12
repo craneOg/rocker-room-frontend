@@ -1,0 +1,63 @@
+.admin {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+.admin-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.admin-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+.admin-tabs a {
+  padding: 8px 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.admin-tabs a.active {
+  font-weight: 700;
+  background: var(--admin-tab-active, rgba(0, 0, 0, 0.06));
+}
+.admin-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+.admin-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+}
+.admin-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.admin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0;
+  list-style: none;
+}
+.admin-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+}
+.admin-spark {
+  width: 100%;
+  height: 48px;
+}
