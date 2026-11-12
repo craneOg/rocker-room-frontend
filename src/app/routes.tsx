@@ -125,6 +125,7 @@ export const routes: RouteObject[] = [
               },
               {
                 path: '/me/withdrawal',
+                handle: { title: 'MY-004', sub: true },
                 lazy: async () => {
                   const { MyWithdrawal } =
                     await import('../features/my/MyWithdrawal')

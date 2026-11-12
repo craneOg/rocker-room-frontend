@@ -120,6 +120,12 @@ const submitBody = (fetchMock: ReturnType<typeof stubApi>) =>
   ) as Record<string, unknown>
 
 describe('MY-004 MyWithdrawal', () => {
+  it('shows the top bar back button', async () => {
+    open()
+    await findScreen('MY-004')
+    expect(screen.getByRole('button', { name: '뒤로' })).toBeTruthy()
+  })
+
   it('needs the checkbox before 다음', async () => {
     open()
     await findScreen('MY-004')
