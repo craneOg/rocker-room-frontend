@@ -17,6 +17,8 @@ export const ADMIN_COPY = {
   },
   period: (d: number) => `${d}일`,
   trendTitle: '추이',
+  trendTable: '추이를 표로 보기',
+  trendDate: '날짜',
   trend: {
     newUsers: '신규 가입자',
     newClubs: '동아리 생성',

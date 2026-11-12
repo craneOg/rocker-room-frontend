@@ -95,6 +95,31 @@ export function AdminOverview() {
               </div>
             ))}
           </div>
+          <details>
+            <summary>{T.trendTable}</summary>
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">{T.trendDate}</th>
+                  {(Object.keys(T.trend) as Series[]).map((k) => (
+                    <th key={k} scope="col">
+                      {T.trend[k]}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {o.trend.map((p) => (
+                  <tr key={p.date}>
+                    <th scope="row">{dateText(p.date)}</th>
+                    {(Object.keys(T.trend) as Series[]).map((k) => (
+                      <td key={k}>{p[k].toLocaleString('ko-KR')}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </details>
         </section>
 
         <section>
