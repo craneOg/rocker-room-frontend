@@ -39,8 +39,7 @@ export const createClub = async (body: CreateClubBody) => {
   }
 }
 
-// ponytail: API-126 (club name availability) path and response are not in the spec we have;
-// modelled on the handle check (`{ available }`).
+/** API-126 (BE confirmed): login required; blank or over 100 chars is 400. A hint only, API-011's 409 decides. */
 export const checkClubName = (name: string, signal?: AbortSignal) =>
   api.get<{ available: boolean }>('/api/v1/clubs/name-availability', {
     query: { name },
@@ -50,8 +49,7 @@ export const checkClubName = (name: string, signal?: AbortSignal) =>
 /** API-129 response. `imageKey` goes to API-011; `previewUrl` is for display. */
 export type ClubImageUpload = { imageKey: string; previewUrl: string }
 
-// ponytail: assumed to be the user photo endpoint plus a `purpose` form field; the spec only says
-// "club-only upload (CLUB-10)" and the backend said purpose=CLUB_PROFILE.
+/** API-129 (BE confirmed): same endpoint as the user photo, `purpose=CLUB_PROFILE`; jpeg/png/webp, 2MiB or less. */
 export const uploadClubImage = (file: File) => {
   const form = new FormData()
   form.append('file', file)
