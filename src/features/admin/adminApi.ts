@@ -80,6 +80,82 @@ export const listAdminClubs = (
     signal,
   })
 
+// API-119 (server DTO, implemented). `joinCode` itself is never sent.
+export type AdminClubDetail = {
+  club: {
+    id: string
+    name: string
+    description: string | null
+    clubType: 'CLUB' | 'BAND'
+    status: 'ACTIVE' | 'INACTIVE'
+    isSearchable: boolean
+    createdByUserId: string
+    createdAt: string
+    updatedAt: string
+  }
+  /** BE has not confirmed the value for a creator without an account or a withdrawn one: null is allowed. */
+  creator: { userId: string; name: string } | null
+  joinCodeEnabled: boolean
+  admins: {
+    membershipId: string
+    userId: string
+    displayName: string
+    handle: string
+    status: 'ACTIVE' | 'ON_LEAVE' | 'GRADUATED'
+    lastActiveAt: string | null
+  }[]
+  counts: {
+    members: number
+    performances: number
+    memberStatus: {
+      active: number
+      onLeave: number
+      graduated: number
+      guests: number
+    }
+    performanceStatus: {
+      draft: number
+      active: number
+      locked: number
+      finished: number
+      canceled: number
+    }
+  }
+  lastActiveAt: string | null
+}
+
+export const getAdminClub = (clubId: string, signal?: AbortSignal) =>
+  api.get<AdminClubDetail>(`/api/v1/admin/clubs/${clubId}`, { signal })
+
+// API-120 / 121 (deactivate, reactivate).
+export const deactivateClub = (clubId: string, reason: string) =>
+  api.post<unknown>(`/api/v1/admin/clubs/${clubId}/deactivate`, { reason })
+
+/** 409 CONFIRMATION_REQUIRED (NO_CLUB_ADMIN) when an inactive club without officers is reactivated unconfirmed. */
+export const reactivateClub = (
+  clubId: string,
+  reason: string,
+  confirmed: boolean,
+) =>
+  api.post<unknown>(`/api/v1/admin/clubs/${clubId}/reactivate`, {
+    reason,
+    confirmed: confirmed || undefined,
+  })
+
+// API-121 emergency replacement (Super Admin; the server is not built yet, the contract is the
+// backend's). It only runs while no officer is ACTIVE: the successor gets the officer role and every
+// previous officer is released, so one officer is left. 422 RULE_VIOLATION reasons:
+// SUCCESSOR_NOT_ELIGIBLE, OTHER_ACTIVE_ADMIN_EXISTS. `reason` has no confirmed length rule yet.
+export const replaceClubAdmin = (
+  clubId: string,
+  reason: string,
+  newAdminMembershipId: string,
+) =>
+  api.post<{ admins: unknown[] }>(
+    `/api/v1/admin/clubs/${clubId}/replace-admin`,
+    { newAdminMembershipId, reason },
+  )
+
 export type AdminUser = {
   id: string
   name: string

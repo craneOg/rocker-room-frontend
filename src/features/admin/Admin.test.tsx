@@ -359,3 +359,270 @@ describe('SADM-005 AuditLogs', () => {
     expect(document.activeElement).toBe(record)
   })
 })
+
+const adminRow = (id: string, over = {}) => ({
+  membershipId: `m${id}`,
+  userId: id,
+  displayName: `임원${id}`,
+  handle: `adm${id}`,
+  status: 'ACTIVE',
+  lastActiveAt: '2026-11-10T03:00:00+09:00',
+  ...over,
+})
+const detail = (over: Record<string, unknown> = {}) => ({
+  club: {
+    id: '10',
+    name: 'Crane Band',
+    description: null,
+    clubType: 'BAND',
+    status: 'ACTIVE',
+    isSearchable: true,
+    createdByUserId: '1',
+    createdAt: '2026-01-02T03:00:00+09:00',
+    updatedAt: '2026-01-02T03:00:00+09:00',
+  },
+  creator: { userId: '1', name: '명혜성' },
+  joinCodeEnabled: true,
+  admins: [adminRow('21'), adminRow('22')],
+  counts: {
+    members: 9,
+    performances: 5,
+    memberStatus: { active: 6, onLeave: 2, graduated: 1, guests: 0 },
+    performanceStatus: {
+      draft: 1,
+      active: 2,
+      locked: 0,
+      finished: 2,
+      canceled: 0,
+    },
+  },
+  lastActiveAt: '2026-11-10T03:00:00+09:00',
+  ...over,
+})
+const member = (id: string, over = {}) => ({
+  id,
+  displayName: `후보${id}`,
+  userName: `후보${id}`,
+  memberType: 'REGULAR',
+  role: 'MEMBER',
+  profileImageUrl: null,
+  parts: [],
+  handle: `cand${id}`,
+  status: 'ACTIVE',
+  ...over,
+})
+const bodyOf = (fetchMock: ReturnType<typeof stubApi>, path: string, n = 0) =>
+  JSON.parse(String(callsTo(fetchMock, path)[n]![1]!.body))
+const typeReason = async (text: string) =>
+  fireEvent.change(await screen.findByRole('textbox'), {
+    target: { value: text },
+  })
+const D = `${A}/clubs/10`
+
+describe('SADM-003 AdminClubDetail', () => {
+  it('shows the facts without the join code, and force-logs-out an officer from the row menu', async () => {
+    const fetchMock = open('/admin/clubs/10', {
+      [`GET ${D}`]: () => json(detail()),
+      [`POST ${A}/users/21/force-logout`]: () =>
+        json({ userId: '21', revoked: true }),
+    })
+    await findScreen('SADM-003')
+    expect(await screen.findByText('Crane Band')).toBeTruthy()
+    expect(screen.getByText('명혜성')).toBeTruthy()
+    expect(screen.getByText(T.detail.joinCodeOn)).toBeTruthy()
+    expect(screen.getByText('@adm21')).toBeTruthy()
+    expect(screen.getByText(T.inactiveNotice)).toBeTruthy()
+
+    fireEvent.click(screen.getByLabelText(T.detail.rowMenu('임원21')))
+    fireEvent.click(screen.getAllByRole('button', { name: T.forceLogout })[0]!)
+    await typeReason('계정 탈취 의심')
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: T.forceLogout }))
+    await screen.findByText(T.forceLoggedOut)
+    expect(bodyOf(fetchMock, `${A}/users/21/force-logout`)).toEqual({
+      reason: '계정 탈취 의심',
+    })
+  })
+
+  it('keeps a later force-logout box open when an earlier state change finishes', async () => {
+    let finish: (r: Response) => void = () => {}
+    open('/admin/clubs/10', {
+      [`GET ${D}`]: () => json(detail()),
+      [`POST ${D}/deactivate`]: () =>
+        new Promise<Response>((resolve) => (finish = resolve)),
+    })
+    fireEvent.click(await screen.findByRole('button', { name: T.deactivate }))
+    await typeReason('운영 정책 위반')
+    fireEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', {
+        name: T.deactivate,
+      }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: COPY.cancel }))
+
+    fireEvent.click(screen.getByLabelText(T.detail.rowMenu('임원21')))
+    fireEvent.click(screen.getAllByRole('button', { name: T.forceLogout })[0]!)
+    await typeReason('계정 탈취 의심')
+    finish(json({}))
+    await screen.findByText(T.deactivated)
+    expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe(
+      '계정 탈취 의심',
+    )
+  })
+
+  it('deactivates with a required reason', async () => {
+    const fetchMock = open('/admin/clubs/10', {
+      [`GET ${D}`]: () => json(detail()),
+      [`POST ${D}/deactivate`]: () => json({}),
+    })
+    fireEvent.click(await screen.findByRole('button', { name: T.deactivate }))
+    const dialog = await screen.findByRole('dialog')
+    const action = within(dialog).getByRole('button', { name: T.deactivate })
+    expect(action.hasAttribute('disabled')).toBe(true)
+    await typeReason('운영 정책 위반')
+    fireEvent.click(action)
+    await screen.findByText(T.deactivated)
+    expect(bodyOf(fetchMock, `${D}/deactivate`)).toEqual({
+      reason: '운영 정책 위반',
+    })
+  })
+
+  it('reactivates an inactive club without officers after the server warning is confirmed', async () => {
+    const fetchMock = open('/admin/clubs/10', {
+      [`GET ${D}`]: () =>
+        json(
+          detail({
+            club: { ...detail().club, status: 'INACTIVE' },
+            admins: [],
+          }),
+        ),
+      [`POST ${D}/reactivate`]: (_, init) =>
+        JSON.parse(String(init?.body)).confirmed
+          ? json({})
+          : new Response(
+              JSON.stringify({
+                error: {
+                  code: 'CONFIRMATION_REQUIRED',
+                  message: 'x',
+                  warnings: [
+                    {
+                      type: 'NO_CLUB_ADMIN',
+                      message: '임원이 없는 동아리예요',
+                    },
+                  ],
+                },
+              }),
+              { status: 409 },
+            ),
+    })
+    fireEvent.click(await screen.findByRole('button', { name: T.reactivate }))
+    await typeReason('복구 요청 승인')
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: T.reactivate }))
+    await screen.findByText('임원이 없는 동아리예요')
+    fireEvent.click(await screen.findByRole('button', { name: '계속 진행' }))
+    await screen.findByText(T.reactivated)
+    expect(callsTo(fetchMock, `${D}/reactivate`)).toHaveLength(2)
+    expect(bodyOf(fetchMock, `${D}/reactivate`, 0).confirmed).toBeUndefined()
+    expect(bodyOf(fetchMock, `${D}/reactivate`, 1)).toEqual({
+      reason: '복구 요청 승인',
+      confirmed: true,
+    })
+  })
+
+  it('blocks the emergency replacement while any officer is active', async () => {
+    open('/admin/clubs/10', {
+      [`GET ${D}`]: () => json(detail({ admins: [adminRow('21')] })),
+    })
+    const button = await screen.findByRole('button', { name: T.replace })
+    expect(button.hasAttribute('disabled')).toBe(true)
+    expect(screen.getByText(T.replaceBlocked)).toBeTruthy()
+  })
+
+  it('shows the member and performance totals besides the per-status numbers', async () => {
+    open('/admin/clubs/10', { [`GET ${D}`]: () => json(detail()) })
+    const metrics = await screen.findByRole('region', {
+      name: T.detail.metrics,
+    })
+    expect(
+      within(metrics).getByText(T.detail.memberTotal).nextElementSibling
+        ?.textContent,
+    ).toBe('9')
+    expect(
+      within(metrics).getByText(T.detail.performanceTotal).nextElementSibling
+        ?.textContent,
+    ).toBe('5')
+  })
+
+  it('finds a successor on a later page before saying there is nobody', async () => {
+    open('/admin/clubs/10', {
+      [`GET ${D}`]: () => json(detail({ admins: [] })),
+      [`GET /api/v1/clubs/10/memberships`]: (url) =>
+        new URL(url, 'http://x').searchParams.get('page') === '1'
+          ? page([member('41')], { page: 1, totalPages: 2 })
+          : page([member('40', { role: 'CLUB_ADMIN' })], { totalPages: 2 }),
+    })
+    fireEvent.click(await screen.findByRole('button', { name: T.replace }))
+    await typeReason('사유')
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: T.replaceNext,
+      }),
+    )
+    fireEvent.click(await screen.findByRole('button', { name: T.replaceMore }))
+    expect(await screen.findByText('후보41')).toBeTruthy()
+    expect(screen.queryByText(T.replaceNoCandidate)).toBeNull()
+  })
+
+  it('replaces the officer in four steps with an eligible member', async () => {
+    const fetchMock = open('/admin/clubs/10', {
+      [`GET ${D}`]: () =>
+        json(detail({ admins: [adminRow('21', { status: 'ON_LEAVE' })] })),
+      [`GET /api/v1/clubs/10/memberships`]: () =>
+        page([
+          member('31'),
+          member('32', { role: 'CLUB_ADMIN' }),
+          member('33', { memberType: 'GUEST' }),
+        ]),
+      [`POST ${D}/replace-admin`]: () => json({ admins: [] }),
+    })
+    fireEvent.click(await screen.findByRole('button', { name: T.replace }))
+    await typeReason('임원 연락 두절')
+    const next = () =>
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: T.replaceNext,
+      })
+    fireEvent.click(next())
+    await screen.findByText('후보31')
+    expect(screen.queryByText('후보32')).toBeNull()
+    expect(screen.queryByText('후보33')).toBeNull()
+    expect(next().hasAttribute('disabled')).toBe(true)
+    fireEvent.click(screen.getByLabelText(/후보31/))
+    fireEvent.click(next())
+    await screen.findByText(T.replaceRelease)
+    fireEvent.click(next())
+    const run = await screen.findByRole('button', { name: T.replaceRun })
+    expect(within(screen.getByRole('dialog')).getByText('임원21')).toBeTruthy()
+    fireEvent.click(run)
+    await screen.findByText(T.replaced)
+    expect(bodyOf(fetchMock, `${D}/replace-admin`)).toEqual({
+      reason: '임원 연락 두절',
+      newAdminMembershipId: '31',
+    })
+  })
+
+  it('says so when there is nobody to appoint', async () => {
+    open('/admin/clubs/10', {
+      [`GET ${D}`]: () => json(detail({ admins: [] })),
+      [`GET /api/v1/clubs/10/memberships`]: () => page([]),
+    })
+    fireEvent.click(await screen.findByRole('button', { name: T.replace }))
+    await typeReason('사유')
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: T.replaceNext,
+      }),
+    )
+    expect(await screen.findByText(T.replaceNoCandidate)).toBeTruthy()
+  })
+})
