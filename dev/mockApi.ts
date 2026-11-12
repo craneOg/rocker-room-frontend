@@ -22,7 +22,7 @@ type Membership = {
     clubType: string
     status: 'ACTIVE' | 'INACTIVE'
     profileImageUrl: null
-    themeColor: null
+    themeColor: string | null
   }
   role: 'CLUB_ADMIN' | 'MEMBER'
   status: 'INVITED' | 'PENDING' | 'REJECTED' | 'ACTIVE'
@@ -56,6 +56,16 @@ const ago = (days: number) => new Date(Date.now() - days * DAY).toISOString()
 const inDays = (days: number) => ago(-days)
 
 const initialState = () => ({
+  // Clubs made through API-011; they live in state so a reset drops them.
+  createdClubs: [] as {
+    id: string
+    name: string
+    code: string
+    description: string
+    clubType: string
+    isSearchable: boolean
+    themeColor: string | null
+  }[],
   user: {
     id: '1',
     name: '명혜성',
@@ -279,6 +289,7 @@ const COOKIE_RESTORE = 'restoreChoice'
 
 export function createMockApi() {
   let state = initialState()
+  const allClubs = () => [...CLUBS, ...state.createdClubs]
   const performancePolicy = createPerformancePolicyMock()
   const perfMock = createPerformanceViewMock()
   const setlistMock = createSetlistMock()
@@ -639,9 +650,78 @@ export function createMockApi() {
       return ok(res, { available: !TAKEN_HANDLES.includes(handle) })
     }
 
+    // CLUB-001: API-126 (path assumed) and API-011 (server not built yet). Names compare ignoring case and spaces.
+    const nameKey = (n: string) => n.replace(/\s+/g, '').toLowerCase()
+    const nameTaken = (n: string) =>
+      CLUBS.some((c) => nameKey(c.name) === nameKey(n)) ||
+      state.memberships.some((m) => nameKey(m.club.name) === nameKey(n))
+    if (path === '/api/v1/clubs/name-availability' && method === 'GET') {
+      await new Promise((r) => setTimeout(r, 300))
+      return ok(res, {
+        available: !nameTaken(url.searchParams.get('name') ?? ''),
+      })
+    }
+    if (path === '/api/v1/clubs' && method === 'POST') {
+      const body = await readBody(req)
+      const name = String(body.name ?? '').trim()
+      if (name.length < 1 || name.length > 100)
+        return fail(res, 400, 'VALIDATION_ERROR')
+      if (nameTaken(name))
+        return send(res, 409, {
+          error: {
+            code: 'DUPLICATE',
+            message: 'DUPLICATE',
+            details: [{ field: 'name', reason: 'CLUB_NAME_TAKEN' }],
+          },
+        })
+      const id = `c${Date.now()}${state.createdClubs.length}`
+      // A distinct code per club (the join link resolves by code); reset drops them with the state.
+      const joinCode = body.issueJoinCode
+        ? `MOCK${String(state.createdClubs.length + 1).padStart(6, '2')}`
+        : null
+      state.createdClubs.push({
+        id,
+        name,
+        code: joinCode ?? '',
+        description: String(body.description ?? ''),
+        clubType: String(body.clubType ?? 'CLUB'),
+        isSearchable: body.isSearchable === true,
+        themeColor: (body.themeColor as string | undefined) ?? null,
+      })
+      state.memberships.push({
+        id: `m${Date.now()}`,
+        clubId: id,
+        club: {
+          ...clubOf(id, name),
+          clubType: String(body.clubType ?? 'CLUB'),
+          themeColor: (body.themeColor as string | undefined) ?? null,
+        },
+        role: 'CLUB_ADMIN',
+        status: 'ACTIVE',
+        invitationExpiresAt: null,
+        requestedAt: null,
+      })
+      return send(res, 201, {
+        data: {
+          id,
+          name,
+          description: body.description ?? null,
+          clubType: body.clubType ?? 'CLUB',
+          profileImageUrl: null,
+          themeColor: body.themeColor ?? null,
+          status: 'ACTIVE',
+          isSearchable: body.isSearchable === true,
+          joinCode,
+          createdByUserId: state.user.id,
+          createdAt: ago(0),
+          updatedAt: ago(0),
+        },
+      })
+    }
+
     if (path === '/api/v1/clubs/join-code/resolve' && method === 'POST') {
       const { joinCode } = await readBody(req)
-      const club = CLUBS.find((c) => c.code === joinCode)
+      const club = allClubs().find((c) => c.code === joinCode)
       return club
         ? ok(res, preview(club, state.memberships))
         : fail(res, 404, 'NOT_FOUND')
@@ -778,7 +858,7 @@ export function createMockApi() {
         path,
       )
     const sampleClub = clubRoute
-      ? CLUBS.find((c) => c.id === clubRoute[1])
+      ? allClubs().find((c) => c.id === clubRoute[1])
       : undefined
     const sampleOwn = clubRoute
       ? state.memberships.find(
@@ -807,16 +887,18 @@ export function createMockApi() {
           : m
       const members = MEMBERS.map(self)
       const admin = own.role === 'CLUB_ADMIN'
+      // A club made through API-011 answers with the settings it was saved with.
+      const made = state.createdClubs.find((c) => c.id === club.id)
       if (!sub)
         return ok(res, {
           id: club.id,
           name: club.name,
           description: club.description,
-          clubType: clubMeta.clubType,
+          clubType: made?.clubType ?? clubMeta.clubType,
           status: 'ACTIVE',
-          isSearchable: true,
+          isSearchable: made ? made.isSearchable : true,
           profileImageUrl: null,
-          themeColor: '#1A2B3C',
+          themeColor: made ? made.themeColor : '#1A2B3C',
           createdAt: ago(90),
           updatedAt: ago(2),
         })

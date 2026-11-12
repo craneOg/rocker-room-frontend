@@ -140,7 +140,15 @@ export const routes: RouteObject[] = [
                   return { Component: MyMembership }
                 },
               },
-              ...subScreens([['/clubs/new', 'CLUB-001']]),
+              {
+                path: '/clubs/new',
+                handle: { title: '동아리 만들기', sub: true },
+                lazy: async () => {
+                  const { ClubCreate } =
+                    await import('../features/club/ClubCreate')
+                  return { Component: ClubCreate }
+                },
+              },
               {
                 path: '/me/profile',
                 handle: { title: 'MY-002', sub: true },
