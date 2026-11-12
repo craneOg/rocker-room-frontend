@@ -530,7 +530,14 @@ export const routes: RouteObject[] = [
                           return { Component: AdminClubs }
                         },
                       },
-                      ...subScreens([['/admin/clubs/:clubId', 'SADM-003']]),
+                      {
+                        path: '/admin/clubs/:clubId',
+                        lazy: async () => {
+                          const { AdminClubDetail } =
+                            await import('../features/admin/AdminClubDetail')
+                          return { Component: AdminClubDetail }
+                        },
+                      },
                       {
                         path: '/admin/users',
                         lazy: async () => {
