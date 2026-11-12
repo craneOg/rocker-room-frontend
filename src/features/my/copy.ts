@@ -16,6 +16,42 @@ export const MY_COPY = {
   logout: '로그아웃',
   logoutTitle: '로그아웃할까요?',
   withdraw: '서비스 탈퇴',
+  // MY-004
+  withdrawTitle: '서비스 탈퇴',
+  stepLabel: (n: number) => `${n}/3`,
+  noticeLeave:
+    '탈퇴하면 모든 동아리에서 나가게 돼요. 다시 돌아와도 동아리 소속과 역할은 되돌릴 수 없어요.',
+  noticeAnonymous:
+    "다른 사람에게는 바로 '탈퇴한 사용자'로 보여요. 사용자 ID와 동아리별 표시 이름은 바로 지워지고, 사용자 ID는 다른 사람이 쓸 수 있게 돼요.",
+  noticeKeep:
+    '이름과 프로필 사진은 90일 동안 보관해요. 90일 안에 같은 카카오 계정으로 로그인하면 이름과 사진을 되찾을 수 있어요. 90일이 지나면 완전히 지워져요.',
+  noticeHistory: "지난 공연 기록(곡·팀·일정 참여)은 '탈퇴한 사용자'로 남아요.",
+  noticePerformance:
+    '진행 중인 공연의 참여는 철회되고, 투표·가불·가능 시간은 집계에서 빠져요.',
+  noticeKakao: '카카오 계정과 서비스의 연결도 끊어져요.',
+  noticeCheck: '위 내용을 확인했어요',
+  next: '다음',
+  nothingToHand: '넘겨줄 역할이 없어요',
+  adminNotRequired: '다른 임원이 있어 승계가 필요 없어요',
+  adminPick: '임원 권한을 넘길 멤버',
+  clubDeactivated:
+    '이 동아리는 비활성 상태가 되고 서비스 관리자가 복구를 돕게 돼요',
+  teamLeaderPick: (team: string) => `${team} 팀장을 넘길 팀원`,
+  teamAuto: (team: string, name: string) =>
+    `심사 대기 중인 ${team}의 팀장은 ${name}님에게 자동으로 넘어가요`,
+  teamAutoNone: (team: string) =>
+    `심사 대기 중인 ${team}의 팀장은 팀원이 없어 비어요`,
+  teamDeleted: (team: string) => `작성 중인 ${team}은(는) 탈퇴하면 삭제돼요`,
+  typePrompt: "탈퇴를 진행하려면 아래 칸에 '탈퇴합니다'를 입력해 주세요.",
+  typePhrase: '탈퇴합니다',
+  doWithdraw: '탈퇴하기',
+  successorGone:
+    '선택한 후임이 더 이상 자격이 없어요. 후임을 다시 확인해 주세요.',
+  doneTitle: '탈퇴가 완료되었어요',
+  doneThanks: '그동안 이용해 주셔서 감사해요.',
+  doneRecover: (date: string) =>
+    `${date}까지 같은 카카오 계정으로 로그인하면 이름과 사진을 되찾을 수 있어요.`,
+  toStart: '처음으로',
   version: (v: string) => `앱 버전 ${v}`,
   admin: '서비스 관리',
   // MY-002
