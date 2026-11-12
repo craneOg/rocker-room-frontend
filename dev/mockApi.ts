@@ -554,6 +554,59 @@ export function createMockApi() {
       return ok(res, { available: !TAKEN_HANDLES.includes(handle) })
     }
 
+    // CLUB-001: API-126 (path assumed) and API-011 (server not built yet). Names compare ignoring case and spaces.
+    const nameKey = (n: string) => n.replace(/\s+/g, '').toLowerCase()
+    const nameTaken = (n: string) =>
+      CLUBS.some((c) => nameKey(c.name) === nameKey(n)) ||
+      state.memberships.some((m) => nameKey(m.club.name) === nameKey(n))
+    if (path === '/api/v1/clubs/name-availability' && method === 'GET') {
+      await new Promise((r) => setTimeout(r, 300))
+      return ok(res, {
+        available: !nameTaken(url.searchParams.get('name') ?? ''),
+      })
+    }
+    if (path === '/api/v1/clubs' && method === 'POST') {
+      const body = await readBody(req)
+      const name = String(body.name ?? '').trim()
+      if (name.length < 1 || name.length > 100)
+        return fail(res, 400, 'VALIDATION_ERROR')
+      if (nameTaken(name))
+        return send(res, 409, {
+          error: {
+            code: 'DUPLICATE',
+            message: 'DUPLICATE',
+            details: [{ field: 'name', reason: 'CLUB_NAME_TAKEN' }],
+          },
+        })
+      const id = `c${Date.now()}`
+      state.memberships.push({
+        id: `m${Date.now()}`,
+        clubId: id,
+        club: {
+          ...clubOf(id, name),
+          clubType: String(body.clubType ?? 'CLUB'),
+          themeColor: (body.themeColor as string | undefined) ?? null,
+        },
+        role: 'CLUB_ADMIN',
+        status: 'ACTIVE',
+        invitationExpiresAt: null,
+        requestedAt: null,
+      })
+      return send(res, 201, {
+        data: {
+          id,
+          name,
+          description: body.description ?? null,
+          clubType: body.clubType ?? 'CLUB',
+          profileImageUrl: null,
+          themeColor: body.themeColor ?? null,
+          status: 'ACTIVE',
+          isSearchable: body.isSearchable === true,
+          joinCode: body.issueJoinCode ? 'MOCK234567' : null,
+        },
+      })
+    }
+
     if (path === '/api/v1/clubs/join-code/resolve' && method === 'POST') {
       const { joinCode } = await readBody(req)
       const club = CLUBS.find((c) => c.code === joinCode)

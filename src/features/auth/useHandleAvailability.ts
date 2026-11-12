@@ -9,7 +9,7 @@ const HANDLE_DEBOUNCE_MS = 400
 export const isNameValid = (trimmed: string) =>
   trimmed.length >= 1 && trimmed.length <= 50
 
-function useDebounced<V>(value: V, ms: number): V {
+export function useDebounced<V>(value: V, ms: number): V {
   const [debounced, setDebounced] = useState(value)
   useEffect(() => {
     const t = setTimeout(() => setDebounced(value), ms)
