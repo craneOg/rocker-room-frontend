@@ -51,6 +51,7 @@ export function MyWithdrawal() {
     queryFn: getWithdrawalPreview,
     enabled: step >= 2,
     gcTime: 0,
+    refetchOnWindowFocus: false,
   })
 
   const withdraw = useMutation({
@@ -62,6 +63,9 @@ export function MyWithdrawal() {
         e.details.some((d) => d.reason === 'SUCCESSOR_NOT_ELIGIBLE')
       ) {
         feedback.toast(T.successorGone, 'negative')
+        // The old picks may name people who are gone: start again from the fresh defaults.
+        setClubPicks({})
+        setTeamPicks({})
         void preview.refetch()
         setStep(2)
       }
@@ -136,9 +140,9 @@ export function MyWithdrawal() {
       ) : null}
 
       {step === 2 ? (
-        preview.isPending ? (
+        preview.isFetching ? (
           <ListSkeleton rows={3} />
-        ) : !preview.data ? (
+        ) : preview.isError || !preview.data ? (
           <ErrorState onRetry={() => void preview.refetch()} />
         ) : (
           <>

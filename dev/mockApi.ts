@@ -620,7 +620,13 @@ export function createMockApi() {
             warnings: [],
           },
         })
-      return ok(res, { successions: { clubs: [], teams: [] } })
+      // The account is gone: the session ends, like a logout.
+      return send(
+        res,
+        200,
+        { data: { successions: { clubs: [], teams: [] } } },
+        { 'Set-Cookie': setCookie(COOKIE_SESSION, false) },
+      )
     }
     if (path === '/api/v1/me/memberships' && method === 'GET')
       return ok(res, { items: state.memberships })

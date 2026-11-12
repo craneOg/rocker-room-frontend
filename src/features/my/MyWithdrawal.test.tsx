@@ -230,4 +230,81 @@ describe('MY-004 MyWithdrawal', () => {
     )
     expect(screen.queryByText(T.doneTitle)).toBeNull()
   })
+
+  const eligibilityError = () =>
+    new Response(
+      JSON.stringify({
+        error: {
+          code: 'RULE_VIOLATION',
+          message: 'x',
+          details: [{ reason: 'SUCCESSOR_NOT_ELIGIBLE' }],
+        },
+      }),
+      { status: 422 },
+    )
+
+  it('does not resend a pick that the fresh preview no longer offers', async () => {
+    let previews = 0
+    let posts = 0
+    const fetchMock = open(undefined, {
+      [`GET ${PREVIEW}`]: () => {
+        previews += 1
+        const c = club()
+        if (previews > 1)
+          c.succession.candidates = c.succession.candidates.filter(
+            (m) => m.userId !== 'u4',
+          )
+        return json({ clubs: [c, deactivated], warnings: [] })
+      },
+      [`POST ${WITHDRAW}`]: () => {
+        posts += 1
+        return posts === 1
+          ? eligibilityError()
+          : json({ successions: { clubs: [], teams: [] } })
+      },
+    })
+    await toStep2()
+    fireEvent.change(
+      await screen.findByLabelText('Crane Band ' + T.adminPick),
+      {
+        target: { value: 'u4' },
+      },
+    )
+    click(T.next)
+    fireEvent.change(phraseBox(), { target: { value: T.typePhrase } })
+    click(T.doWithdraw)
+    await screen.findByText(T.successorGone)
+    // The error toast makes the page aria-hidden, so the buttons are found by text.
+    fireEvent.click(await screen.findByText(T.next))
+    fireEvent.change(phraseBox(), { target: { value: T.typePhrase } })
+    fireEvent.click(screen.getByText(T.doWithdraw))
+    await screen.findByText(T.doneTitle)
+    const sent = callsTo(fetchMock, WITHDRAW).filter(
+      ([, i]) => i?.method === 'POST',
+    )
+    expect(sent).toHaveLength(2)
+    expect(JSON.parse(String(sent[1]![1]!.body))).toMatchObject({
+      successors: [{ clubId: '10', userId: 'u3' }],
+    })
+  })
+
+  it('blocks going on when the refreshed preview fails to load', async () => {
+    let previews = 0
+    open(undefined, {
+      [`GET ${PREVIEW}`]: () => {
+        previews += 1
+        return previews > 1
+          ? new Response('{}', { status: 500 })
+          : json({ clubs: [club(), deactivated], warnings: [] })
+      },
+      [`POST ${WITHDRAW}`]: eligibilityError,
+    })
+    await toStep3()
+    fireEvent.change(phraseBox(), { target: { value: T.typePhrase } })
+    click(T.doWithdraw)
+    await screen.findByText(T.successorGone)
+    await waitFor(() => expect(previews).toBe(2))
+    await waitFor(() => expect(screen.queryByText('노을밴드')).toBeNull())
+    expect(screen.queryByRole('button', { name: T.next })).toBeNull()
+  })
 })
