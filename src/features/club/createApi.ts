@@ -40,9 +40,14 @@ export const createClub = async (body: CreateClubBody) => {
 }
 
 /** API-126 (BE confirmed): login required; blank or over 100 chars is 400. A hint only, API-011's 409 decides. */
-export const checkClubName = (name: string, signal?: AbortSignal) =>
+export const checkClubName = (
+  name: string,
+  signal?: AbortSignal,
+  /** Renaming (API-016): the club itself does not count as a duplicate. */
+  excludeClubId?: string,
+) =>
   api.get<{ available: boolean }>('/api/v1/clubs/name-availability', {
-    query: { name },
+    query: { name, excludeClubId },
     signal,
   })
 

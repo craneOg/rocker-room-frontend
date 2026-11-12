@@ -1,18 +1,21 @@
 import { TextArea, TextField, Typography } from '@montage-ui/core'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { fieldErrors } from '../../shared/api/errors'
 import { COPY } from '../../shared/ui/copy'
 import { feedback } from '../../shared/ui/feedbackBus'
 import { FormField } from '../../shared/ui/FormField'
 import { ReasonModal } from '../../shared/ui/ReasonModal'
+import { useDebounced } from '../auth/useHandleAvailability'
 import type { ClubDetail } from './api'
+import { checkClubName } from './createApi'
 import { ClubNameTakenError, invalidateClub, updateClub } from './manageApi'
 import { MANAGE_COPY as M } from './manageCopy'
 import { ActionModal, RadioList } from './ManageBits'
 
 const NAME_MAX = 100
 const DESCRIPTION_MAX = 500
+const NAME_CHECK_MS = 500
 
 /**
  * CLUB-101 1-1: name, description and type. Changing the type asks for a reason (API-016) after
@@ -34,6 +37,19 @@ export function ClubEditModal({
 
   const trimmed = name.trim()
   const typeChanged = clubType !== club.clubType
+  // Same check as CLUB-001; an unchanged name needs none. A hint only: the 409 on save decides.
+  const debounced = useDebounced(trimmed, NAME_CHECK_MS)
+  const availability = useQuery({
+    queryKey: ['club-name-availability', club.id, debounced],
+    queryFn: ({ signal }) => checkClubName(debounced, signal, club.id),
+    enabled:
+      trimmed.length > 0 && debounced === trimmed && trimmed !== club.name,
+    staleTime: 0,
+  })
+  const nameTaken =
+    debounced === trimmed &&
+    trimmed !== club.name &&
+    availability.data?.available === false
   const save = useMutation({
     mutationFn: (reason?: string) =>
       updateClub(club.id, {
@@ -61,18 +77,21 @@ export function ClubEditModal({
         open={!asking}
         title={M.editClubTitle}
         actionLabel={M.save}
-        actionDisabled={trimmed.length === 0}
+        actionDisabled={trimmed.length === 0 || nameTaken}
         loading={save.isPending}
         onClose={onClose}
         onSubmit={() =>
           typeChanged ? setAsking(true) : save.mutate(undefined)
         }
       >
-        <FormField label={M.labelName} error={error}>
+        <FormField
+          label={M.labelName}
+          error={error ?? (nameTaken ? M.nameTaken : undefined)}
+        >
           <TextField
             value={name}
             maxLength={NAME_MAX}
-            status={error ? 'negative' : 'normal'}
+            status={error || nameTaken ? 'negative' : 'normal'}
             onChange={(e) => {
               setName(e.target.value)
               setError(undefined)
