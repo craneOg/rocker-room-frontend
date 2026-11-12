@@ -228,4 +228,57 @@ describe('CLUB-001 ClubCreate', () => {
     await screen.findByText(T.imageExpired)
     expect(screen.queryByRole('button', { name: T.defaultPhoto })).toBeNull()
   })
+
+  it('ignores an upload that finishes after the user went back to the default photo', async () => {
+    let finishSecond: (r: Response) => void = () => {}
+    let uploads = 0
+    const { fetchMock } = openCreate({
+      [`POST ${API_PATHS.profileImage}`]: () =>
+        ++uploads === 1
+          ? json(
+              {
+                imageKey: 'tmp/clubs/a.png',
+                previewUrl: 'https://cdn.test/a.png',
+              },
+              201,
+            )
+          : new Promise<Response>((resolve) => (finishSecond = resolve)),
+    })
+    await findScreen('CLUB-001')
+    type(nameInput(), '크레인')
+    fireEvent.change(screen.getByTestId('photo-input'), {
+      target: { files: [png('a.png')] },
+    })
+    await screen.findByRole('button', { name: T.defaultPhoto })
+    fireEvent.change(screen.getByTestId('photo-input'), {
+      target: { files: [png('b.png')] },
+    })
+    await waitFor(() => expect(uploads).toBe(2))
+    fireEvent.click(screen.getByRole('button', { name: T.defaultPhoto }))
+    finishSecond(
+      json(
+        { imageKey: 'tmp/clubs/b.png', previewUrl: 'https://cdn.test/b.png' },
+        201,
+      ),
+    )
+    await waitFor(() => expect(submit().disabled).toBe(false))
+    await screen.findByText(T.nameAvailable)
+    fireEvent.click(submit())
+
+    await screen.findByText(T.doneTitle('크레인'))
+    expect(body(fetchMock)).not.toHaveProperty('profileImageKey')
+  })
+
+  it('points to adding members directly when neither a code nor search is on', async () => {
+    openCreate({ [`POST ${CLUBS}`]: () => json(created(null), 201) })
+    await findScreen('CLUB-001')
+    type(nameInput(), '크레인')
+    fireEvent.click(screen.getByRole('switch', { name: T.useJoinCode }))
+    await screen.findByText(T.nameAvailable)
+    fireEvent.click(submit())
+
+    await screen.findByText(T.doneTitle('크레인'))
+    expect(screen.getByText(T.doneHintDirect)).toBeTruthy()
+    expect(screen.queryByText(T.doneHint)).toBeNull()
+  })
 })

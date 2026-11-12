@@ -21,7 +21,7 @@ type Membership = {
     clubType: string
     status: 'ACTIVE' | 'INACTIVE'
     profileImageUrl: null
-    themeColor: null
+    themeColor: string | null
   }
   role: 'CLUB_ADMIN' | 'MEMBER'
   status: 'INVITED' | 'PENDING' | 'REJECTED' | 'ACTIVE'
@@ -55,6 +55,13 @@ const ago = (days: number) => new Date(Date.now() - days * DAY).toISOString()
 const inDays = (days: number) => ago(-days)
 
 const initialState = () => ({
+  // Clubs made through API-011; they live in state so a reset drops them.
+  createdClubs: [] as {
+    id: string
+    name: string
+    code: string
+    description: string
+  }[],
   user: {
     id: '1',
     name: '명혜성',
@@ -278,6 +285,7 @@ const COOKIE_RESTORE = 'restoreChoice'
 
 export function createMockApi() {
   let state = initialState()
+  const allClubs = () => [...CLUBS, ...state.createdClubs]
   const performancePolicy = createPerformancePolicyMock()
   const perfMock = createPerformanceViewMock()
   const setlistMock = createSetlistMock()
@@ -579,6 +587,13 @@ export function createMockApi() {
           },
         })
       const id = `c${Date.now()}`
+      const joinCode = body.issueJoinCode ? 'MOCK234567' : null
+      state.createdClubs.push({
+        id,
+        name,
+        code: joinCode ?? '',
+        description: String(body.description ?? ''),
+      })
       state.memberships.push({
         id: `m${Date.now()}`,
         clubId: id,
@@ -602,14 +617,17 @@ export function createMockApi() {
           themeColor: body.themeColor ?? null,
           status: 'ACTIVE',
           isSearchable: body.isSearchable === true,
-          joinCode: body.issueJoinCode ? 'MOCK234567' : null,
+          joinCode,
+          createdByUserId: state.user.id,
+          createdAt: ago(0),
+          updatedAt: ago(0),
         },
       })
     }
 
     if (path === '/api/v1/clubs/join-code/resolve' && method === 'POST') {
       const { joinCode } = await readBody(req)
-      const club = CLUBS.find((c) => c.code === joinCode)
+      const club = allClubs().find((c) => c.code === joinCode)
       return club
         ? ok(res, preview(club, state.memberships))
         : fail(res, 404, 'NOT_FOUND')
@@ -732,7 +750,7 @@ export function createMockApi() {
         path,
       )
     const sampleClub = clubRoute
-      ? CLUBS.find((c) => c.id === clubRoute[1])
+      ? allClubs().find((c) => c.id === clubRoute[1])
       : undefined
     const sampleOwn = clubRoute
       ? state.memberships.find(

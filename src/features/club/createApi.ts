@@ -12,8 +12,6 @@ import { ClubNameTakenError } from './manageApi'
 
 export type CreateClubBody = {
   name: string
-  // ponytail: the field names and "omit when empty" rules below are not confirmed for the request
-  // body (tmp/backend-questions.md, section A, CLUB-001).
   description?: string
   clubType: 'CLUB' | 'BAND'
   isSearchable: boolean
@@ -22,8 +20,11 @@ export type CreateClubBody = {
   themeColor?: string
 }
 
-// ponytail: response shape assumed to be API-015's club detail plus `joinCode`.
-export type CreatedClub = ClubDetail & { joinCode?: string | null }
+// Response (201) per the backend: the club detail plus `joinCode`, `createdByUserId`.
+export type CreatedClub = ClubDetail & {
+  joinCode?: string | null
+  createdByUserId?: string
+}
 
 export const createClub = async (body: CreateClubBody) => {
   try {

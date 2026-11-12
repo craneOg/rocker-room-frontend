@@ -37,6 +37,7 @@ const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/
 export function ClubCreate() {
   const queryClient = useQueryClient()
   const fileInput = useRef<HTMLInputElement>(null)
+  const uploadGeneration = useRef(0)
   const [name, setName] = useState('')
   const [nameTouched, setNameTouched] = useState(false)
   const [description, setDescription] = useState('')
@@ -64,10 +65,6 @@ export function ClubCreate() {
 
   const uploading = useMutation({
     mutationFn: uploadClubImage,
-    onSuccess: (u) => {
-      setUpload(u)
-      setPhotoError(undefined)
-    },
     onError: (e) => {
       // The global handler stays silent on VALIDATION_ERROR; the file rules show as helper text.
       const reasons = isApiError(e) ? e.details.map((d) => d.reason) : []
@@ -110,7 +107,13 @@ export function ClubCreate() {
       return setPhotoError(T.fileUnsupported)
     if (file.size > MAX_IMAGE_BYTES) return setPhotoError(T.fileTooLarge)
     setPhotoError(undefined)
-    uploading.mutate(file)
+    // A later pick or "default photo" supersedes this upload: its result is then ignored.
+    const generation = ++uploadGeneration.current
+    uploading.mutate(file, {
+      onSuccess: (u) => {
+        if (generation === uploadGeneration.current) setUpload(u)
+      },
+    })
   }
 
   const canSubmit =
@@ -224,7 +227,10 @@ export function ClubCreate() {
               size="small"
               variant="outlined"
               color="assistive"
-              onClick={() => setUpload(null)}
+              onClick={() => {
+                uploadGeneration.current++
+                setUpload(null)
+              }}
             >
               {T.defaultPhoto}
             </Button>
@@ -330,7 +336,7 @@ export function ClubCreate() {
         </Typography>
         <div className="start-card-actions">
           {T.defaultPartsNames.map((p) => (
-            <ContentBadge key={p} size="small" color="neutral" variant="filled">
+            <ContentBadge key={p} size="small" color="neutral" variant="solid">
               {p}
             </ContentBadge>
           ))}
@@ -404,7 +410,7 @@ function CreateDone({ club }: { club: CreatedClub }) {
         </section>
       ) : null}
       <Typography variant="body2" color="semantic.foreground.neutral.secondary">
-        {T.doneHint}
+        {code || club.isSearchable ? T.doneHint : T.doneHintDirect}
       </Typography>
       <Button size="large" onClick={() => void navigate(`/clubs/${club.id}`)}>
         {T.goClub}

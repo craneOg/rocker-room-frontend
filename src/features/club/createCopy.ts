@@ -39,6 +39,7 @@ export const CREATE_COPY = {
   copyCode: '코드 복사',
   copyInvite: '초대 문구 복사',
   copied: '복사했어요',
+  doneHintDirect: '임원이 사용자 ID로 멤버를 직접 추가해 주세요',
   doneHint: "멤버가 가입 신청하면 홈의 '가입 승인 대기'에서 승인해 주세요",
   goClub: '동아리 홈으로',
   firstPerformance: '첫 공연 만들기',
