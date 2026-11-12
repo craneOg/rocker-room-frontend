@@ -7,6 +7,7 @@ import { createScheduleMock } from './scheduleMock.ts'
 import { bodyCache, createPerformanceViewMock } from './performanceViewMock.ts'
 import { createSetlistMock } from './setlistMock.ts'
 import { createSongMock } from './songMock.ts'
+import { handleAdmin } from './adminMock.ts'
 import { handleTeams } from './teamMock.ts'
 
 // Dev-server-only mock backend (`npm run dev:mock`). In-memory state, plain Node handler.
@@ -596,6 +597,20 @@ export function createMockApi() {
     if (
       signedIn &&
       (await scheduleMock({
+        req,
+        res,
+        url,
+        path,
+        method,
+        memberships: state.memberships,
+      }))
+    )
+      return
+
+    // SADM-001 ~ 005 (admin overview, clubs, users, audit logs).
+    if (
+      signedIn &&
+      (await handleAdmin({
         req,
         res,
         url,
