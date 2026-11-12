@@ -52,6 +52,16 @@ export const MY_COPY = {
   doneRecover: (date: string) =>
     `${date}까지 같은 카카오 계정으로 로그인하면 이름과 사진을 되찾을 수 있어요.`,
   toStart: '처음으로',
+  // MY-003
+  membershipTitle: '내 소속 정보',
+  displayNameLabel: '표시 이름',
+  displayNameHint: '이 동아리에서만 보이는 이름이에요',
+  myParts: '내 파트',
+  partsHint: '가불 응답과 연주자 배정 때 기본값으로 쓰여요',
+  partInactive: (name: string) => `${name} (사용 중지)`,
+  membershipStatus: '소속 상태',
+  statusHint: '상태 변경은 임원에게 요청하세요.',
+  noClub: '소속된 동아리가 없어요',
   version: (v: string) => `앱 버전 ${v}`,
   admin: '서비스 관리',
   // MY-002
