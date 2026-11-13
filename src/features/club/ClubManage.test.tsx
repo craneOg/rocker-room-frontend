@@ -13,6 +13,7 @@ import {
   type Route,
 } from '../../test/harness'
 import { MEMBER_COPY as T } from './copy'
+import { CREATE_COPY } from './createCopy'
 import { LAST_ADMIN_ROLE, MANAGE_COPY as M } from './manageCopy'
 
 setupDom()
@@ -219,6 +220,49 @@ describe('CLUB-101 1-1 club edit', () => {
       const sent = body(fetchMock, BASE) as Record<string, unknown>
       expect('profileImageKey' in sent).toBe(false)
       expect('themeColor' in sent).toBe(false)
+    })
+
+    it('drops an expired new photo and saves the other changes on retry', async () => {
+      let patches = 0
+      const { fetchMock } = open('/clubs/10/info', 'CLUB_ADMIN', {
+        [`PATCH ${BASE}`]: () =>
+          ++patches === 1
+            ? new Response(
+                JSON.stringify({
+                  error: {
+                    code: 'NOT_FOUND',
+                    message: 'x',
+                    details: [{ reason: 'IMAGE_KEY_NOT_FOUND' }],
+                  },
+                }),
+                { status: 404 },
+              )
+            : json(club),
+        [`POST ${API_PATHS.profileImage}`]: () =>
+          json(
+            {
+              imageKey: 'tmp/clubs/k.png',
+              previewUrl: 'https://cdn.test/k.png',
+            },
+            201,
+          ),
+      })
+      await click(M.edit)
+      await screen.findByDisplayValue('Crane Band')
+      upload()
+      await screen.findByRole('button', { name: '기본 이미지로' })
+      await click(M.save)
+
+      await screen.findByText(CREATE_COPY.imageExpired)
+      expect(screen.queryByRole('button', { name: '기본 이미지로' })).toBeNull()
+      await click(M.save)
+
+      await screen.findByText(COPY.saved)
+      const sent = callsTo(fetchMock, BASE)
+        .filter(([, init]) => init?.method === 'PATCH')
+        .map(([, init]) => JSON.parse(String(init?.body)) as object)
+      expect(sent[0]).toMatchObject({ profileImageKey: 'tmp/clubs/k.png' })
+      expect('profileImageKey' in (sent[1] ?? {})).toBe(false)
     })
 
     it('blocks saving a malformed colour', async () => {

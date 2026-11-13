@@ -1,7 +1,7 @@
 import { TextArea, TextField, Typography } from '@montage-ui/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
-import { fieldErrors } from '../../shared/api/errors'
+import { fieldErrors, isApiError } from '../../shared/api/errors'
 import { COPY } from '../../shared/ui/copy'
 import { feedback } from '../../shared/ui/feedbackBus'
 import { FormField } from '../../shared/ui/FormField'
@@ -10,6 +10,7 @@ import { useDebounced } from '../auth/useHandleAvailability'
 import type { ClubDetail } from './api'
 import { ClubPhotoField, ThemeColorField } from './ClubPhotoColorFields'
 import { HEX_COLOR, checkClubName, type ClubImageUpload } from './createApi'
+import { CREATE_COPY as T } from './createCopy'
 import { ClubNameTakenError, invalidateClub, updateClub } from './manageApi'
 import { MANAGE_COPY as M } from './manageCopy'
 import { ActionModal, RadioList } from './ManageBits'
@@ -89,6 +90,14 @@ export function ClubEditModal({
       setAsking(false)
       if (e instanceof ClubNameTakenError) setError(M.nameTaken)
       else if (fieldErrors(e).name !== undefined) setError(COPY.checkInput)
+      else if (
+        isApiError(e) &&
+        e.details.some((d) => d.reason === 'IMAGE_KEY_NOT_FOUND')
+      ) {
+        // The new photo's key expired: drop it so the other changes can still be saved.
+        setPhoto('keep')
+        feedback.toast(T.imageExpired, 'negative')
+      }
     },
   })
 
