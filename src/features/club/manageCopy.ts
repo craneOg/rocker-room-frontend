@@ -73,6 +73,7 @@ export const MANAGE_COPY = {
     '이 멤버가 유일한 임원이라 다른 멤버에게 임원 권한이 넘어가요.',
   withdrawSuccessionTo: (name: string) =>
     `임원 권한을 이어받는 사람: ${name}님`,
+  changeOfficerSuccessor: '임원 후임 바꾸기',
   withdrawConfirm: '내보내기',
   withdrawn: '소속을 해제했어요',
   // 5-4

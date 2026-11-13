@@ -237,6 +237,29 @@ describe('CLUB-101 1-1 club edit', () => {
     })
   })
 
+  it('flags a taken name while typing, excluding the club itself from the check', async () => {
+    const { fetchMock } = open('/clubs/10/info', 'CLUB_ADMIN', {
+      [`GET /api/v1/clubs/name-availability`]: () => json({ available: false }),
+    })
+    await click(M.edit)
+    expect(callsTo(fetchMock, '/api/v1/clubs/name-availability')).toHaveLength(
+      0,
+    )
+    fireEvent.change(await screen.findByDisplayValue('Crane Band'), {
+      target: { value: 'Heron Band' },
+    })
+    await screen.findByText(new RegExp(M.nameTaken), {}, { timeout: 3000 })
+    expect(
+      (await button(M.save)).hasAttribute('disabled') ||
+        (await button(M.save)).getAttribute('aria-disabled') === 'true',
+    ).toBe(true)
+    const url = String(
+      callsTo(fetchMock, '/api/v1/clubs/name-availability').at(-1)?.[0],
+    )
+    expect(url).toContain('excludeClubId=10')
+    expect(url).toContain('name=Heron+Band')
+  })
+
   it('saves name and description, then refreshes the club', async () => {
     const { fetchMock } = open('/clubs/10/info', 'CLUB_ADMIN', {
       [`PATCH ${BASE}`]: () => json(club),
@@ -618,6 +641,111 @@ describe('CLUB-103 officer actions', () => {
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/clubs/10/members'),
     )
+  })
+
+  describe('withdrawing the only officer', () => {
+    const soleOfficer = (extra: Record<string, Route> = {}) =>
+      open('/clubs/10/members/21', 'CLUB_ADMIN', {
+        [`GET ${BASE}/memberships/21`]: () =>
+          json({
+            ...member('21', '정규채', { role: 'CLUB_ADMIN' }),
+            performances: [],
+          }),
+        [`GET ${at('/withdraw-preview')}`]: () =>
+          json({
+            target: {
+              membershipId: '21',
+              displayName: '정규채',
+              role: 'CLUB_ADMIN',
+            },
+            succession: {
+              type: 'DESIGNATED_OR_EARLIEST',
+              candidateMembershipId: '22',
+              candidateName: '김도윤',
+            },
+            performanceImpacts: [],
+            teamLeaderCandidates: [],
+            warnings: [],
+          }),
+        [`GET ${BASE}/memberships`]: () =>
+          page([
+            member('21', '정규채', { role: 'CLUB_ADMIN' }),
+            member('22', '김도윤'),
+            member('23', '이서준'),
+            member('24', '박관리', { role: 'CLUB_ADMIN' }),
+          ]),
+        [`POST ${at('/withdraw')}`]: () => json({}),
+        ...extra,
+      })
+
+    it('sends the chosen successor, and lists no officers as candidates', async () => {
+      const { fetchMock } = soleOfficer()
+      await click(M.withdraw)
+      await screen.findByText(new RegExp(M.withdrawSuccessionTo('김도윤')))
+      const select = await screen.findByRole('combobox', {
+        name: M.changeOfficerSuccessor,
+      })
+      expect(
+        Array.from(select.querySelectorAll('option')).map((o) => o.value),
+      ).toEqual(['22', '23'])
+      fireEvent.change(select, { target: { value: '23' } })
+      await screen.findByText(new RegExp(M.withdrawSuccessionTo('이서준')))
+      await click(M.withdrawConfirm)
+
+      await screen.findByText(M.withdrawn)
+      expect(body(fetchMock, at('/withdraw'))).toEqual({
+        teamLeaderSuccessors: [],
+        successorMembershipId: '23',
+      })
+      expect(
+        callsTo(fetchMock, `${BASE}/memberships`).some(([url]) =>
+          String(url).includes('status=ACTIVE'),
+        ),
+      ).toBe(true)
+    })
+
+    it('lists candidates from every page and offers a retry when the list fails', async () => {
+      let failFirst = true
+      const pageOf = (n: number, items: unknown[]) =>
+        json({ items, page: n, size: 100, totalElements: 101, totalPages: 2 })
+      const { fetchMock } = soleOfficer({
+        [`GET ${BASE}/memberships`]: (url) => {
+          if (failFirst) return apiError('INTERNAL_ERROR', 500)
+          return String(url).includes('page=1')
+            ? pageOf(1, [member('99', '둘째장')])
+            : pageOf(0, [member('22', '김도윤')])
+        },
+      })
+      await click(M.withdraw)
+      const retry = await screen.findByRole('button', { name: COPY.retry })
+      failFirst = false
+      fireEvent.click(retry)
+      const select = await screen.findByRole('combobox', {
+        name: M.changeOfficerSuccessor,
+      })
+      expect(
+        Array.from(select.querySelectorAll('option')).map((o) => o.value),
+      ).toEqual(['22', '99'])
+      fireEvent.change(select, { target: { value: '99' } })
+      await click(M.withdrawConfirm)
+      await screen.findByText(M.withdrawn)
+      expect(body(fetchMock, at('/withdraw'))).toEqual({
+        teamLeaderSuccessors: [],
+        successorMembershipId: '99',
+      })
+    })
+
+    it('leaves the successor to the server when it is not changed', async () => {
+      const { fetchMock } = soleOfficer()
+      await click(M.withdraw)
+      await screen.findByRole('combobox', { name: M.changeOfficerSuccessor })
+      await click(M.withdrawConfirm)
+
+      await screen.findByText(M.withdrawn)
+      expect(body(fetchMock, at('/withdraw'))).toEqual({
+        teamLeaderSuccessors: [],
+      })
+    })
   })
 
   it('offers only role revocation and a leave link on the own page', async () => {

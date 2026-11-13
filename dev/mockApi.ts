@@ -56,6 +56,11 @@ const ago = (days: number) => new Date(Date.now() - days * DAY).toISOString()
 const inDays = (days: number) => ago(-days)
 
 const initialState = () => ({
+  // c10's photo and colour (API-016); in state so a reset restores them.
+  c10Style: {
+    profileImageUrl: null as string | null,
+    themeColor: '#1A2B3C' as string | null,
+  },
   // Clubs made through API-011; they live in state so a reset drops them.
   createdClubs: [] as {
     id: string
@@ -238,11 +243,7 @@ type MockMember = {
 }
 
 // Editable club type (API-016); name and description are edited in place on CLUBS.
-const clubMeta = {
-  clubType: 'BAND',
-  profileImageUrl: null as string | null,
-  themeColor: '#1A2B3C' as string | null,
-}
+const clubMeta = { clubType: 'BAND' }
 
 const NAMES = ['명혜성', '송예림', '정규채', '김도윤', '이서연', '박지호']
 const MEMBERS: MockMember[] = Array.from({ length: 30 }, (_, i) => ({
@@ -656,13 +657,22 @@ export function createMockApi() {
 
     // CLUB-001: API-126 (path assumed) and API-011 (server not built yet). Names compare ignoring case and spaces.
     const nameKey = (n: string) => n.replace(/\s+/g, '').toLowerCase()
-    const nameTaken = (n: string) =>
-      CLUBS.some((c) => nameKey(c.name) === nameKey(n)) ||
-      state.memberships.some((m) => nameKey(m.club.name) === nameKey(n))
+    // `excludeClubId` (API-126, renaming): the club itself does not count.
+    const nameTaken = (n: string, excludeClubId = '') =>
+      CLUBS.some(
+        (c) => c.id !== excludeClubId && nameKey(c.name) === nameKey(n),
+      ) ||
+      state.memberships.some(
+        (m) =>
+          m.club.id !== excludeClubId && nameKey(m.club.name) === nameKey(n),
+      )
     if (path === '/api/v1/clubs/name-availability' && method === 'GET') {
       await new Promise((r) => setTimeout(r, 300))
       return ok(res, {
-        available: !nameTaken(url.searchParams.get('name') ?? ''),
+        available: !nameTaken(
+          url.searchParams.get('name') ?? '',
+          url.searchParams.get('excludeClubId') ?? '',
+        ),
       })
     }
     if (path === '/api/v1/clubs' && method === 'POST') {
@@ -901,8 +911,8 @@ export function createMockApi() {
           clubType: made?.clubType ?? clubMeta.clubType,
           status: 'ACTIVE',
           isSearchable: made ? made.isSearchable : true,
-          profileImageUrl: clubMeta.profileImageUrl,
-          themeColor: made ? made.themeColor : clubMeta.themeColor,
+          profileImageUrl: made ? null : state.c10Style.profileImageUrl,
+          themeColor: made ? made.themeColor : state.c10Style.themeColor,
           createdAt: ago(90),
           updatedAt: ago(2),
         })
@@ -1002,14 +1012,17 @@ export function createMockApi() {
       const club = CLUBS.find((c) => c.id === 'c10')
       if (!target && method === 'PATCH' && club) {
         const body = await readBody(req)
+        // Check every field first: a rejected request changes nothing.
+        let name: string | undefined
         if (typeof body.name === 'string') {
-          const name = body.name.trim()
+          name = body.name.trim()
           if (name.length < 1 || name.length > 100)
             return fail(res, 400, 'VALIDATION_ERROR')
           if (
             CLUBS.some(
               (c) =>
-                c.id !== club.id && c.name.toLowerCase() === name.toLowerCase(),
+                c.id !== club.id &&
+                c.name.toLowerCase() === name!.toLowerCase(),
             )
           )
             return send(res, 409, {
@@ -1019,47 +1032,49 @@ export function createMockApi() {
                 details: [{ reason: 'CLUB_NAME_TAKEN' }],
               },
             })
-          club.name = name
         }
+        const newType =
+          typeof body.clubType === 'string' &&
+          body.clubType !== clubMeta.clubType
+            ? body.clubType
+            : undefined
+        if (
+          newType !== undefined &&
+          (typeof body.clubTypeChangeReason !== 'string' ||
+            !body.clubTypeChangeReason)
+        )
+          return fail(res, 400, 'VALIDATION_ERROR')
+        // API-016 photo and colour: null clears, a missing field leaves it alone.
+        const key = body.profileImageKey
+        if (
+          'profileImageKey' in body &&
+          key !== null &&
+          !(typeof key === 'string' && key.startsWith('tmp/'))
+        )
+          return fail(res, 404, 'NOT_FOUND')
+        const color = body.themeColor
+        if (
+          'themeColor' in body &&
+          color !== null &&
+          !(typeof color === 'string' && /^#[0-9A-F]{6}$/.test(color))
+        )
+          return fail(res, 400, 'VALIDATION_ERROR')
+
+        if (name !== undefined) club.name = name
         if ('description' in body)
           club.description =
             typeof body.description === 'string' ? body.description : ''
-        if (
-          typeof body.clubType === 'string' &&
-          body.clubType !== clubMeta.clubType
-        ) {
-          if (
-            typeof body.clubTypeChangeReason !== 'string' ||
-            !body.clubTypeChangeReason
-          )
-            return fail(res, 400, 'VALIDATION_ERROR')
-          clubMeta.clubType = body.clubType
-        }
-        // API-016 photo and colour: null clears, a missing field leaves it alone.
-        if ('profileImageKey' in body) {
-          if (body.profileImageKey === null) clubMeta.profileImageUrl = null
-          else if (
-            typeof body.profileImageKey === 'string' &&
-            body.profileImageKey.startsWith('tmp/')
-          )
-            clubMeta.profileImageUrl = PREVIEW_PNG
-          else return fail(res, 404, 'NOT_FOUND')
-        }
-        if ('themeColor' in body) {
-          if (body.themeColor === null) clubMeta.themeColor = null
-          else if (
-            typeof body.themeColor === 'string' &&
-            /^#[0-9A-F]{6}$/.test(body.themeColor)
-          )
-            clubMeta.themeColor = body.themeColor
-          else return fail(res, 400, 'VALIDATION_ERROR')
-        }
+        if (newType !== undefined) clubMeta.clubType = newType
+        if ('profileImageKey' in body)
+          state.c10Style.profileImageUrl = key === null ? null : PREVIEW_PNG
+        if ('themeColor' in body)
+          state.c10Style.themeColor = color as string | null
         return ok(res, {
           id: club.id,
           name: club.name,
           clubType: clubMeta.clubType,
-          profileImageUrl: clubMeta.profileImageUrl,
-          themeColor: clubMeta.themeColor,
+          profileImageUrl: state.c10Style.profileImageUrl,
+          themeColor: state.c10Style.themeColor,
         })
       }
       if (target === 'bulk' && method === 'POST') {
