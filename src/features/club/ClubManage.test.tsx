@@ -251,6 +251,12 @@ describe('CLUB-101 1-1 club edit', () => {
       await screen.findByDisplayValue('Crane Band')
       upload()
       await screen.findByRole('button', { name: '기본 이미지로' })
+      fireEvent.change(screen.getByDisplayValue('신촌 기반 밴드'), {
+        target: { value: '합주 위주 밴드' },
+      })
+      fireEvent.change(screen.getByPlaceholderText('#1A2B3C'), {
+        target: { value: '#abcdef' },
+      })
       await click(M.save)
 
       await screen.findByText(CREATE_COPY.imageExpired)
@@ -261,7 +267,13 @@ describe('CLUB-101 1-1 club edit', () => {
       const sent = callsTo(fetchMock, BASE)
         .filter(([, init]) => init?.method === 'PATCH')
         .map(([, init]) => JSON.parse(String(init?.body)) as object)
-      expect(sent[0]).toMatchObject({ profileImageKey: 'tmp/clubs/k.png' })
+      const changes = { description: '합주 위주 밴드', themeColor: '#ABCDEF' }
+      expect(sent[0]).toMatchObject({
+        ...changes,
+        profileImageKey: 'tmp/clubs/k.png',
+      })
+      // The retry drops only the photo key; the other edits are kept.
+      expect(sent[1]).toMatchObject(changes)
       expect('profileImageKey' in (sent[1] ?? {})).toBe(false)
     })
 
