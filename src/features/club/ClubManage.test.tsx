@@ -132,6 +132,29 @@ describe('CLUB-101 1-1 club edit', () => {
     expect(screen.queryByRole('button', { name: M.edit })).toBeNull()
   })
 
+  it('flags a taken name while typing, excluding the club itself from the check', async () => {
+    const { fetchMock } = open('/clubs/10/info', 'CLUB_ADMIN', {
+      [`GET /api/v1/clubs/name-availability`]: () => json({ available: false }),
+    })
+    await click(M.edit)
+    expect(callsTo(fetchMock, '/api/v1/clubs/name-availability')).toHaveLength(
+      0,
+    )
+    fireEvent.change(await screen.findByDisplayValue('Crane Band'), {
+      target: { value: 'Heron Band' },
+    })
+    await screen.findByText(new RegExp(M.nameTaken), {}, { timeout: 3000 })
+    expect(
+      (await button(M.save)).hasAttribute('disabled') ||
+        (await button(M.save)).getAttribute('aria-disabled') === 'true',
+    ).toBe(true)
+    const url = String(
+      callsTo(fetchMock, '/api/v1/clubs/name-availability').at(-1)?.[0],
+    )
+    expect(url).toContain('excludeClubId=10')
+    expect(url).toContain('name=Heron+Band')
+  })
+
   it('saves name and description, then refreshes the club', async () => {
     const { fetchMock } = open('/clubs/10/info', 'CLUB_ADMIN', {
       [`PATCH ${BASE}`]: () => json(club),

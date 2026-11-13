@@ -652,13 +652,22 @@ export function createMockApi() {
 
     // CLUB-001: API-126 (path assumed) and API-011 (server not built yet). Names compare ignoring case and spaces.
     const nameKey = (n: string) => n.replace(/\s+/g, '').toLowerCase()
-    const nameTaken = (n: string) =>
-      CLUBS.some((c) => nameKey(c.name) === nameKey(n)) ||
-      state.memberships.some((m) => nameKey(m.club.name) === nameKey(n))
+    // `excludeClubId` (API-126, renaming): the club itself does not count.
+    const nameTaken = (n: string, excludeClubId = '') =>
+      CLUBS.some(
+        (c) => c.id !== excludeClubId && nameKey(c.name) === nameKey(n),
+      ) ||
+      state.memberships.some(
+        (m) =>
+          m.club.id !== excludeClubId && nameKey(m.club.name) === nameKey(n),
+      )
     if (path === '/api/v1/clubs/name-availability' && method === 'GET') {
       await new Promise((r) => setTimeout(r, 300))
       return ok(res, {
-        available: !nameTaken(url.searchParams.get('name') ?? ''),
+        available: !nameTaken(
+          url.searchParams.get('name') ?? '',
+          url.searchParams.get('excludeClubId') ?? '',
+        ),
       })
     }
     if (path === '/api/v1/clubs' && method === 'POST') {
