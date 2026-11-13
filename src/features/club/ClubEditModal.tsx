@@ -1,14 +1,16 @@
 import { TextArea, TextField, Typography } from '@montage-ui/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
-import { fieldErrors } from '../../shared/api/errors'
+import { useCallback, useState } from 'react'
+import { fieldErrors, isApiError } from '../../shared/api/errors'
 import { COPY } from '../../shared/ui/copy'
 import { feedback } from '../../shared/ui/feedbackBus'
 import { FormField } from '../../shared/ui/FormField'
 import { ReasonModal } from '../../shared/ui/ReasonModal'
 import { useDebounced } from '../auth/useHandleAvailability'
 import type { ClubDetail } from './api'
-import { checkClubName } from './createApi'
+import { ClubPhotoField, ThemeColorField } from './ClubPhotoColorFields'
+import { HEX_COLOR, checkClubName, type ClubImageUpload } from './createApi'
+import { CREATE_COPY as T } from './createCopy'
 import { ClubNameTakenError, invalidateClub, updateClub } from './manageApi'
 import { MANAGE_COPY as M } from './manageCopy'
 import { ActionModal, RadioList } from './ManageBits'
@@ -18,8 +20,9 @@ const DESCRIPTION_MAX = 500
 const NAME_CHECK_MS = 500
 
 /**
- * CLUB-101 1-1: name, description and type. Changing the type asks for a reason (API-016) after
- * the form. The profile image and theme colour are not editable yet (needs the upload API-130).
+ * CLUB-101 1-1: name, description, photo, theme colour and type. Changing the type asks for a
+ * reason (API-016) after the form. The photo goes through API-129 (purpose=CLUB_PROFILE) and only
+ * its key is sent; fields left alone are not sent.
  */
 export function ClubEditModal({
   club,
@@ -34,9 +37,22 @@ export function ClubEditModal({
   const [clubType, setClubType] = useState(club.clubType)
   const [asking, setAsking] = useState(false)
   const [error, setError] = useState<string>()
+  // keep: as it is; reset: back to the default image; otherwise the newly uploaded photo.
+  const [photo, setPhoto] = useState<'keep' | 'reset' | ClubImageUpload>('keep')
+  const [uploading, setUploading] = useState(false)
+  const onBusyChange = useCallback((busy: boolean) => setUploading(busy), [])
+  const [color, setColor] = useState(club.themeColor ?? '')
 
   const trimmed = name.trim()
   const typeChanged = clubType !== club.clubType
+  const colorValid = color === '' || HEX_COLOR.test(color)
+  const colorChanged = color.toUpperCase() !== (club.themeColor ?? '')
+  const previewUrl =
+    photo === 'keep'
+      ? club.profileImageUrl
+      : photo === 'reset'
+        ? null
+        : photo.previewUrl
   // Same check as CLUB-001; an unchanged name needs none. A hint only: the 409 on save decides.
   const debounced = useDebounced(trimmed, NAME_CHECK_MS)
   const availability = useQuery({
@@ -55,6 +71,12 @@ export function ClubEditModal({
       updateClub(club.id, {
         name: trimmed,
         description: description.trim() || null,
+        ...(photo === 'keep'
+          ? {}
+          : { profileImageKey: photo === 'reset' ? null : photo.imageKey }),
+        ...(colorChanged
+          ? { themeColor: color ? color.toUpperCase() : null }
+          : {}),
         ...(typeChanged
           ? { clubType, clubTypeChangeReason: reason ?? '' }
           : {}),
@@ -68,6 +90,14 @@ export function ClubEditModal({
       setAsking(false)
       if (e instanceof ClubNameTakenError) setError(M.nameTaken)
       else if (fieldErrors(e).name !== undefined) setError(COPY.checkInput)
+      else if (
+        isApiError(e) &&
+        e.details.some((d) => d.reason === 'IMAGE_KEY_NOT_FOUND')
+      ) {
+        // The new photo's key expired: drop it so the other changes can still be saved.
+        setPhoto('keep')
+        feedback.toast(T.imageExpired, 'negative')
+      }
     },
   })
 
@@ -77,7 +107,9 @@ export function ClubEditModal({
         open={!asking}
         title={M.editClubTitle}
         actionLabel={M.save}
-        actionDisabled={trimmed.length === 0 || nameTaken}
+        actionDisabled={
+          trimmed.length === 0 || nameTaken || !colorValid || uploading
+        }
         loading={save.isPending}
         onClose={onClose}
         onSubmit={() =>
@@ -109,6 +141,18 @@ export function ClubEditModal({
             }
           />
         </FormField>
+        <ClubPhotoField
+          previewUrl={previewUrl}
+          initial={trimmed.charAt(0)}
+          canReset={
+            typeof photo === 'object' ||
+            (photo === 'keep' && !!club.profileImageUrl)
+          }
+          onUploaded={setPhoto}
+          onReset={() => setPhoto(club.profileImageUrl ? 'reset' : 'keep')}
+          onBusyChange={onBusyChange}
+        />
+        <ThemeColorField value={color} onChange={setColor} />
         <Typography variant="body2" weight="bold">
           {M.labelClubType}
         </Typography>

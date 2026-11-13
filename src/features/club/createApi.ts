@@ -61,3 +61,9 @@ export const uploadClubImage = (file: File) => {
   form.append('purpose', 'CLUB_PROFILE')
   return api.post<ClubImageUpload>(API_PATHS.profileImage, form)
 }
+
+/** CLUB-001 / CLUB-101 photo and colour rules (API-129: jpeg/png/webp, 2MiB). */
+export const MAX_IMAGE_BYTES = 2 * 1024 * 1024
+export const IMAGE_EXTENSION = /\.(jpe?g|png|webp)$/i
+export const IMAGE_ACCEPT = '.jpg,.jpeg,.png,.webp'
+export const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/

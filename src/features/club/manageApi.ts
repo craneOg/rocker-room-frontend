@@ -50,6 +50,10 @@ export type ClubUpdate = {
   clubType?: string
   /** Required by the server when `clubType` changes. */
   clubTypeChangeReason?: string
+  /** API-129 (purpose=CLUB_PROFILE) key. null: back to the default image (assumed, BE to confirm). */
+  profileImageKey?: string | null
+  /** #RRGGBB upper case. null: clear it. */
+  themeColor?: string | null
 }
 
 export const updateClub = async (clubId: string, body: ClubUpdate) => {

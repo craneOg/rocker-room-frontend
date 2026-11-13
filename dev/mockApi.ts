@@ -56,6 +56,11 @@ const ago = (days: number) => new Date(Date.now() - days * DAY).toISOString()
 const inDays = (days: number) => ago(-days)
 
 const initialState = () => ({
+  // c10's photo and colour (API-016); in state so a reset restores them.
+  c10Style: {
+    profileImageUrl: null as string | null,
+    themeColor: '#1A2B3C' as string | null,
+  },
   // Clubs made through API-011; they live in state so a reset drops them.
   createdClubs: [] as {
     id: string
@@ -906,8 +911,8 @@ export function createMockApi() {
           clubType: made?.clubType ?? clubMeta.clubType,
           status: 'ACTIVE',
           isSearchable: made ? made.isSearchable : true,
-          profileImageUrl: null,
-          themeColor: made ? made.themeColor : '#1A2B3C',
+          profileImageUrl: made ? null : state.c10Style.profileImageUrl,
+          themeColor: made ? made.themeColor : state.c10Style.themeColor,
           createdAt: ago(90),
           updatedAt: ago(2),
         })
@@ -1007,14 +1012,17 @@ export function createMockApi() {
       const club = CLUBS.find((c) => c.id === 'c10')
       if (!target && method === 'PATCH' && club) {
         const body = await readBody(req)
+        // Check every field first: a rejected request changes nothing.
+        let name: string | undefined
         if (typeof body.name === 'string') {
-          const name = body.name.trim()
+          name = body.name.trim()
           if (name.length < 1 || name.length > 100)
             return fail(res, 400, 'VALIDATION_ERROR')
           if (
             CLUBS.some(
               (c) =>
-                c.id !== club.id && c.name.toLowerCase() === name.toLowerCase(),
+                c.id !== club.id &&
+                c.name.toLowerCase() === name!.toLowerCase(),
             )
           )
             return send(res, 409, {
@@ -1024,26 +1032,49 @@ export function createMockApi() {
                 details: [{ reason: 'CLUB_NAME_TAKEN' }],
               },
             })
-          club.name = name
         }
+        const newType =
+          typeof body.clubType === 'string' &&
+          body.clubType !== clubMeta.clubType
+            ? body.clubType
+            : undefined
+        if (
+          newType !== undefined &&
+          (typeof body.clubTypeChangeReason !== 'string' ||
+            !body.clubTypeChangeReason)
+        )
+          return fail(res, 400, 'VALIDATION_ERROR')
+        // API-016 photo and colour: null clears, a missing field leaves it alone.
+        const key = body.profileImageKey
+        if (
+          'profileImageKey' in body &&
+          key !== null &&
+          !(typeof key === 'string' && key.startsWith('tmp/'))
+        )
+          return fail(res, 404, 'NOT_FOUND')
+        const color = body.themeColor
+        if (
+          'themeColor' in body &&
+          color !== null &&
+          !(typeof color === 'string' && /^#[0-9A-F]{6}$/.test(color))
+        )
+          return fail(res, 400, 'VALIDATION_ERROR')
+
+        if (name !== undefined) club.name = name
         if ('description' in body)
           club.description =
             typeof body.description === 'string' ? body.description : ''
-        if (
-          typeof body.clubType === 'string' &&
-          body.clubType !== clubMeta.clubType
-        ) {
-          if (
-            typeof body.clubTypeChangeReason !== 'string' ||
-            !body.clubTypeChangeReason
-          )
-            return fail(res, 400, 'VALIDATION_ERROR')
-          clubMeta.clubType = body.clubType
-        }
+        if (newType !== undefined) clubMeta.clubType = newType
+        if ('profileImageKey' in body)
+          state.c10Style.profileImageUrl = key === null ? null : PREVIEW_PNG
+        if ('themeColor' in body)
+          state.c10Style.themeColor = color as string | null
         return ok(res, {
           id: club.id,
           name: club.name,
           clubType: clubMeta.clubType,
+          profileImageUrl: state.c10Style.profileImageUrl,
+          themeColor: state.c10Style.themeColor,
         })
       }
       if (target === 'bulk' && method === 'POST') {
