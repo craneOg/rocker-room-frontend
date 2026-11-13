@@ -16,6 +16,10 @@ import { feedback } from '../../shared/ui/feedbackBus'
 import { FormField } from '../../shared/ui/FormField'
 import {
   checkClubName,
+  HEX_COLOR,
+  IMAGE_ACCEPT,
+  IMAGE_EXTENSION,
+  MAX_IMAGE_BYTES,
   createClub,
   uploadClubImage,
   type ClubImageUpload,
@@ -28,10 +32,6 @@ import { RadioList } from './ManageBits'
 const NAME_MAX = 100
 const DESCRIPTION_MAX = 500
 const NAME_CHECK_MS = 500
-const MAX_IMAGE_BYTES = 2 * 1024 * 1024
-const IMAGE_EXTENSION = /\.(jpe?g|png|webp)$/i
-const ACCEPT = '.jpg,.jpeg,.png,.webp'
-const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/
 
 /** CLUB-001: create a club (the creator becomes its first officer), then 6-1. */
 export function ClubCreate() {
@@ -201,7 +201,7 @@ export function ClubCreate() {
         <input
           ref={fileInput}
           type="file"
-          accept={ACCEPT}
+          accept={IMAGE_ACCEPT}
           hidden
           data-testid="photo-input"
           onChange={(e) => {

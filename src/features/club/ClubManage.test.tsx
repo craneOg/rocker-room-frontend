@@ -132,6 +132,111 @@ describe('CLUB-101 1-1 club edit', () => {
     expect(screen.queryByRole('button', { name: M.edit })).toBeNull()
   })
 
+  describe('photo and theme colour', () => {
+    const photoClub = {
+      ...club,
+      profileImageUrl: 'https://cdn.test/old.png',
+      themeColor: '#112233',
+    }
+    const upload = (name = 'new.png') =>
+      fireEvent.change(screen.getByTestId('photo-input'), {
+        target: {
+          files: [new File(['x'], name, { type: 'image/png' })],
+        },
+      })
+
+    it('sends the uploaded photo key and the upper-cased colour', async () => {
+      const { fetchMock } = open('/clubs/10/info', 'CLUB_ADMIN', {
+        [`PATCH ${BASE}`]: () => json(club),
+        [`POST ${API_PATHS.profileImage}`]: () =>
+          json(
+            {
+              imageKey: 'tmp/clubs/k.png',
+              previewUrl: 'https://cdn.test/k.png',
+            },
+            201,
+          ),
+      })
+      await click(M.edit)
+      await screen.findByDisplayValue('Crane Band')
+      upload()
+      await waitFor(() =>
+        expect(
+          (
+            screen
+              .getByRole('img', { name: '프로필 사진' })
+              .querySelector('img') as HTMLImageElement | null
+          )?.src,
+        ).toBe('https://cdn.test/k.png'),
+      )
+      fireEvent.change(screen.getByPlaceholderText('#1A2B3C'), {
+        target: { value: '#abcdef' },
+      })
+      await click(M.save)
+
+      await screen.findByText(COPY.saved)
+      expect(body(fetchMock, BASE)).toMatchObject({
+        profileImageKey: 'tmp/clubs/k.png',
+        themeColor: '#ABCDEF',
+      })
+      const form = callsTo(fetchMock, API_PATHS.profileImage)[0]?.[1]
+        ?.body as FormData
+      expect(form.get('purpose')).toBe('CLUB_PROFILE')
+    })
+
+    it('goes back to the default image and clears the colour with null', async () => {
+      const { fetchMock } = open('/clubs/10/info', 'CLUB_ADMIN', {
+        [`GET ${BASE}`]: () => json(photoClub),
+        [`PATCH ${BASE}`]: () => json(photoClub),
+      })
+      await click(M.edit)
+      await screen.findByDisplayValue('Crane Band')
+      fireEvent.click(await button('기본 이미지로'))
+      fireEvent.change(screen.getByPlaceholderText('#1A2B3C'), {
+        target: { value: '' },
+      })
+      await click(M.save)
+
+      await screen.findByText(COPY.saved)
+      expect(body(fetchMock, BASE)).toMatchObject({
+        profileImageKey: null,
+        themeColor: null,
+      })
+    })
+
+    it('does not send photo or colour when they are left alone', async () => {
+      const { fetchMock } = open('/clubs/10/info', 'CLUB_ADMIN', {
+        [`GET ${BASE}`]: () => json(photoClub),
+        [`PATCH ${BASE}`]: () => json(photoClub),
+      })
+      await click(M.edit)
+      fireEvent.change(await screen.findByDisplayValue('Crane Band'), {
+        target: { value: 'Heron Band' },
+      })
+      await click(M.save)
+
+      await screen.findByText(COPY.saved)
+      const sent = body(fetchMock, BASE) as Record<string, unknown>
+      expect('profileImageKey' in sent).toBe(false)
+      expect('themeColor' in sent).toBe(false)
+    })
+
+    it('blocks saving a malformed colour', async () => {
+      open('/clubs/10/info', 'CLUB_ADMIN')
+      await click(M.edit)
+      await screen.findByDisplayValue('Crane Band')
+      fireEvent.change(screen.getByPlaceholderText('#1A2B3C'), {
+        target: { value: '#12' },
+      })
+      await screen.findByText(/#RRGGBB/)
+      const save = await button(M.save)
+      expect(
+        save.hasAttribute('disabled') ||
+          save.getAttribute('aria-disabled') === 'true',
+      ).toBe(true)
+    })
+  })
+
   it('saves name and description, then refreshes the club', async () => {
     const { fetchMock } = open('/clubs/10/info', 'CLUB_ADMIN', {
       [`PATCH ${BASE}`]: () => json(club),

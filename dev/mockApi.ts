@@ -238,7 +238,11 @@ type MockMember = {
 }
 
 // Editable club type (API-016); name and description are edited in place on CLUBS.
-const clubMeta = { clubType: 'BAND' }
+const clubMeta = {
+  clubType: 'BAND',
+  profileImageUrl: null as string | null,
+  themeColor: '#1A2B3C' as string | null,
+}
 
 const NAMES = ['명혜성', '송예림', '정규채', '김도윤', '이서연', '박지호']
 const MEMBERS: MockMember[] = Array.from({ length: 30 }, (_, i) => ({
@@ -897,8 +901,8 @@ export function createMockApi() {
           clubType: made?.clubType ?? clubMeta.clubType,
           status: 'ACTIVE',
           isSearchable: made ? made.isSearchable : true,
-          profileImageUrl: null,
-          themeColor: made ? made.themeColor : '#1A2B3C',
+          profileImageUrl: clubMeta.profileImageUrl,
+          themeColor: made ? made.themeColor : clubMeta.themeColor,
           createdAt: ago(90),
           updatedAt: ago(2),
         })
@@ -1031,10 +1035,31 @@ export function createMockApi() {
             return fail(res, 400, 'VALIDATION_ERROR')
           clubMeta.clubType = body.clubType
         }
+        // API-016 photo and colour: null clears, a missing field leaves it alone.
+        if ('profileImageKey' in body) {
+          if (body.profileImageKey === null) clubMeta.profileImageUrl = null
+          else if (
+            typeof body.profileImageKey === 'string' &&
+            body.profileImageKey.startsWith('tmp/')
+          )
+            clubMeta.profileImageUrl = PREVIEW_PNG
+          else return fail(res, 404, 'NOT_FOUND')
+        }
+        if ('themeColor' in body) {
+          if (body.themeColor === null) clubMeta.themeColor = null
+          else if (
+            typeof body.themeColor === 'string' &&
+            /^#[0-9A-F]{6}$/.test(body.themeColor)
+          )
+            clubMeta.themeColor = body.themeColor
+          else return fail(res, 400, 'VALIDATION_ERROR')
+        }
         return ok(res, {
           id: club.id,
           name: club.name,
           clubType: clubMeta.clubType,
+          profileImageUrl: clubMeta.profileImageUrl,
+          themeColor: clubMeta.themeColor,
         })
       }
       if (target === 'bulk' && method === 'POST') {
