@@ -31,7 +31,7 @@ export const CREATE_COPY = {
   searchableHint: '켜면 누구나 이름으로 찾아 가입 신청할 수 있어요',
   directOnly: '임원이 사용자 ID로 직접 추가하는 방법만 쓸 수 있어요',
   defaultParts: '기본 파트',
-  defaultPartsNames: ['보컬', '기타', '베이스', '드럼', '키보드'],
+  defaultPartsNames: ['보컬', '기타', '베이스', '키보드', '드럼', '그 외'],
   defaultPartsHint: "파트는 만든 뒤 '파트 관리'에서 추가·수정할 수 있어요",
   submit: '동아리 만들기',
   doneTitle: (club: string) => `${club} 만들기 완료`,
