@@ -1,6 +1,6 @@
 import { api } from '../../shared/api/client'
 
-// API-137 / 135 / 136 (Notion API spec; confirmed, not yet implemented on the server).
+// API-137 (BE PR #46) / 135 / 136 (BE PR #25): Notion API spec, implemented by the BE.
 export type HomeBanner =
   | { type: 'CLUB_INACTIVE' }
   | { type: 'MEMBER_GRADUATED' }
@@ -87,11 +87,11 @@ export const getSuccessionNotices = async () =>
 export const confirmSuccessionNotice = (id: string) =>
   api.post<unknown>(`/api/v1/me/succession-notices/${id}/confirm`)
 
-// API-138 / 139 (Notion API spec; confirmed, not yet implemented on the server).
+// API-138 / 139 (Notion API spec; implemented by the BE, rocker-room-backend PR #46).
 export type CheckItem = {
   /** L-01 ~ L-11 */
   checkId: string
-  /** BLOCKER blocks locking; WARNING does not. Only BLOCKER is shown in the spec example. */
+  /** BLOCKER blocks locking; WARNING does not. The BE sets BLOCKER when checkId <= "L-06" (string compare), WARNING above it. */
   kind: 'BLOCKER' | 'WARNING'
   satisfied: boolean
   count: number
