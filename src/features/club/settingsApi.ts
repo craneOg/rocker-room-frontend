@@ -64,7 +64,7 @@ export const updatePart = (
   patch: { name?: string; displayOrder?: number; isActive?: boolean },
 ) => nameTaken(api.patch<Part>(`${club(clubId)}/parts/${partId}`, patch))
 
-/** API-145. `succession` is assumed to be null/absent unless the caller is the only admin. */
+/** API-145. Confirmed by the backend: `succession` is an object only when the caller is the sole active officer, else null; the key is always present. */
 export type TeamLeaderCandidates = {
   performanceId: string
   performanceName: string

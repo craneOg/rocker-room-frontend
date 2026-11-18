@@ -33,7 +33,7 @@ export type MembershipPage = {
 
 export type ListStatus = 'PENDING' | 'INVITED' | 'DECLINED'
 
-/** Assumption: 100 is accepted as the page size and covers a club's waiting list (no paging UI). */
+/** Confirmed by the backend: `size` is 1..100 (over 100 is 400); 100 covers a club's waiting list (no paging UI). */
 export const LIST_SIZE = 100
 
 export const listMemberships = (

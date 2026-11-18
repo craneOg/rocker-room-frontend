@@ -317,6 +317,16 @@ export function createMockApi() {
   const ok = (res: ServerResponse, data: unknown) => send(res, 200, { data })
   const fail = (res: ServerResponse, status: number, code: string) =>
     send(res, status, { error: { code, message: code } })
+  // Membership 409/DUPLICATE errors carry one reason: `details[0].reason`, no field.
+  const reasoned = (
+    res: ServerResponse,
+    status: number,
+    code: string,
+    reason: string,
+  ) =>
+    send(res, status, {
+      error: { code, message: code, details: [{ reason }] },
+    })
   // Confirmed by the backend: `NOT_RESTORABLE` is a reason of 409 STATE_CONFLICT (APIs 132, 133).
   const notRestorable = (
     res: ServerResponse,
@@ -1150,12 +1160,14 @@ export function createMockApi() {
         const next = body.displayName
         if (next !== null && typeof next !== 'string')
           return fail(res, 400, 'VALIDATION_ERROR')
-        if (typeof next === 'string' && next.length > 50)
+        if (typeof next === 'string' && (!next.trim() || next.length > 50))
           return fail(res, 400, 'VALIDATION_ERROR')
         m.displayName = next
         return ok(res, memberView(m, true))
       }
       if (action === 'role' && method === 'PUT') {
+        if (m.role === body.role)
+          return reasoned(res, 409, 'STATE_CONFLICT', 'RELATION_CONFLICT')
         if (body.role === 'CLUB_ADMIN') {
           if (
             m.memberType !== 'REGULAR' ||
@@ -1171,6 +1183,13 @@ export function createMockApi() {
         return ok(res, memberView(m, true))
       }
       if (action === 'parts' && method === 'PUT') {
+        if (!live)
+          return reasoned(
+            res,
+            409,
+            'STATE_CONFLICT',
+            'INVALID_MEMBERSHIP_STATUS',
+          )
         const partIds = Array.isArray(body.partIds)
           ? (body.partIds as string[])
           : []
@@ -1197,7 +1216,13 @@ export function createMockApi() {
           graduate: 'GRADUATED',
           resume: 'ACTIVE',
         }[action] as MockMember['status']
-        if (!live || m.status === next) return fail(res, 409, 'STATE_CONFLICT')
+        if (!live || m.status === next)
+          return reasoned(
+            res,
+            409,
+            'STATE_CONFLICT',
+            'INVALID_MEMBERSHIP_STATUS',
+          )
         if (next === 'GRADUATED' && m.role === 'CLUB_ADMIN') {
           if (admins().length < 2) return rule('LAST_ADMIN')
           m.role = 'MEMBER'
@@ -1207,7 +1232,14 @@ export function createMockApi() {
       }
       if (action === 'member-type' && method === 'PUT') {
         if (!live || m.memberType === body.memberType)
-          return fail(res, 409, 'STATE_CONFLICT')
+          return reasoned(
+            res,
+            409,
+            'STATE_CONFLICT',
+            m.memberType === body.memberType
+              ? 'SAME_MEMBER_TYPE'
+              : 'INVALID_MEMBERSHIP_STATUS',
+          )
         if (typeof body.reason !== 'string' || !body.reason)
           return fail(res, 400, 'VALIDATION_ERROR')
         if (body.memberType === 'GUEST') {
@@ -1293,7 +1325,7 @@ export function createMockApi() {
       if (source === 'JOIN_CODE' ? joinCode !== club.code : source !== 'SEARCH')
         return fail(res, 404, 'NOT_FOUND')
       if (!preview(club, state.memberships).canApply)
-        return fail(res, 409, 'DUPLICATE')
+        return reasoned(res, 409, 'DUPLICATE', 'DUPLICATE_MEMBERSHIP')
       state.memberships = state.memberships.filter((m) => m.clubId !== club.id)
       state.memberships.push({
         id: `m${Date.now()}`,
@@ -1424,12 +1456,21 @@ export function createMockApi() {
       if (!m) return fail(res, 404, 'NOT_FOUND')
       const invited = m.status === 'INVITED'
       if (what === 'cancel' ? m.status !== 'PENDING' : !invited)
-        return fail(res, 409, 'STATE_CONFLICT')
-      if (invited && Date.parse(m.invitationExpiresAt ?? '') <= Date.now())
-        return fail(res, 409, 'STATE_CONFLICT')
+        return reasoned(res, 409, 'STATE_CONFLICT', 'INVALID_STATE')
+      if (
+        what === 'accept' &&
+        Date.parse(m.invitationExpiresAt ?? '') <= Date.now()
+      )
+        return reasoned(res, 409, 'STATE_CONFLICT', 'INVITATION_EXPIRED')
+      const status =
+        what === 'accept'
+          ? 'ACTIVE'
+          : what === 'decline'
+            ? 'DECLINED'
+            : 'WITHDRAWN'
       if (what === 'accept') m.status = 'ACTIVE'
       else state.memberships = state.memberships.filter((x) => x !== m)
-      return send(res, 204)
+      return ok(res, { id: m.id, clubId, status })
     }
 
     // CLUB-106/107/108 (club c5 only).
@@ -1553,7 +1594,8 @@ export function createMockApi() {
       if (method === 'POST' && decide) {
         const m = list.find((x) => x.id === decide[1])
         if (!m) return fail(res, 404, 'NOT_FOUND')
-        if (m.status !== 'PENDING') return fail(res, 409, 'STATE_CONFLICT')
+        if (m.status !== 'PENDING')
+          return reasoned(res, 409, 'STATE_CONFLICT', 'INVALID_STATE')
         m.status = decide[2] === 'approve' ? 'ACTIVE' : 'REJECTED'
         return ok(res, m)
       }
@@ -1611,9 +1653,9 @@ export function createMockApi() {
           m?.status === 'INVITED' &&
           Date.parse(m.invitationExpiresAt ?? '') <= Date.now()
         if (m && ['ACTIVE', 'PENDING'].includes(m.status))
-          return fail(res, 409, 'DUPLICATE')
+          return reasoned(res, 409, 'DUPLICATE', 'DUPLICATE_MEMBERSHIP')
         if (m?.status === 'INVITED' && !expired)
-          return fail(res, 409, 'DUPLICATE')
+          return reasoned(res, 409, 'DUPLICATE', 'DUPLICATE_MEMBERSHIP')
         const type = memberType === 'GUEST' ? 'GUEST' : 'REGULAR'
         const until = inDays(30)
         if (m)

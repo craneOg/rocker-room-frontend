@@ -38,6 +38,10 @@ function client() {
 
 const base = '/api/v1/clubs/c10/memberships'
 
+const reason = (r: Reply) =>
+  (r.data as { error: { details: { reason: string }[] } }).error.details[0]
+    ?.reason
+
 describe('dev mock: club management writes', () => {
   it('lets a directly added regular member become a guest', async () => {
     const call = client()
@@ -65,5 +69,55 @@ describe('dev mock: club management writes', () => {
     expect((successor.data as { data: { role: string } }).data.role).toBe(
       'CLUB_ADMIN',
     )
+  })
+
+  it('answers a repeated or disallowed change with a 409 reason', async () => {
+    const call = client()
+    const same = await call('PUT', `${base}/u2/role`, { role: 'CLUB_ADMIN' })
+    expect([same.status, reason(same)]).toEqual([409, 'RELATION_CONFLICT'])
+    const type = await call('PUT', `${base}/u2/member-type`, {
+      memberType: 'REGULAR',
+      reason: 'test',
+    })
+    expect([type.status, reason(type)]).toEqual([409, 'SAME_MEMBER_TYPE'])
+    const resume = await call('POST', `${base}/u2/resume`, {})
+    expect([resume.status, reason(resume)]).toEqual([
+      409,
+      'INVALID_MEMBERSHIP_STATUS',
+    ])
+    await call('POST', `${base}/u3/withdraw`, {})
+    const parts = await call('PUT', `${base}/u3/parts`, { partIds: [] })
+    expect([parts.status, reason(parts)]).toEqual([
+      409,
+      'INVALID_MEMBERSHIP_STATUS',
+    ])
+  })
+
+  it('rejects a blank display name', async () => {
+    const call = client()
+    expect(
+      (await call('PATCH', `${base}/u1`, { displayName: '  ' })).status,
+    ).toBe(400)
+  })
+})
+
+describe('dev mock: invite and join request actions', () => {
+  it('returns 200 with the membership and 409 reasons', async () => {
+    const call = client()
+    const expired = await call('POST', '/api/v1/clubs/c2/memberships/m2/accept')
+    expect([expired.status, reason(expired)]).toEqual([
+      409,
+      'INVITATION_EXPIRED',
+    ])
+    const accepted = await call(
+      'POST',
+      '/api/v1/clubs/c1/memberships/m1/accept',
+    )
+    expect(accepted.status).toBe(200)
+    expect((accepted.data as { data: { status: string } }).data.status).toBe(
+      'ACTIVE',
+    )
+    const again = await call('POST', '/api/v1/clubs/c1/memberships/m1/decline')
+    expect([again.status, reason(again)]).toEqual([409, 'INVALID_STATE'])
   })
 })
