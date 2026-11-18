@@ -655,7 +655,7 @@ export function createMockApi() {
       return ok(res, { available: !TAKEN_HANDLES.includes(handle) })
     }
 
-    // CLUB-001: API-126 (path assumed) and API-011 (server not built yet). Names compare ignoring case and spaces.
+    // CLUB-001: API-126 and API-011 (both implemented by the BE). Names compare ignoring case and spaces.
     const nameKey = (n: string) => n.replace(/\s+/g, '').toLowerCase()
     // `excludeClubId` (API-126, renaming): the club itself does not count.
     const nameTaken = (n: string, excludeClubId = '') =>
@@ -685,7 +685,7 @@ export function createMockApi() {
           error: {
             code: 'DUPLICATE',
             message: 'DUPLICATE',
-            details: [{ field: 'name', reason: 'CLUB_NAME_TAKEN' }],
+            details: [{ reason: 'CLUB_NAME_TAKEN' }], // the BE sends no field
           },
         })
       const id = `c${Date.now()}${state.createdClubs.length}`
