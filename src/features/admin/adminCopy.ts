@@ -175,7 +175,6 @@ export const ADMIN_COPY = {
     ADMIN_GRANTED: '임원 권한 부여',
     ADMIN_EMERGENCY_REPLACED: '비상 임원 교체',
     ADMIN_SUCCESSION: '임원 승계',
-    ACCOUNT_RELINKED: '계정 재연결',
     ACCOUNT_WITHDRAWN: '계정 탈퇴',
     JOIN_CODE_REGENERATED: '가입 코드 재발급',
     MEMBERSHIP_APPROVED: '가입 승인',
