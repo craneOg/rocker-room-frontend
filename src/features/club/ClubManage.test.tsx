@@ -760,6 +760,39 @@ describe('CLUB-103 officer actions', () => {
       ).toBe(true)
     })
 
+    it('says the club is deactivated when nobody can take over, and still withdraws', async () => {
+      const { fetchMock } = soleOfficer({
+        [`GET ${at('/withdraw-preview')}`]: () =>
+          json({
+            target: {
+              membershipId: '21',
+              displayName: '정규채',
+              role: 'CLUB_ADMIN',
+            },
+            succession: {
+              type: 'DESIGNATED_OR_EARLIEST',
+              candidateMembershipId: null,
+              candidateName: null,
+            },
+            performanceImpacts: [],
+            teamLeaderCandidates: [],
+            warnings: [],
+          }),
+      })
+      await click(M.withdraw)
+      await screen.findByText(M.withdrawNoSuccessor)
+      expect(screen.queryByText(/null/)).toBeNull()
+      expect(
+        screen.queryByRole('combobox', { name: M.changeOfficerSuccessor }),
+      ).toBeNull()
+      await click(M.withdrawConfirm)
+
+      await screen.findByText(M.withdrawn)
+      expect(body(fetchMock, at('/withdraw'))).toEqual({
+        teamLeaderSuccessors: [],
+      })
+    })
+
     it('lists candidates from every page and offers a retry when the list fails', async () => {
       let failFirst = true
       const pageOf = (n: number, items: unknown[]) =>

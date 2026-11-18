@@ -73,6 +73,9 @@ export const MANAGE_COPY = {
     '이 멤버가 유일한 임원이라 다른 멤버에게 임원 권한이 넘어가요.',
   withdrawSuccessionTo: (name: string) =>
     `임원 권한을 이어받는 사람: ${name}님`,
+  // Not in the spec (assumed): nobody can take over, so the club is deactivated.
+  withdrawNoSuccessor:
+    '이 멤버가 유일한 임원이고 넘길 멤버가 없어 동아리가 비활성 상태가 돼요.',
   changeOfficerSuccessor: '임원 후임 바꾸기',
   withdrawConfirm: '내보내기',
   withdrawn: '소속을 해제했어요',
