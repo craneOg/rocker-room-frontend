@@ -646,7 +646,6 @@ export function createMockApi() {
             code: 'CONFIRMATION_REQUIRED',
             message: 'CONFIRMATION_REQUIRED',
             details: [{ reason: 'WITHDRAWAL_CONFIRMATION_REQUIRED' }],
-            warnings: [],
           },
         })
       // The account is gone: the session ends, like a logout.
