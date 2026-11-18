@@ -60,6 +60,7 @@ const initialState = () => ({
   c10Style: {
     profileImageUrl: null as string | null,
     themeColor: '#1A2B3C' as string | null,
+    isSearchable: true,
   },
   // Clubs made through API-011; they live in state so a reset drops them.
   createdClubs: [] as {
@@ -907,10 +908,10 @@ export function createMockApi() {
         return ok(res, {
           id: club.id,
           name: club.name,
-          description: club.description,
+          description: club.description || null,
           clubType: made?.clubType ?? clubMeta.clubType,
           status: 'ACTIVE',
-          isSearchable: made ? made.isSearchable : true,
+          isSearchable: made ? made.isSearchable : state.c10Style.isSearchable,
           profileImageUrl: made ? null : state.c10Style.profileImageUrl,
           themeColor: made ? made.themeColor : state.c10Style.themeColor,
           createdAt: ago(90),
@@ -1033,17 +1034,42 @@ export function createMockApi() {
               },
             })
         }
+        const bad = (field: string, reason = 'INVALID_VALUE') =>
+          send(res, 400, {
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: 'VALIDATION_ERROR',
+              details: [{ field, reason }],
+            },
+          })
+        // Like the backend: a blank description is stored as null (strip first), 500 chars at most.
+        let description: string | undefined
+        if ('description' in body) {
+          description =
+            typeof body.description === 'string' ? body.description.trim() : ''
+          if (description.length > 500) return bad('description')
+        }
+        if (
+          'clubType' in body &&
+          body.clubType !== 'CLUB' &&
+          body.clubType !== 'BAND'
+        )
+          return bad('clubType')
         const newType =
           typeof body.clubType === 'string' &&
           body.clubType !== clubMeta.clubType
             ? body.clubType
             : undefined
-        if (
-          newType !== undefined &&
-          (typeof body.clubTypeChangeReason !== 'string' ||
-            !body.clubTypeChangeReason)
-        )
-          return fail(res, 400, 'VALIDATION_ERROR')
+        if (newType !== undefined) {
+          if (body.clubTypeChangeReason == null)
+            return bad('clubTypeChangeReason', 'REASON_REQUIRED')
+          const reason =
+            typeof body.clubTypeChangeReason === 'string'
+              ? body.clubTypeChangeReason.trim()
+              : ''
+          if (reason.length < 1 || reason.length > 500)
+            return bad('clubTypeChangeReason')
+        }
         // API-016 photo and colour: null clears, a missing field leaves it alone.
         const key = body.profileImageKey
         if (
@@ -1051,7 +1077,13 @@ export function createMockApi() {
           key !== null &&
           !(typeof key === 'string' && key.startsWith('tmp/'))
         )
-          return fail(res, 404, 'NOT_FOUND')
+          return send(res, 404, {
+            error: {
+              code: 'NOT_FOUND',
+              message: 'NOT_FOUND',
+              details: [{ reason: 'IMAGE_KEY_NOT_FOUND' }],
+            },
+          })
         const color = body.themeColor
         if (
           'themeColor' in body &&
@@ -1061,9 +1093,9 @@ export function createMockApi() {
           return fail(res, 400, 'VALIDATION_ERROR')
 
         if (name !== undefined) club.name = name
-        if ('description' in body)
-          club.description =
-            typeof body.description === 'string' ? body.description : ''
+        if (description !== undefined) club.description = description
+        if (typeof body.isSearchable === 'boolean')
+          state.c10Style.isSearchable = body.isSearchable
         if (newType !== undefined) clubMeta.clubType = newType
         if ('profileImageKey' in body)
           state.c10Style.profileImageUrl = key === null ? null : PREVIEW_PNG
@@ -1072,9 +1104,15 @@ export function createMockApi() {
         return ok(res, {
           id: club.id,
           name: club.name,
+          description: club.description || null,
           clubType: clubMeta.clubType,
+          status: 'ACTIVE',
+          isSearchable: state.c10Style.isSearchable,
           profileImageUrl: state.c10Style.profileImageUrl,
           themeColor: state.c10Style.themeColor,
+          createdByUserId: state.user.id,
+          createdAt: ago(90),
+          updatedAt: new Date().toISOString(),
         })
       }
       if (target === 'bulk' && method === 'POST') {
@@ -1446,7 +1484,18 @@ export function createMockApi() {
         const { isSearchable } = await readBody(req)
         if (typeof isSearchable === 'boolean')
           settings.isSearchable = isSearchable
-        return ok(res, clubDto())
+        return ok(res, {
+          ...clubDto(),
+          name: '크레인 밴드 (임원)',
+          description: null,
+          clubType: 'BAND',
+          status: 'ACTIVE',
+          profileImageUrl: null,
+          themeColor: null,
+          createdByUserId: state.user.id,
+          createdAt: ago(90),
+          updatedAt: new Date().toISOString(),
+        })
       }
       if (sub === '/join-code' && method === 'GET')
         return ok(res, { joinCode: settings.joinCode })
