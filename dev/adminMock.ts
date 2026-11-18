@@ -264,7 +264,7 @@ export async function handleAdmin(ctx: MockCtx): Promise<boolean> {
       // API-121 (backend contract): only while no officer is ACTIVE; the successor becomes the only officer.
       if (admins(target).some((a) => a.status === 'ACTIVE')) {
         fail(422, 'RULE_VIOLATION', {
-          details: [{ field: 'request', reason: 'OTHER_ACTIVE_ADMIN_EXISTS' }],
+          details: [{ reason: 'OTHER_ACTIVE_ADMIN_EXISTS' }],
         })
       } else {
         const id = String(body.newAdminMembershipId)
