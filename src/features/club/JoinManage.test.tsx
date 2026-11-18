@@ -179,6 +179,29 @@ describe('CLUB-104 JoinManage: requests', () => {
     ).toHaveLength(1)
   })
 
+  it('treats 409 INVALID_STATE (no longer pending) as already handled', async () => {
+    open('/clubs/10/join-requests', {
+      'POST /api/v1/clubs/10/memberships/p1/approve': () => {
+        rows.PENDING = rows.PENDING!.filter((r) => r.id !== 'p1')
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: 'STATE_CONFLICT',
+              message: 'conflict',
+              details: [{ reason: 'INVALID_STATE' }],
+            },
+          }),
+          { status: 409 },
+        )
+      },
+    })
+    fireEvent.click(await waitFor(() => inRow('김민수', '승인')))
+
+    await screen.findByText(T.gone)
+    await waitFor(() => expect(screen.queryByText('김민수')).toBeNull())
+    expect(document.querySelector('[data-screen-id="CLUB-104"]')).toBeTruthy()
+  })
+
   it('tells the user, not the 404 page, when the request is already gone', async () => {
     open('/clubs/10/join-requests', {
       'POST /api/v1/clubs/10/memberships/p1/approve': () => {

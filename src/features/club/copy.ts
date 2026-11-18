@@ -76,12 +76,12 @@ export const MEMBER_TYPE_LABEL: Record<string, string> = {
   GUEST: '객원',
 }
 
-/** `joinSource`: JOIN_CODE and SEARCH are confirmed (API-014); the others are assumed. */
+/** `joinSource` values of the BE (confirmed). */
 export const JOIN_SOURCE_LABEL: Record<string, string> = {
-  CLUB_CREATE: '동아리 생성',
+  CLUB_CREATOR: '동아리 생성',
   JOIN_CODE: '가입 코드',
   SEARCH: '동아리 찾기',
-  DIRECT_ADD: '직접 추가',
+  ADMIN_ADDED: '직접 추가',
 }
 
 /** Shown in the type badge; unknown values fall back to the raw value. */

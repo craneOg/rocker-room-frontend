@@ -120,11 +120,15 @@ export const changeMemberType = (
 
 export type WithdrawPreview = {
   target: { membershipId: string; displayName: string; role: string }
-  /** Default successor of a sole officer (U-05), one person only; null/absent when none is needed. */
+  /**
+   * Default successor of a sole officer (U-05), one person only; null/absent when none is needed.
+   * The candidate is null when nobody can take over: the withdrawal still succeeds and the club
+   * is deactivated (BE-confirmed).
+   */
   succession?: {
     type: string
-    candidateMembershipId: string
-    candidateName: string
+    candidateMembershipId: string | null
+    candidateName: string | null
   } | null
   performanceImpacts: {
     performanceId: string

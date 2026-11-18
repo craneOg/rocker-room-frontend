@@ -256,9 +256,9 @@ const MEMBERS: MockMember[] = Array.from({ length: 30 }, (_, i) => ({
   status: i % 9 === 8 ? 'GRADUATED' : i % 8 === 7 ? 'ON_LEAVE' : 'ACTIVE',
   joinSource:
     i === 0
-      ? 'CLUB_CREATE'
+      ? 'CLUB_CREATOR'
       : i % 7 === 6 || i % 3 === 2
-        ? 'DIRECT_ADD'
+        ? 'ADMIN_ADDED'
         : i % 2
           ? 'JOIN_CODE'
           : 'SEARCH',
@@ -1212,7 +1212,7 @@ export function createMockApi() {
           return fail(res, 400, 'VALIDATION_ERROR')
         if (body.memberType === 'GUEST') {
           if (m.role === 'CLUB_ADMIN') return rule('ADMIN_CANNOT_BE_GUEST')
-          if (m.joinSource !== 'DIRECT_ADD') return rule('NOT_DIRECTLY_ADDED')
+          if (m.joinSource !== 'ADMIN_ADDED') return rule('NOT_DIRECTLY_ADDED')
         }
         m.memberType = body.memberType === 'GUEST' ? 'GUEST' : 'REGULAR'
         return ok(res, memberView(m, true))
@@ -1232,12 +1232,15 @@ export function createMockApi() {
             displayName: m.displayName ?? m.userName,
             role: m.role,
           },
+          // No candidate: the BE still answers, with null candidate fields (the club is deactivated).
           succession:
-            m.role === 'CLUB_ADMIN' && admins().length < 2 && successor
+            m.role === 'CLUB_ADMIN' && admins().length < 2
               ? {
                   type: 'DESIGNATED_OR_EARLIEST',
-                  candidateMembershipId: successor.id,
-                  candidateName: successor.displayName ?? successor.userName,
+                  candidateMembershipId: successor?.id ?? null,
+                  candidateName: successor
+                    ? (successor.displayName ?? successor.userName)
+                    : null,
                 }
               : null,
           performanceImpacts: [
@@ -1270,10 +1273,10 @@ export function createMockApi() {
       }
       if (action === 'withdraw' && method === 'POST') {
         if (!live) return fail(res, 409, 'STATE_CONFLICT')
+        // Without a successor the BE still withdraws (and deactivates the club): no LAST_ADMIN here.
         if (m.role === 'CLUB_ADMIN' && admins().length < 2) {
           const successor = successorOf(m)
-          if (!successor) return rule('LAST_ADMIN')
-          successor.role = 'CLUB_ADMIN'
+          if (successor) successor.role = 'CLUB_ADMIN'
         }
         m.status = 'WITHDRAWN'
         m.role = 'MEMBER'

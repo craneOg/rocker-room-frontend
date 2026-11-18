@@ -47,7 +47,8 @@ export const listMemberships = (
   })
 
 /**
- * 404 of an action: the membership is gone (already handled, or withdrawn). Being no ApiError,
+ * 404 (the membership is gone) or 409 INVALID_STATE (no longer pending: already handled) of an
+ * action. Being no ApiError,
  * it stays out of the global handler's full-page 404 view; the screen shows the list again.
  */
 export class MembershipGoneError extends Error {
@@ -61,7 +62,12 @@ const orGone = async <T>(run: () => Promise<T>) => {
   try {
     return await run()
   } catch (e) {
-    if (isApiError(e, 'NOT_FOUND')) throw new MembershipGoneError()
+    if (
+      isApiError(e, 'NOT_FOUND') ||
+      (isApiError(e, 'STATE_CONFLICT') &&
+        e.details.some((d) => d.reason === 'INVALID_STATE'))
+    )
+      throw new MembershipGoneError()
     throw e
   }
 }

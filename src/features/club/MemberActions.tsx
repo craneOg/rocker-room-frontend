@@ -346,7 +346,9 @@ function WithdrawDialog({ clubId, member, onClose, qc }: DialogProps) {
   // teamId -> chosen successor; teams not chosen here use the preview's first candidate.
   const [chosen, setChosen] = useState<Record<string, string>>({})
   const data = preview.data
-  const needsOfficer = data?.target.role === 'CLUB_ADMIN' && !!data.succession
+  const candidateName = data?.succession?.candidateName ?? null
+  const isSoleOfficer = data?.target.role === 'CLUB_ADMIN' && !!data.succession
+  const needsOfficer = isSoleOfficer && candidateName !== null
   // Officer candidates: the preview names one person only, so the list comes from API-020.
   const officers = useQuery({
     queryKey: ['club-member', clubId, member.id, 'officer-candidates'],
@@ -368,7 +370,7 @@ function WithdrawDialog({ clubId, member, onClose, qc }: DialogProps) {
   const officerCandidates = (officers.data ?? []).filter(
     (c) => c.role !== 'CLUB_ADMIN' && c.id !== member.id,
   )
-  const defaultOfficer = data?.succession?.candidateMembershipId
+  const defaultOfficer = data?.succession?.candidateMembershipId ?? undefined
   const officerId = officerPick ?? defaultOfficer
   const pickedOfficer = officerCandidates.find((c) => c.id === officerId)
   const leaderTeams = data?.teamLeaderCandidates ?? []
@@ -438,13 +440,14 @@ function WithdrawDialog({ clubId, member, onClose, qc }: DialogProps) {
               </li>
             )
           })}
-          {needsOfficer && data.succession ? (
+          {isSoleOfficer && candidateName === null ? (
+            <li>{M.withdrawNoSuccessor}</li>
+          ) : null}
+          {needsOfficer && candidateName !== null ? (
             <li>
               {M.withdrawSuccession}{' '}
               {M.withdrawSuccessionTo(
-                pickedOfficer
-                  ? memberName(pickedOfficer)
-                  : data.succession.candidateName,
+                pickedOfficer ? memberName(pickedOfficer) : candidateName,
               )}
               {officers.isError ? (
                 <Button
