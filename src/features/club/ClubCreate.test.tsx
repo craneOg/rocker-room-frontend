@@ -189,7 +189,7 @@ describe('CLUB-001 ClubCreate', () => {
             error: {
               code: 'DUPLICATE',
               message: 'dup',
-              details: [{ field: 'name', reason: 'CLUB_NAME_TAKEN' }],
+              details: [{ reason: 'CLUB_NAME_TAKEN' }],
             },
           }),
           { status: 409 },
