@@ -142,10 +142,11 @@ export const reactivateClub = (
     confirmed: confirmed || undefined,
   })
 
-// API-121 emergency replacement (Super Admin; the server is not built yet, the contract is the
-// backend's). It only runs while no officer is ACTIVE: the successor gets the officer role and every
-// previous officer is released, so one officer is left. 422 RULE_VIOLATION reasons:
-// SUCCESSOR_NOT_ELIGIBLE, OTHER_ACTIVE_ADMIN_EXISTS. `reason` has no confirmed length rule yet.
+// API-121 emergency replacement (Super Admin; merged in the backend, craneOg/rocker-room-backend#53).
+// It only runs while no officer is ACTIVE (unless the optional `overrideActiveAdmin` is sent, which
+// this client does not use): the successor (same club, ACTIVE, REGULAR, not an officer) gets the
+// officer role and every previous officer is released. `reason` is 1..500 chars and not blank.
+// 422 RULE_VIOLATION `details[0].reason`: OTHER_ACTIVE_ADMIN_EXISTS (checked first), SUCCESSOR_NOT_ELIGIBLE.
 export const replaceClubAdmin = (
   clubId: string,
   reason: string,
