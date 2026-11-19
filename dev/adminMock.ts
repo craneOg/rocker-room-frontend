@@ -77,6 +77,9 @@ const admins = (c: (typeof CLUBS)[number]) => {
   }
   return list
 }
+// Successor candidates of a sample club (ACTIVE, REGULAR, no officer): the only ids API-121 accepts.
+const successorIds = (clubId: string) =>
+  Array.from({ length: 4 }, (_, i) => `${clubId}9${i}`)
 /** `/api/__mock/reset`: back to the sample officers and club states. */
 export const resetAdmin = () => {
   adminsOf.clear()
@@ -105,8 +108,8 @@ export async function handleAdmin(ctx: MockCtx): Promise<boolean> {
   const mem = /^\/api\/v1\/clubs\/(\d+)\/memberships$/.exec(path)
   if (mem && method === 'GET') {
     send(res, {
-      items: Array.from({ length: 4 }, (_, i) => ({
-        id: `${mem[1]}9${i}`,
+      items: successorIds(mem[1] ?? '').map((id, i) => ({
+        id,
         displayName: `정회원 ${mem[1]}-${i + 1}`,
         userName: `정회원 ${i + 1}`,
         memberType: 'REGULAR',
@@ -265,6 +268,12 @@ export async function handleAdmin(ctx: MockCtx): Promise<boolean> {
       if (admins(target).some((a) => a.status === 'ACTIVE')) {
         fail(422, 'RULE_VIOLATION', {
           details: [{ reason: 'OTHER_ACTIVE_ADMIN_EXISTS' }],
+        })
+      } else if (
+        !successorIds(target.id).includes(String(body.newAdminMembershipId))
+      ) {
+        fail(422, 'RULE_VIOLATION', {
+          details: [{ reason: 'SUCCESSOR_NOT_ELIGIBLE' }],
         })
       } else {
         const id = String(body.newAdminMembershipId)

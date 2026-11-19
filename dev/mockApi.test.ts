@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
+import { resetAdmin } from './adminMock.ts'
 import { createMockApi } from './mockApi.ts'
 
 type Reply = { status: number; data?: Record<string, unknown> }
@@ -119,5 +120,34 @@ describe('dev mock: invite and join request actions', () => {
     )
     const again = await call('POST', '/api/v1/clubs/c1/memberships/m1/decline')
     expect([again.status, reason(again)]).toEqual([409, 'INVALID_STATE'])
+  })
+})
+
+describe('dev mock: emergency admin replacement (API-121)', () => {
+  const replace = '/api/v1/admin/clubs/9/replace-admin'
+  // The sample officers live in module state: a replacement must not leak into other tests.
+  afterEach(() => resetAdmin())
+
+  it('rejects a successor that is not one of the club candidates', async () => {
+    const call = client()
+    // Club 9 has no officer; 1990 is not one of its candidates (990..993).
+    const r = await call('POST', replace, {
+      newAdminMembershipId: '1990',
+      reason: 'x',
+    })
+    expect(r.status).toBe(422)
+    expect(reason(r)).toBe('SUCCESSOR_NOT_ELIGIBLE')
+  })
+
+  it('replaces with a listed candidate', async () => {
+    const call = client()
+    const r = await call('POST', replace, {
+      newAdminMembershipId: '990',
+      reason: 'x',
+    })
+    expect(r.status).toBe(200)
+    expect(
+      (r.data as { data: { admins: unknown[] } }).data.admins,
+    ).toHaveLength(1)
   })
 })
