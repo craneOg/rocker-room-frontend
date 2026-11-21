@@ -56,6 +56,16 @@ export const SETTINGS_COPY = {
     '넘길 멤버가 없어 동아리가 비활성 상태가 되고 서비스 관리자가 복구를 돕게 돼요.',
   leaderSuccessor: (team: string) => `${team} 팀장을 이어받을 팀원`,
   noLeader: '팀장 없음',
+  // Not in the spec (assumed): a DRAFT team is deleted with its leader.
+  leaderTeamDeleted: (team: string) =>
+    `${team} 팀은 만드는 중이라 함께 삭제돼요.`,
+  // Not in the spec (assumed): a SUBMITTED team passes leadership on automatically.
+  leaderAutoSuccessor: (team: string, name: string) =>
+    `${team} 팀장은 ${name}님에게 자동으로 넘어가요.`,
+  // Not in the spec (assumed): a team without any candidate ends up without a leader (same wording as
+  // MANAGE_COPY.withdrawLeaderNone).
+  leaderNone: (team: string) =>
+    `${team}에는 팀장을 이어받을 팀원이 없어 팀장이 비어요.`,
   leave: '동아리 나가기',
   leaveConfirmTitle: (club: string) => `정말 ${club}에서 나갈까요?`,
   leaveConfirm: '나가기',

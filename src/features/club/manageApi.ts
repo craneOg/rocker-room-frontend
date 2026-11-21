@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import { api } from '../../shared/api/client'
 import { isApiError } from '../../shared/api/errors'
 import type { ClubDetail } from './api'
+import type { TeamLeaderCandidates } from './settingsApi'
 
 // Write APIs of CLUB-101 / 102 / 103 (officers only): API-016, 030, 031, 032, 142, 146, 160-163.
 const clubPath = (clubId: string) => `/api/v1/clubs/${clubId}`
@@ -137,13 +138,7 @@ export type WithdrawPreview = {
     isTeamLeader: boolean
     teamName: string | null
   }[]
-  teamLeaderCandidates: {
-    performanceId: string
-    performanceName: string
-    teamId: string
-    teamName: string
-    candidates: { membershipId: string; displayName: string }[]
-  }[]
+  teamLeaderCandidates: TeamLeaderCandidates[]
   warnings: string[]
 }
 
