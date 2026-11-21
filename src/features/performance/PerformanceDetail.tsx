@@ -117,9 +117,11 @@ function featureRows(
       deadline: p.availabilityDeadline,
       to: `${base}/availability`,
       progress:
-        g?.availabilitySlotCount != null
-          ? T.progressAvailability(g.availabilitySlotCount)
-          : null,
+        g?.availabilitySubmitted === false
+          ? T.progressAvailabilityEmpty
+          : g?.availabilitySubmitted && g.availabilitySlotCount != null
+            ? T.progressAvailability(g.availabilitySlotCount)
+            : null,
     },
   ]
   // A feature the performance does not use is not listed.

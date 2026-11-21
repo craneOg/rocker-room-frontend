@@ -62,6 +62,7 @@ describe('SONG-001 list', () => {
           unansweredPlayabilityCount: 4,
           votes: { used: 0, limit: 3 },
           availabilitySlotCount: null,
+          availabilitySubmitted: null,
         },
       },
     })

@@ -77,6 +77,8 @@ export const VIEW_COPY = {
   progressPlayability: (n: number) => `미응답 ${n}곡`,
   progressVote: (used: number, limit: number | null) =>
     limit === null ? `선택 ${used}곡` : `선택 ${used}/${limit}곡`,
+  // Not in the spec (assumed)
+  progressAvailabilityEmpty: '미입력',
   progressAvailability: (n: number) => `입력 완료 ${n}칸`,
   summary: '공연 요약',
   tileParticipants: (n: number) => `참여자 ${n}명`,

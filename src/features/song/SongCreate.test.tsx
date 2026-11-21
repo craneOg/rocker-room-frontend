@@ -127,6 +127,7 @@ describe('SONG-002 as a member', () => {
           unansweredPlayabilityCount: null,
           votes: null,
           availabilitySlotCount: null,
+          availabilitySubmitted: null,
         },
       },
     })

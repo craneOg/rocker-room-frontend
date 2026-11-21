@@ -385,6 +385,7 @@ export function createPerformanceViewMock() {
           unansweredPlayabilityCount: 4,
           votes: null,
           availabilitySlotCount: null,
+          availabilitySubmitted: null,
         },
       })
       return true

@@ -82,6 +82,8 @@ export type MyParticipation = PerformanceMember & {
     unansweredPlayabilityCount: number | null
     votes: { used: number; limit: number | null } | null
     availabilitySlotCount: number | null
+    /** True once availability was saved at least once (an empty list counts); null with the slot count. */
+    availabilitySubmitted: boolean | null
   }
 }
 
