@@ -146,6 +146,7 @@ export const mine = (extra: Record<string, unknown> = {}) => ({
     unansweredPlayabilityCount: null,
     votes: null,
     availabilitySlotCount: null,
+    availabilitySubmitted: null,
   },
   ...extra,
 })

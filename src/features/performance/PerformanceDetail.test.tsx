@@ -74,6 +74,55 @@ describe('PERF-003 header, banner and summary', () => {
   })
 })
 
+describe('PERF-003 availability progress', () => {
+  const progressText = async (
+    availabilitySubmitted: boolean | null,
+    availabilitySlotCount: number | null,
+  ) => {
+    open('/clubs/10/performances/31', 'MEMBER', {
+      [`GET ${ME}`]: () =>
+        json(
+          mine({
+            progress: {
+              candidateSongs: null,
+              unansweredPlayabilityCount: null,
+              votes: null,
+              availabilitySlotCount,
+              availabilitySubmitted,
+            },
+          }),
+        ),
+    })
+    await findScreen('PERF-003')
+    const row = (await screen.findByText(T.featureName.availability)).closest(
+      'a',
+    )
+    return row?.textContent ?? ''
+  }
+
+  it('says 미입력 when availability was never saved', async () => {
+    const text = await progressText(false, 0)
+    expect(text).toContain(T.progressAvailabilityEmpty)
+    expect(text).not.toContain('입력 완료')
+  })
+
+  it('shows the slot count once saved', async () => {
+    expect(await progressText(true, 4)).toContain(T.progressAvailability(4))
+  })
+
+  it('shows 입력 완료 0칸 after saving an empty list', async () => {
+    const text = await progressText(true, 0)
+    expect(text).toContain('입력 완료 0칸')
+    expect(text).not.toContain(T.progressAvailabilityEmpty)
+  })
+
+  it('shows no availability progress when it is null', async () => {
+    const text = await progressText(null, null)
+    expect(text).not.toContain(T.progressAvailabilityEmpty)
+    expect(text).not.toContain('입력 완료')
+  })
+})
+
 describe('PERF-003 4 my participation card', () => {
   it('applies through the confirmation sheet (4-1)', async () => {
     const { fetchMock } = open('/clubs/10/performances/31', 'MEMBER', {

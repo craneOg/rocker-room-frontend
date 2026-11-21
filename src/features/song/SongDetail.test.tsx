@@ -328,6 +328,7 @@ describe('SONG-003 my vote', () => {
           unansweredPlayabilityCount: null,
           votes: { used: 2, limit: 3 },
           availabilitySlotCount: null,
+          availabilitySubmitted: null,
         },
       },
       routes: base(

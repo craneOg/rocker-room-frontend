@@ -51,6 +51,8 @@ const seed = () => {
   }
   return {
     slots,
+    // Members who saved at least once; saving an empty list counts too.
+    submitted: new Set(['pm71', 'pm72', 'pm73']),
     season: { start: addDays(monday, -7), end: addDays(monday, 27) },
     deadline: iso(Date.now() + 3 * DAY),
   }
@@ -183,6 +185,7 @@ export function createAvailabilityMock() {
             unansweredPlayabilityCount: null,
             votes: null,
             availabilitySlotCount: state.slots.pm71?.size ?? 0,
+            availabilitySubmitted: state.submitted.has('pm71'),
           },
         })
       }
@@ -288,6 +291,7 @@ export function createAvailabilityMock() {
       for (const x of inRange(set, f, t)) set.delete(x)
       for (const s of starts) set.add(s)
       state.slots[mineId] = set
+      state.submitted.add(mineId)
       return ok(ctx, { items: items(inRange(set, f, t)) })
     }
 
@@ -323,9 +327,7 @@ export function createAvailabilityMock() {
             ? []
             : TEAM_MEMBERS
       const people = PEOPLE.filter(([id]) => ids.includes(id))
-      const missing = people.filter(
-        ([id]) => (state.slots[id]?.size ?? 0) === 0,
-      )
+      const missing = people.filter(([id]) => !state.submitted.has(id))
       const starts = new Set<number>()
       for (const [id] of people)
         for (const t of inRange(state.slots[id] ?? new Set(), from, to))
