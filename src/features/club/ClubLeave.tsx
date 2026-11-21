@@ -184,7 +184,7 @@ export function ClubLeave() {
               <Typography variant="body2">
                 {auto
                   ? T.leaderAutoSuccessor(team, auto.displayName)
-                  : T.leaderNone(team)}
+                  : T.leaderAutoNone(team)}
               </Typography>
             </section>
           )
