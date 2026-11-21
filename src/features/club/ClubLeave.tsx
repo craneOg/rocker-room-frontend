@@ -7,7 +7,12 @@ import { isClubMember, useSession } from '../../shared/auth/session'
 import { COPY } from '../../shared/ui/copy'
 import { feedback } from '../../shared/ui/feedbackBus'
 import { ListSkeleton } from '../../shared/ui/StateViews'
-import { getLeavePreview, leaveClub, type LeavePreview } from './settingsApi'
+import {
+  getLeavePreview,
+  leaveClub,
+  type LeavePreview,
+  type TeamLeaderCandidates,
+} from './settingsApi'
 import { SETTINGS_COPY as T } from './settingsCopy'
 import { LoadError } from './SettingsViews'
 
@@ -15,6 +20,12 @@ const MEMBERSHIPS_KEY = ['me', 'memberships']
 // What the user decided on: if any of it differs at the last moment, they must confirm again.
 const signature = (p: LeavePreview) =>
   JSON.stringify([p.succession, p.performanceImpacts, p.teamLeaderCandidates])
+
+const hasPicker = (t: TeamLeaderCandidates) =>
+  t.teamStatus !== 'DRAFT' && t.teamStatus !== 'SUBMITTED'
+// The server's default; the first candidate only when it names none.
+const defaultPick = (t: TeamLeaderCandidates) =>
+  t.defaultMembershipId ?? t.candidates[0]?.membershipId
 
 /** CLUB-108: leave the current club after seeing who takes over (self only). */
 export function ClubLeave() {
@@ -29,7 +40,7 @@ export function ClubLeave() {
   const key = ['club', clubId, 'leave-preview']
   const fetchPreview = () => getLeavePreview(clubId)
   const preview = useQuery({ queryKey: key, queryFn: fetchPreview })
-  // teamId -> chosen successor; a team without a pick uses its default (first candidate).
+  // teamId -> chosen successor; a team without a pick uses its default.
   const [picks, setPicks] = useState<Record<string, string>>({})
 
   const left = useRef<Membership>(null)
@@ -52,7 +63,9 @@ export function ClubLeave() {
         clubId,
         v.membership.id,
         v.data.teamLeaderCandidates.flatMap((t) => {
-          const membershipId = picks[t.teamId] ?? t.candidates[0]?.membershipId
+          // DRAFT is deleted and SUBMITTED hands over by itself: no successor is sent.
+          if (!hasPicker(t)) return []
+          const membershipId = picks[t.teamId] ?? defaultPick(t)
           return membershipId ? [{ teamId: t.teamId, membershipId }] : []
         }),
       ),
@@ -157,34 +170,59 @@ export function ClubLeave() {
         </section>
       ) : null}
 
-      {leaderTeams.map((t) => (
-        <section key={t.teamId} className="start-section">
-          <label htmlFor={`leader-${t.teamId}`}>
-            <Typography variant="body2" weight="bold">
-              {T.leaderSuccessor(`${t.performanceName} ${t.teamName}`)}
-            </Typography>
-          </label>
-          <select
-            id={`leader-${t.teamId}`}
-            className="leave-select"
-            disabled={t.candidates.length === 0}
-            value={picks[t.teamId] ?? t.candidates[0]?.membershipId ?? ''}
-            onChange={(e) =>
-              setPicks((p) => ({ ...p, [t.teamId]: e.target.value }))
-            }
-          >
-            {t.candidates.length === 0 ? (
-              <option value="">{T.noLeader}</option>
-            ) : (
-              t.candidates.map((c) => (
-                <option key={c.membershipId} value={c.membershipId}>
-                  {c.displayName}
-                </option>
-              ))
-            )}
-          </select>
-        </section>
-      ))}
+      {leaderTeams.map((t) => {
+        const team = `${t.performanceName} ${t.teamName}`
+        if (t.teamStatus === 'DRAFT')
+          return (
+            <section key={t.teamId} className="start-section">
+              <Typography variant="body2">
+                {T.leaderTeamDeleted(team)}
+              </Typography>
+            </section>
+          )
+        if (t.teamStatus === 'SUBMITTED') {
+          const auto = t.candidates.find(
+            (c) => c.membershipId === t.defaultMembershipId,
+          )
+          return (
+            <section key={t.teamId} className="start-section">
+              <Typography variant="body2">
+                {auto
+                  ? T.leaderAutoSuccessor(team, auto.displayName)
+                  : T.leaderAutoSuccessorNoName(team)}
+              </Typography>
+            </section>
+          )
+        }
+        return (
+          <section key={t.teamId} className="start-section">
+            <label htmlFor={`leader-${t.teamId}`}>
+              <Typography variant="body2" weight="bold">
+                {T.leaderSuccessor(team)}
+              </Typography>
+            </label>
+            <select
+              id={`leader-${t.teamId}`}
+              className="leave-select"
+              disabled={t.candidates.length === 0}
+              value={picks[t.teamId] ?? defaultPick(t) ?? ''}
+              onChange={(e) =>
+                setPicks((p) => ({ ...p, [t.teamId]: e.target.value }))
+              }
+            >
+              {t.candidates.length === 0 ? (
+                <option value="">{T.noLeader}</option>
+              ) : (
+                t.candidates.map((c) => (
+                  <option key={c.membershipId} value={c.membershipId}>
+                    {c.displayName}
+                  </option>
+                ))
+              )}
+            </select>
+          </section>
+        )
+      })}
 
       <Button
         color="negative"

@@ -67,6 +67,8 @@ const preview = (over: Record<string, unknown> = {}) => ({
       performanceName: '2026 가을 공연',
       teamId: '41',
       teamName: '1팀',
+      teamStatus: 'APPROVED',
+      defaultMembershipId: '23',
       candidates: [
         { membershipId: '23', displayName: '김하늘' },
         { membershipId: '24', displayName: '박서연' },
@@ -185,6 +187,101 @@ describe('CLUB-108 ClubLeave', () => {
     await screen.findByText(COPY.notFoundTitle)
   })
 
+  describe('team status', () => {
+    const team = (
+      teamId: string,
+      teamName: string,
+      teamStatus: string,
+      defaultMembershipId: string | null,
+      candidates: { membershipId: string; displayName: string }[],
+    ) => ({
+      performanceId: '31',
+      performanceName: '2026 가을 공연',
+      teamId,
+      teamName,
+      teamStatus,
+      defaultMembershipId,
+      candidates,
+    })
+    const both = [
+      { membershipId: '23', displayName: '김하늘' },
+      { membershipId: '24', displayName: '박서연' },
+    ]
+    const leaveNow = async () => {
+      fireEvent.click(leaveButton())
+      await screen.findByText(T.leaveConfirmTitle('Crane Band'))
+      confirmInDialog()
+    }
+
+    it('shows a deletion notice for a DRAFT team, with no picker and no successor sent', async () => {
+      const { fetchMock } = openScreen({
+        [`GET ${PREVIEW}`]: () =>
+          json(
+            preview({
+              teamLeaderCandidates: [team('42', '2팀', 'DRAFT', null, [])],
+            }),
+          ),
+      })
+      await screen.findByText(T.leaderTeamDeleted('2026 가을 공연 2팀'))
+      expect(screen.queryByRole('combobox')).toBeNull()
+      await leaveNow()
+      await waitFor(() => expect(callsTo(fetchMock, WITHDRAW)).toHaveLength(1))
+      expect(sentBody(fetchMock)).toEqual({ teamLeaderSuccessors: [] })
+    })
+
+    it('names the automatic successor of a SUBMITTED team, with no picker and no successor sent', async () => {
+      const { fetchMock } = openScreen({
+        [`GET ${PREVIEW}`]: () =>
+          json(
+            preview({
+              teamLeaderCandidates: [
+                team('43', '3팀', 'SUBMITTED', '24', [...both].reverse()),
+              ],
+            }),
+          ),
+      })
+      await screen.findByText(
+        T.leaderAutoSuccessor('2026 가을 공연 3팀', '박서연'),
+      )
+      expect(screen.queryByRole('combobox')).toBeNull()
+      await leaveNow()
+      await waitFor(() => expect(callsTo(fetchMock, WITHDRAW)).toHaveLength(1))
+      expect(sentBody(fetchMock)).toEqual({ teamLeaderSuccessors: [] })
+    })
+
+    it('uses the name-less notice when the SUBMITTED default is not among the candidates', async () => {
+      openScreen({
+        [`GET ${PREVIEW}`]: () =>
+          json(
+            preview({
+              teamLeaderCandidates: [
+                team('43', '3팀', 'SUBMITTED', '99', both),
+              ],
+            }),
+          ),
+      })
+      await screen.findByText(T.leaderAutoSuccessorNoName('2026 가을 공연 3팀'))
+    })
+
+    it('defaults an APPROVED team to defaultMembershipId even when it is not the first candidate', async () => {
+      const { fetchMock } = openScreen({
+        [`GET ${PREVIEW}`]: () =>
+          json(
+            preview({
+              teamLeaderCandidates: [team('41', '1팀', 'APPROVED', '24', both)],
+            }),
+          ),
+      })
+      const select = (await screen.findByRole('combobox')) as HTMLSelectElement
+      expect(select.value).toBe('24')
+      await leaveNow()
+      await waitFor(() => expect(callsTo(fetchMock, WITHDRAW)).toHaveLength(1))
+      expect(sentBody(fetchMock)).toEqual({
+        teamLeaderSuccessors: [{ teamId: '41', membershipId: '24' }],
+      })
+    })
+  })
+
   it('goes to the start screen when no other club is left', async () => {
     const { router } = openScreen({ [`GET ${PREVIEW}`]: () => json(plain) }, [
       crane,
@@ -223,6 +320,8 @@ describe('CLUB-108 ClubLeave', () => {
                     performanceName: '2026 가을 공연',
                     teamId: '41',
                     teamName: '1팀',
+                    teamStatus: 'APPROVED',
+                    defaultMembershipId: '25',
                     candidates: [{ membershipId: '25', displayName: '이도윤' }],
                   },
                 ],

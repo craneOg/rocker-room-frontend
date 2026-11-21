@@ -666,6 +666,8 @@ describe('CLUB-103 officer actions', () => {
               performanceName: '가을 공연',
               teamId: '41',
               teamName: '1팀',
+              teamStatus: 'APPROVED',
+              defaultMembershipId: '23',
               candidates: [
                 { membershipId: '23', displayName: '김하늘' },
                 { membershipId: '24', displayName: '박서연' },
@@ -697,6 +699,83 @@ describe('CLUB-103 officer actions', () => {
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/clubs/10/members'),
     )
+  })
+
+  describe('withdrawing a team leader by team status', () => {
+    const team = (
+      teamId: string,
+      teamName: string,
+      teamStatus: string,
+      defaultMembershipId: string | null,
+      candidates: { membershipId: string; displayName: string }[],
+    ) => ({
+      performanceId: '31',
+      performanceName: '가을 공연',
+      teamId,
+      teamName,
+      teamStatus,
+      defaultMembershipId,
+      candidates,
+    })
+    const people = [
+      { membershipId: '23', displayName: '김하늘' },
+      { membershipId: '24', displayName: '박서연' },
+    ]
+    const withTeams = (teams: unknown[]) =>
+      open('/clubs/10/members/21', 'CLUB_ADMIN', {
+        [`GET ${at('/withdraw-preview')}`]: () =>
+          json({
+            target: {
+              membershipId: '21',
+              displayName: '정규채',
+              role: 'MEMBER',
+            },
+            succession: null,
+            performanceImpacts: [],
+            teamLeaderCandidates: teams,
+            warnings: [],
+          }),
+        [`POST ${at('/withdraw')}`]: () => json({}),
+      })
+
+    it('shows notices for DRAFT and SUBMITTED teams, with no picker and no successor sent', async () => {
+      const { fetchMock } = withTeams([
+        team('42', '2팀', 'DRAFT', null, []),
+        team('43', '3팀', 'SUBMITTED', '24', [...people].reverse()),
+        team('44', '4팀', 'SUBMITTED', null, []),
+      ])
+      await click(M.withdraw)
+      await screen.findByText(M.withdrawTeamDeleted('가을 공연', '2팀'))
+      await screen.findByText(
+        M.withdrawLeaderAuto('가을 공연', '3팀', '박서연'),
+      )
+      await screen.findByText(M.withdrawLeaderAutoNoName('가을 공연', '4팀'))
+      expect(screen.queryByRole('combobox')).toBeNull()
+      await click(M.withdrawConfirm)
+
+      await screen.findByText(M.withdrawn)
+      expect(body(fetchMock, at('/withdraw'))).toEqual({
+        teamLeaderSuccessors: [],
+      })
+    })
+
+    it('defaults an APPROVED team to defaultMembershipId and sends it when unchanged', async () => {
+      const { fetchMock } = withTeams([
+        team('41', '1팀', 'APPROVED', '24', people),
+      ])
+      await click(M.withdraw)
+      await screen.findByText(M.withdrawLeader('가을 공연', '1팀', '박서연'))
+      const select = screen.getByRole('combobox', {
+        name: `1팀 ${M.changeSuccessor}`,
+      }) as HTMLSelectElement
+      expect(select.value).toBe('24')
+      await click(M.withdrawConfirm)
+
+      await screen.findByText(M.withdrawn)
+      expect(body(fetchMock, at('/withdraw'))).toEqual({
+        teamLeaderSuccessors: [{ teamId: '41', membershipId: '24' }],
+      })
+    })
   })
 
   describe('withdrawing the only officer', () => {

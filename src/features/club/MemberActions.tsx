@@ -343,7 +343,7 @@ function WithdrawDialog({ clubId, member, onClose, qc }: DialogProps) {
     queryFn: () => getWithdrawPreview(clubId, member.id),
     gcTime: 0,
   })
-  // teamId -> chosen successor; teams not chosen here use the preview's first candidate.
+  // teamId -> chosen successor; teams not chosen here use the preview's default.
   const [chosen, setChosen] = useState<Record<string, string>>({})
   const data = preview.data
   const candidateName = data?.succession?.candidateName ?? null
@@ -374,8 +374,11 @@ function WithdrawDialog({ clubId, member, onClose, qc }: DialogProps) {
   const officerId = officerPick ?? defaultOfficer
   const pickedOfficer = officerCandidates.find((c) => c.id === officerId)
   const leaderTeams = data?.teamLeaderCandidates ?? []
+  // DRAFT is deleted and SUBMITTED hands over by itself: no successor is sent for either.
   const successors = leaderTeams.flatMap((t) => {
-    const id = chosen[t.teamId] ?? t.candidates[0]?.membershipId
+    if (t.teamStatus === 'DRAFT' || t.teamStatus === 'SUBMITTED') return []
+    const id =
+      chosen[t.teamId] ?? t.defaultMembershipId ?? t.candidates[0]?.membershipId
     return id === undefined ? [] : [{ teamId: t.teamId, membershipId: id }]
   })
   const kick = useMutation({
@@ -410,8 +413,33 @@ function WithdrawDialog({ clubId, member, onClose, qc }: DialogProps) {
             <li>{M.withdrawPerformances(data.performanceImpacts.length)}</li>
           ) : null}
           {leaderTeams.map((t) => {
+            if (t.teamStatus === 'DRAFT')
+              return (
+                <li key={t.teamId}>
+                  {M.withdrawTeamDeleted(t.performanceName, t.teamName)}
+                </li>
+              )
+            if (t.teamStatus === 'SUBMITTED') {
+              const auto = t.candidates.find(
+                (c) => c.membershipId === t.defaultMembershipId,
+              )
+              return (
+                <li key={t.teamId}>
+                  {auto
+                    ? M.withdrawLeaderAuto(
+                        t.performanceName,
+                        t.teamName,
+                        auto.displayName,
+                      )
+                    : M.withdrawLeaderAutoNoName(t.performanceName, t.teamName)}
+                </li>
+              )
+            }
             const picked =
               t.candidates.find((c) => c.membershipId === chosen[t.teamId]) ??
+              t.candidates.find(
+                (c) => c.membershipId === t.defaultMembershipId,
+              ) ??
               t.candidates[0]
             return (
               <li key={t.teamId}>

@@ -1321,22 +1321,46 @@ export function createMockApi() {
               teamName: '1팀',
             },
           ],
-          teamLeaderCandidates: [
-            {
+          teamLeaderCandidates: (() => {
+            const candidates = MEMBERS.filter(
+              (x) => x.id !== m.id && x.status === 'ACTIVE',
+            )
+              .slice(0, 2)
+              .map((x) => ({
+                membershipId: x.id,
+                displayName: x.displayName ?? x.userName,
+              }))
+            const team = {
               performanceId: 'f1',
               performanceName: '정기 공연',
-              teamId: 't1',
-              teamName: '1팀',
-              candidates: MEMBERS.filter(
-                (x) => x.id !== m.id && x.status === 'ACTIVE',
-              )
-                .slice(0, 2)
-                .map((x) => ({
-                  membershipId: x.id,
-                  displayName: x.displayName ?? x.userName,
-                })),
-            },
-          ],
+            }
+            return [
+              {
+                ...team,
+                teamId: 't1',
+                teamName: '1팀',
+                teamStatus: 'APPROVED',
+                defaultMembershipId: candidates[0]?.membershipId ?? null,
+                candidates,
+              },
+              {
+                ...team,
+                teamId: 't2',
+                teamName: '2팀',
+                teamStatus: 'DRAFT',
+                defaultMembershipId: null,
+                candidates: [],
+              },
+              {
+                ...team,
+                teamId: 't3',
+                teamName: '3팀',
+                teamStatus: 'SUBMITTED',
+                defaultMembershipId: candidates[0]?.membershipId ?? null,
+                candidates,
+              },
+            ]
+          })(),
           warnings: [],
         })
       }
@@ -1611,9 +1635,32 @@ export function createMockApi() {
               performanceName: '2026 가을 공연',
               teamId: '41',
               teamName: '1팀',
+              teamStatus: 'APPROVED',
+              defaultMembershipId: '23',
               candidates: [
                 { membershipId: '23', displayName: '김하늘' },
                 { membershipId: '24', displayName: '박서연' },
+              ],
+            },
+            {
+              performanceId: '31',
+              performanceName: '2026 가을 공연',
+              teamId: '42',
+              teamName: '2팀',
+              teamStatus: 'DRAFT',
+              defaultMembershipId: null,
+              candidates: [],
+            },
+            {
+              performanceId: '31',
+              performanceName: '2026 가을 공연',
+              teamId: '43',
+              teamName: '3팀',
+              teamStatus: 'SUBMITTED',
+              defaultMembershipId: '24',
+              candidates: [
+                { membershipId: '24', displayName: '박서연' },
+                { membershipId: '23', displayName: '김하늘' },
               ],
             },
           ],

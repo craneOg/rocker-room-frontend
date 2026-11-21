@@ -68,6 +68,15 @@ export const MANAGE_COPY = {
     `${performance} ${team}의 팀장이 ${successor}님으로 바뀌어요.`,
   withdrawLeaderNone: (performance: string, team: string) =>
     `${performance} ${team}에는 팀장을 이어받을 팀원이 없어 팀장이 비어요.`,
+  // Not in the spec (assumed): a DRAFT team is deleted with its leader.
+  withdrawTeamDeleted: (performance: string, team: string) =>
+    `${performance} ${team} 팀은 만드는 중이라 함께 삭제돼요.`,
+  // Not in the spec (assumed): a SUBMITTED team passes leadership on automatically.
+  withdrawLeaderAuto: (performance: string, team: string, successor: string) =>
+    `${performance} ${team} 팀장은 ${successor}님에게 자동으로 넘어가요.`,
+  // Not in the spec (assumed): same, when the successor's name is not in the list.
+  withdrawLeaderAutoNoName: (performance: string, team: string) =>
+    `${performance} ${team} 팀장은 다음 팀원에게 자동으로 넘어가요.`,
   changeSuccessor: '후임 바꾸기',
   withdrawSuccession:
     '이 멤버가 유일한 임원이라 다른 멤버에게 임원 권한이 넘어가요.',

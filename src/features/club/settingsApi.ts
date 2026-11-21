@@ -70,6 +70,9 @@ export type TeamLeaderCandidates = {
   performanceName: string
   teamId: string
   teamName: string
+  /** DRAFT: the team is deleted; SUBMITTED: leadership passes to `defaultMembershipId` automatically. */
+  teamStatus: string
+  defaultMembershipId: string | null
   candidates: { membershipId: string; displayName: string }[]
 }
 export type LeavePreview = {
