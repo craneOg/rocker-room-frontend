@@ -8,10 +8,11 @@ import { COPY } from '../../shared/ui/copy'
 import { feedback } from '../../shared/ui/feedbackBus'
 import { ListSkeleton } from '../../shared/ui/StateViews'
 import {
+  defaultLeaderPick,
   getLeavePreview,
+  hasLeaderPicker,
   leaveClub,
   type LeavePreview,
-  type TeamLeaderCandidates,
 } from './settingsApi'
 import { SETTINGS_COPY as T } from './settingsCopy'
 import { LoadError } from './SettingsViews'
@@ -20,12 +21,6 @@ const MEMBERSHIPS_KEY = ['me', 'memberships']
 // What the user decided on: if any of it differs at the last moment, they must confirm again.
 const signature = (p: LeavePreview) =>
   JSON.stringify([p.succession, p.performanceImpacts, p.teamLeaderCandidates])
-
-const hasPicker = (t: TeamLeaderCandidates) =>
-  t.teamStatus !== 'DRAFT' && t.teamStatus !== 'SUBMITTED'
-// The server's default; the first candidate only when it names none.
-const defaultPick = (t: TeamLeaderCandidates) =>
-  t.defaultMembershipId ?? t.candidates[0]?.membershipId
 
 /** CLUB-108: leave the current club after seeing who takes over (self only). */
 export function ClubLeave() {
@@ -64,8 +59,8 @@ export function ClubLeave() {
         v.membership.id,
         v.data.teamLeaderCandidates.flatMap((t) => {
           // DRAFT is deleted and SUBMITTED hands over by itself: no successor is sent.
-          if (!hasPicker(t)) return []
-          const membershipId = picks[t.teamId] ?? defaultPick(t)
+          if (!hasLeaderPicker(t)) return []
+          const membershipId = picks[t.teamId] ?? defaultLeaderPick(t)
           return membershipId ? [{ teamId: t.teamId, membershipId }] : []
         }),
       ),
@@ -189,7 +184,7 @@ export function ClubLeave() {
               <Typography variant="body2">
                 {auto
                   ? T.leaderAutoSuccessor(team, auto.displayName)
-                  : T.leaderAutoSuccessorNoName(team)}
+                  : T.leaderNone(team)}
               </Typography>
             </section>
           )
@@ -205,7 +200,7 @@ export function ClubLeave() {
               id={`leader-${t.teamId}`}
               className="leave-select"
               disabled={t.candidates.length === 0}
-              value={picks[t.teamId] ?? defaultPick(t) ?? ''}
+              value={picks[t.teamId] ?? defaultLeaderPick(t) ?? ''}
               onChange={(e) =>
                 setPicks((p) => ({ ...p, [t.teamId]: e.target.value }))
               }

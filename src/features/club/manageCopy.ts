@@ -74,9 +74,6 @@ export const MANAGE_COPY = {
   // Not in the spec (assumed): a SUBMITTED team passes leadership on automatically.
   withdrawLeaderAuto: (performance: string, team: string, successor: string) =>
     `${performance} ${team} 팀장은 ${successor}님에게 자동으로 넘어가요.`,
-  // Not in the spec (assumed): same, when the successor's name is not in the list.
-  withdrawLeaderAutoNoName: (performance: string, team: string) =>
-    `${performance} ${team} 팀장은 다음 팀원에게 자동으로 넘어가요.`,
   changeSuccessor: '후임 바꾸기',
   withdrawSuccession:
     '이 멤버가 유일한 임원이라 다른 멤버에게 임원 권한이 넘어가요.',

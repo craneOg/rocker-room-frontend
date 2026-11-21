@@ -249,18 +249,21 @@ describe('CLUB-108 ClubLeave', () => {
       expect(sentBody(fetchMock)).toEqual({ teamLeaderSuccessors: [] })
     })
 
-    it('uses the name-less notice when the SUBMITTED default is not among the candidates', async () => {
-      openScreen({
+    it('says the team is left without a leader when a SUBMITTED team has no candidate', async () => {
+      const { fetchMock } = openScreen({
         [`GET ${PREVIEW}`]: () =>
           json(
             preview({
-              teamLeaderCandidates: [
-                team('43', '3팀', 'SUBMITTED', '99', both),
-              ],
+              teamLeaderCandidates: [team('43', '3팀', 'SUBMITTED', null, [])],
             }),
           ),
       })
-      await screen.findByText(T.leaderAutoSuccessorNoName('2026 가을 공연 3팀'))
+      await screen.findByText(T.leaderNone('2026 가을 공연 3팀'))
+      expect(screen.queryByText(/자동으로 넘어가요/)).toBeNull()
+      expect(screen.queryByRole('combobox')).toBeNull()
+      await leaveNow()
+      await waitFor(() => expect(callsTo(fetchMock, WITHDRAW)).toHaveLength(1))
+      expect(sentBody(fetchMock)).toEqual({ teamLeaderSuccessors: [] })
     })
 
     it('defaults an APPROVED team to defaultMembershipId even when it is not the first candidate', async () => {

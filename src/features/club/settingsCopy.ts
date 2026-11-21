@@ -62,9 +62,10 @@ export const SETTINGS_COPY = {
   // Not in the spec (assumed): a SUBMITTED team passes leadership on automatically.
   leaderAutoSuccessor: (team: string, name: string) =>
     `${team} 팀장은 ${name}님에게 자동으로 넘어가요.`,
-  // Not in the spec (assumed): same, when the successor's name is not in the list.
-  leaderAutoSuccessorNoName: (team: string) =>
-    `${team} 팀장은 다음 팀원에게 자동으로 넘어가요.`,
+  // Not in the spec (assumed): a team without any candidate ends up without a leader (same wording as
+  // MANAGE_COPY.withdrawLeaderNone).
+  leaderNone: (team: string) =>
+    `${team}에는 팀장을 이어받을 팀원이 없어 팀장이 비어요.`,
   leave: '동아리 나가기',
   leaveConfirmTitle: (club: string) => `정말 ${club}에서 나갈까요?`,
   leaveConfirm: '나가기',

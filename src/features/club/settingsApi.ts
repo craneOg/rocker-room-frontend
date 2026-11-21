@@ -1,5 +1,6 @@
 import { api } from '../../shared/api/client'
 import { isApiError } from '../../shared/api/errors'
+import type { TeamStatus } from '../team/teamApi'
 
 // CLUB-106 / 107 / 108 (Notion API spec; confirmed unless noted). IDs are strings.
 const club = (clubId: string) => `/api/v1/clubs/${clubId}`
@@ -71,10 +72,16 @@ export type TeamLeaderCandidates = {
   teamId: string
   teamName: string
   /** DRAFT: the team is deleted; SUBMITTED: leadership passes to `defaultMembershipId` automatically. */
-  teamStatus: string
+  teamStatus: TeamStatus
   defaultMembershipId: string | null
   candidates: { membershipId: string; displayName: string }[]
 }
+/** DRAFT is deleted and SUBMITTED hands over by itself: only the other teams let the user pick. */
+export const hasLeaderPicker = (t: TeamLeaderCandidates) =>
+  t.teamStatus !== 'DRAFT' && t.teamStatus !== 'SUBMITTED'
+/** The server's default successor; the first candidate only when it names none. */
+export const defaultLeaderPick = (t: TeamLeaderCandidates) =>
+  t.defaultMembershipId ?? t.candidates[0]?.membershipId
 export type LeavePreview = {
   role: string
   succession?: {

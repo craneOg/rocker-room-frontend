@@ -32,6 +32,7 @@ import {
 } from './manageCopy'
 import { ActionModal, RadioList, showRuleCopy } from './ManageBits'
 import { memberName } from './MemberBits'
+import { defaultLeaderPick, hasLeaderPicker } from './settingsApi'
 
 type Dialogs = 'status' | 'parts' | 'type' | 'withdraw' | null
 type Props = { clubId: string; member: MemberDetail; isSelf: boolean }
@@ -376,9 +377,8 @@ function WithdrawDialog({ clubId, member, onClose, qc }: DialogProps) {
   const leaderTeams = data?.teamLeaderCandidates ?? []
   // DRAFT is deleted and SUBMITTED hands over by itself: no successor is sent for either.
   const successors = leaderTeams.flatMap((t) => {
-    if (t.teamStatus === 'DRAFT' || t.teamStatus === 'SUBMITTED') return []
-    const id =
-      chosen[t.teamId] ?? t.defaultMembershipId ?? t.candidates[0]?.membershipId
+    if (!hasLeaderPicker(t)) return []
+    const id = chosen[t.teamId] ?? defaultLeaderPick(t)
     return id === undefined ? [] : [{ teamId: t.teamId, membershipId: id }]
   })
   const kick = useMutation({
@@ -431,7 +431,7 @@ function WithdrawDialog({ clubId, member, onClose, qc }: DialogProps) {
                         t.teamName,
                         auto.displayName,
                       )
-                    : M.withdrawLeaderAutoNoName(t.performanceName, t.teamName)}
+                    : M.withdrawLeaderNone(t.performanceName, t.teamName)}
                 </li>
               )
             }
