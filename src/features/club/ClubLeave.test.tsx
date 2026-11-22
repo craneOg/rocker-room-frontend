@@ -258,7 +258,7 @@ describe('CLUB-108 ClubLeave', () => {
             }),
           ),
       })
-      await screen.findByText(T.leaderNone('2026 가을 공연 3팀'))
+      await screen.findByText(T.leaderAutoNone('2026 가을 공연 3팀'))
       expect(screen.queryByText(/자동으로 넘어가요/)).toBeNull()
       expect(screen.queryByRole('combobox')).toBeNull()
       await leaveNow()

@@ -431,7 +431,7 @@ function WithdrawDialog({ clubId, member, onClose, qc }: DialogProps) {
                         t.teamName,
                         auto.displayName,
                       )
-                    : M.withdrawLeaderNone(t.performanceName, t.teamName)}
+                    : M.withdrawLeaderAutoNone(t.performanceName, t.teamName)}
                 </li>
               )
             }

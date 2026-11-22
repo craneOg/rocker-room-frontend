@@ -749,12 +749,8 @@ describe('CLUB-103 officer actions', () => {
       await screen.findByText(
         M.withdrawLeaderAuto('가을 공연', '3팀', '박서연'),
       )
-      await screen.findByText(M.withdrawLeaderNone('가을 공연', '4팀'))
-      expect(
-        screen.queryByText(
-          '가을 공연 4팀 팀장은 다음 팀원에게 자동으로 넘어가요.',
-        ),
-      ).toBeNull()
+      await screen.findByText(M.withdrawLeaderAutoNone('가을 공연', '4팀'))
+      expect(screen.queryByText(/4팀의 팀장은 .*자동으로 넘어가요/)).toBeNull()
       expect(screen.queryByRole('combobox')).toBeNull()
       await click(M.withdrawConfirm)
 
