@@ -28,6 +28,12 @@ const ME = {
   onboardingRequired: false,
   isSuperAdmin: false,
 }
+// A fixed server answer: 00:30 KST is still the previous day in UTC, and it is not today + 90 days.
+const WITHDRAWN = {
+  withdrawnAt: '2026-11-19T00:30:00+09:00',
+  restorableUntil: '2027-02-17T00:30:00+09:00',
+  successions: { clubs: [], teams: [] },
+}
 const PREVIEW = '/api/v1/me/withdrawal-preview'
 const WITHDRAW = '/api/v1/me/withdrawal'
 
@@ -91,7 +97,7 @@ function open(
     [`GET ${API_PATHS.memberships}`]: () =>
       json({ items: [membership('MEMBER')] }),
     [`GET ${PREVIEW}`]: () => json({ clubs, warnings: [] }),
-    [`POST ${WITHDRAW}`]: () => json({ successions: { clubs: [], teams: [] } }),
+    [`POST ${WITHDRAW}`]: () => json(WITHDRAWN),
     ...extra,
   })
   renderApp('/me/withdrawal')
@@ -196,8 +202,8 @@ describe('MY-004 MyWithdrawal', () => {
       teamLeaderSuccessors: [{ teamId: 't1', membershipId: 'm5' }],
       confirmed: true,
     })
-    // Today + 90 days, as a date.
-    expect(screen.getByText(/\d{4}\.\d{2}\.\d{2}까지/)).toBeTruthy()
+    // The server's restore deadline, as a KST date (UTC would say 02.16).
+    expect(screen.getByText(/2027\.02\.17까지/)).toBeTruthy()
   })
 
   it('sends the defaults when nothing was changed', async () => {
@@ -264,9 +270,7 @@ describe('MY-004 MyWithdrawal', () => {
       },
       [`POST ${WITHDRAW}`]: () => {
         posts += 1
-        return posts === 1
-          ? eligibilityError()
-          : json({ successions: { clubs: [], teams: [] } })
+        return posts === 1 ? eligibilityError() : json(WITHDRAWN)
       },
     })
     await toStep2()

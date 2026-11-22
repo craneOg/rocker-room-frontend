@@ -652,7 +652,13 @@ export function createMockApi() {
       return send(
         res,
         200,
-        { data: { successions: { clubs: [], teams: [] } } },
+        {
+          data: {
+            withdrawnAt: ago(0),
+            restorableUntil: inDays(90),
+            successions: { clubs: [], teams: [] },
+          },
+        },
         { 'Set-Cookie': setCookie(COOKIE_SESSION, false) },
       )
     }

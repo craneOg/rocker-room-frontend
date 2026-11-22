@@ -42,5 +42,12 @@ export type WithdrawalBody = {
   confirmed: true
 }
 
+/** API-009 response (BE-confirmed): KST ISO-8601 times; `successions` is not used by the screen. */
+export type WithdrawalResult = {
+  withdrawnAt: string
+  /** `withdrawnAt` + 90 days: the account can be restored until then (same field as API-131). */
+  restorableUntil: string
+}
+
 export const withdrawService = (body: WithdrawalBody) =>
-  api.post<unknown>(PATH, body)
+  api.post<WithdrawalResult>(PATH, body)

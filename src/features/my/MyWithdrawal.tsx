@@ -2,6 +2,7 @@ import { Button, TextField, Typography } from '@montage-ui/core'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { isApiError } from '../../shared/api/errors'
+import { formatKstYmd } from '../../shared/lib/time'
 import { feedback } from '../../shared/ui/feedbackBus'
 import { ErrorState, ListSkeleton } from '../../shared/ui/StateViews'
 import { MY_COPY as T } from './copy'
@@ -12,20 +13,6 @@ import {
   type WithdrawalBody,
   type WithdrawalClub,
 } from './withdrawApi'
-
-const KEEP_DAYS = 90
-
-/** "2027.02.08" of today + 90 days in KST. */
-const recoverDate = () => {
-  const parts = new Intl.DateTimeFormat('ko-KR', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date(Date.now() + KEEP_DAYS * 86_400_000))
-  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? ''
-  return `${get('year')}.${get('month')}.${get('day')}`
-}
 
 const NOTICE = [
   T.noticeLeave,
@@ -56,7 +43,8 @@ export function MyWithdrawal() {
 
   const withdraw = useMutation({
     mutationFn: (body: WithdrawalBody) => withdrawService(body),
-    onSuccess: () => setDoneFor(recoverDate()),
+    // The server's restore deadline ("2027.02.17" in KST), not a client-side guess.
+    onSuccess: (r) => setDoneFor(formatKstYmd(r.restorableUntil)),
     onError: (e) => {
       if (
         isApiError(e, 'RULE_VIOLATION') &&
