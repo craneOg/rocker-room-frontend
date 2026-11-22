@@ -100,7 +100,7 @@ export const teamDetail = (
     ...extra,
   })
 
-/** MutationResult of the team writes; `version` is what the next write must send. */
+/** Answer of the team writes (API-064-074, 155): the backend names the team `team`; `version` is what the next write must send. */
 export const mutation = (
   version = '3',
   extra: Record<string, unknown> = {},
@@ -109,7 +109,7 @@ export const mutation = (
 ) =>
   json(
     {
-      resource: {
+      team: {
         id: '201',
         performanceId: '31',
         name: 'Crane Team',
@@ -155,14 +155,14 @@ export const stubAnimations = () => {
   Element.prototype.getAnimations = () => []
 }
 
-/** Answer of API-062: the backend names the created team `team` (the other writes `resource`). */
+/** Answer of API-062 (creation): the backend names the created team `resource` (the other writes `team`). */
 export const created = (
   extra: Record<string, unknown> = {},
   warnings: unknown[] = [],
 ) =>
   json(
     {
-      team: {
+      resource: {
         id: '201',
         performanceId: '31',
         name: 'Crane Team',

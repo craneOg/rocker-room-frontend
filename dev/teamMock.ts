@@ -183,8 +183,8 @@ const brief = (t: Team) => ({
   leaderMembershipId: t.leader,
   version: String(t.version),
 })
-// The backend answers a creation as `team`; the other writes follow the Notion spec (`resource`).
-const result = (t: Team, warnings: object[] = [], key = 'resource') => ({
+// The backend answers the creation (API-062) as `resource` and every other write as `team`.
+const result = (t: Team, warnings: object[] = [], key = 'team') => ({
   [key]: brief(t),
   warnings,
   effects: {
@@ -377,7 +377,7 @@ export async function handleTeams(ctx: MockCtx): Promise<boolean> {
       submittedAt: null,
     }
     teams.push(team)
-    send(res, 201, { data: result(team, warn(members), 'team') })
+    send(res, 201, { data: result(team, warn(members), 'resource') })
     return true
   }
 

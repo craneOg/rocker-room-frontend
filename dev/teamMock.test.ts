@@ -66,15 +66,15 @@ describe('team mock reasons', () => {
     expect(reason(r)).toBe('MEMBER_NOT_ELIGIBLE')
   })
 
-  it('answers a creation as `team` and an officer team as APPROVED', async () => {
+  it('answers a creation as `resource` and an officer team as APPROVED', async () => {
     const r = await call('POST', P, {
       name: '새 팀 A',
       members: [{ membershipId: 'u2', partId: 'p2' }],
     })
-    const data = r.body.data as { team: { status: string }; resource?: unknown }
+    const data = r.body.data as { resource: { status: string }; team?: unknown }
     expect(r.status).toBe(201)
-    expect(data.team.status).toBe('APPROVED')
-    expect(data.resource).toBeUndefined()
+    expect(data.resource.status).toBe('APPROVED')
+    expect(data.team).toBeUndefined()
   })
 
   it('lists submission times for the review queue', async () => {

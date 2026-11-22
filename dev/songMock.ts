@@ -312,22 +312,12 @@ export function createSongMock() {
         s.status === 'CONFIRMED' ? requirementsOk(s) : null,
     }
   }
+  // MutationResult of the song writes: the whole Song, `warnings`, and `effects` (an object that only
+  // has the keys that apply; none here).
   const resource = (s: Song) => ({
-    resource: {
-      id: s.id,
-      performanceId: s.pid,
-      title: s.title,
-      status: s.status,
-      assignedTeamId: s.assignedTeamId,
-      setlistOrder: s.order,
-      version: String(s.version),
-    },
+    resource: body(s),
     warnings: [] as unknown[],
-    effects: {
-      approvedPerformanceMemberIds: [],
-      affectedScheduleIds: [],
-      affectedUserIds: [],
-    },
+    effects: {},
   })
 
   const renumber = (pid: string) =>
@@ -731,7 +721,7 @@ export function createSongMock() {
       if (typeof b.reason === 'string') s.note = b.reason
       s.version++
       renumber(pid)
-      return done(body(s))
+      return done(resource(s))
     }
 
     if ((sub === 'unconfirm' || sub === 'reject') && method === 'POST') {
@@ -779,7 +769,7 @@ export function createSongMock() {
         return no(409, 'STATE_CONFLICT', 'NOT_REJECTED')
       s.status = 'PROPOSED'
       s.version++
-      return done({ id: s.id, status: s.status, version: String(s.version) })
+      return done(body(s))
     }
 
     if ((sub === 'withdraw' || sub === 'remove') && method === 'POST') {
@@ -790,12 +780,7 @@ export function createSongMock() {
       s.status = 'WITHDRAWN'
       s.withdrawal = sub === 'withdraw' ? 'PROPOSER' : 'ADMIN'
       s.version++
-      return done({
-        id: s.id,
-        status: s.status,
-        withdrawalType: s.withdrawal,
-        version: String(s.version),
-      })
+      return done(body(s))
     }
 
     if (sub === 'assigned-team' && method === 'PUT') {

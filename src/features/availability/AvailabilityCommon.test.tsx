@@ -39,8 +39,9 @@ const B = who('89', '이도윤')
 const C = who('90', '김하준')
 const D = who('91', '최유나')
 
-const slotOf = (from: string, _to: string, members: unknown[]) => ({
+const slotOf = (from: string, to: string, members: unknown[]) => ({
   startAt: `2026-10-15T${from}:00+09:00`,
+  endAt: `2026-10-15T${to}:00+09:00`,
   availableCount: members.length,
   availableMembers: members,
 })

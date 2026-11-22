@@ -107,7 +107,7 @@ export type TeamDetail = {
   candidateSongs: TeamSong[]
 }
 
-/** The Team resource every write answers (inside `resource` for the MutationResult ones). */
+/** The Team resource every write answers (inside `resource` for the creation, API-062, `team` for the other writes). */
 export type TeamBrief = {
   id: string
   performanceId: string
@@ -119,13 +119,13 @@ export type TeamBrief = {
 
 /** Raw `warnings` of a write: parse them with parseWarnings (shared/api/warnings). */
 export type MutationResult = {
-  /** Notion spec shape. The backend answers a creation as `team` (both are read). */
+  /** The backend answers the creation (API-062) as `resource` and every other write (064-074, 155) as `team`. */
   resource?: TeamBrief
   team?: TeamBrief
   warnings?: unknown
 }
 
-/** The Team of a write answer: `team`, `resource`, or the Team itself (API-064 / 068). */
+/** The Team of a write answer: `team`, `resource` (API-062), or the Team itself (API-064 / 068). */
 export const briefOf = (r: MutationResult | TeamBrief): TeamBrief =>
   'id' in r ? r : (r.team ?? (r.resource as TeamBrief))
 
