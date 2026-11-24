@@ -222,7 +222,7 @@ describe('TEAM-004 saved application', () => {
 
   it('renames on 임시 저장 and keeps editing', async () => {
     const { fetchMock } = openEdit(() => team(), {
-      [`PATCH ${T201}`]: () => json({ id: '201', version: '3' }),
+      [`PATCH ${T201}`]: () => mutation('3'),
     })
     const name = await screen.findByRole('textbox', { name: T.nameLabel })
     expect(screen.getByText('나')).toBeTruthy()
@@ -293,7 +293,7 @@ describe('TEAM-004 saved application', () => {
   it('changes a part, the leader and removes a member at once', async () => {
     const { fetchMock } = openEdit(() => team(), {
       [`PATCH ${T201}/members/502`]: () => mutation('3'),
-      [`PUT ${T201}/leader`]: () => json({ id: '201', version: '3' }),
+      [`PUT ${T201}/leader`]: () => mutation('3'),
       [`DELETE ${T201}/members/502`]: () => mutation('3'),
     })
     fireEvent.change(await screen.findByLabelText(T.pickerPart('김도윤')), {

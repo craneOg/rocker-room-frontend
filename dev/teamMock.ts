@@ -495,7 +495,7 @@ export async function handleTeams(ctx: MockCtx): Promise<boolean> {
       return fail(res, 409, 'DUPLICATE', 'DUPLICATE_TEAM_NAME')
     team.name = body.name.trim()
     team.version++
-    send(res, 200, { data: brief(team) })
+    send(res, 200, { data: result(team) })
     return true
   }
   if (tail === 'members' && method === 'POST') {
@@ -535,7 +535,7 @@ export async function handleTeams(ctx: MockCtx): Promise<boolean> {
       return fail(res, 409, 'STATE_CONFLICT', 'LEADER_NOT_TEAM_MEMBER')
     team.leader = next as string | null
     team.version++
-    send(res, 200, { data: brief(team) })
+    send(res, 200, { data: result(team) })
     return true
   }
 

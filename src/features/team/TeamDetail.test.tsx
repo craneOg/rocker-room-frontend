@@ -160,13 +160,10 @@ describe('TEAM-002 officer edits', () => {
       [`PATCH ${T201}`]: () =>
         taken
           ? apiError('DUPLICATE', 409)
-          : json({
-              id: '201',
-              performanceId: '31',
+          : mutation('3', {
               name: '새 이름',
               status: 'APPROVED',
               leaderMembershipId: '21',
-              version: '3',
             }),
     })
     await menuItem(T.teamMenu, T.menuRename)
@@ -205,7 +202,7 @@ describe('TEAM-002 officer edits', () => {
 
   it('makes another member the leader, clears the leader, and changes a part', async () => {
     const { fetchMock } = openAdmin({
-      [`PUT ${T201}/leader`]: () => json({ id: '201', version: '3' }),
+      [`PUT ${T201}/leader`]: () => mutation('3'),
       [`PATCH ${T201}/members/502`]: () => mutation('3'),
     })
     await menuItem(`김도윤 ${T.rowMenu}`, T.makeLeader)
@@ -438,7 +435,7 @@ describe('TEAM-002 on a LOCKED performance', () => {
   it('asks an officer for a reason before an edit and sends it', async () => {
     const { fetchMock } = openAdmin({
       [`GET ${PERF}`]: () => withTeamPolicy('CLOSED', { status: 'LOCKED' }),
-      [`PUT ${T201}/leader`]: () => json({ id: '201', version: '3' }),
+      [`PUT ${T201}/leader`]: () => mutation('3'),
     })
     await menuItem(`김도윤 ${T.rowMenu}`, T.makeLeader)
     const reason = await screen.findByRole('textbox', { name: T.lockedTitle })
