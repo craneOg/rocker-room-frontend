@@ -60,14 +60,14 @@ export type CommonTarget =
 /** Only cells somebody can use are listed; a missing cell means 0 available (confirmed by the backend). */
 export type CommonSlot = {
   startAt: string
+  /** startAt + 30 minutes. */
+  endAt: string
   availableCount: number
   /** Officers only. */
   availableMembers?: NamedMember[]
 }
 
 export type CommonAvailability = {
-  from?: string
-  to?: string
   participantCount: number
   respondedCount: number
   /** The three below are missing altogether (not null) for a caller who is not an officer (AV-04). */

@@ -272,6 +272,13 @@ export function createSongMock() {
     proposedBy: person(s),
     version: String(s.version),
   })
+  // The whole Song of the BE (SongResponse): the detail and every write answer use this one.
+  const fullSong = (s: Song) => ({
+    ...body(s),
+    memo: s.memo,
+    decisionNote: s.note,
+    withdrawalType: s.withdrawal,
+  })
   const sessionRows = (s: Song) =>
     s.sessions.map((x) => ({
       performanceMemberId: x.pm,
@@ -312,22 +319,12 @@ export function createSongMock() {
         s.status === 'CONFIRMED' ? requirementsOk(s) : null,
     }
   }
+  // MutationResult of the song writes: the whole Song, `warnings`, and `effects` (an object that only
+  // has the keys that apply; none here).
   const resource = (s: Song) => ({
-    resource: {
-      id: s.id,
-      performanceId: s.pid,
-      title: s.title,
-      status: s.status,
-      assignedTeamId: s.assignedTeamId,
-      setlistOrder: s.order,
-      version: String(s.version),
-    },
+    resource: fullSong(s),
     warnings: [] as unknown[],
-    effects: {
-      approvedPerformanceMemberIds: [],
-      affectedScheduleIds: [],
-      affectedUserIds: [],
-    },
+    effects: {},
   })
 
   const renumber = (pid: string) =>
@@ -623,12 +620,7 @@ export function createSongMock() {
       if (s.status === 'WITHDRAWN' && !admin && s.proposer !== 'u1')
         return no(404, 'NOT_FOUND')
       return done({
-        song: {
-          ...body(s),
-          memo: s.memo,
-          decisionNote: s.note,
-          withdrawalType: s.withdrawal,
-        },
+        song: fullSong(s),
         requirements: s.requirements,
         sessions: sessionRows(s),
         evaluation: aggregate(s),
@@ -687,7 +679,7 @@ export function createSongMock() {
         s.link = (b.referenceUrl as string | null) ?? null
       if ('memo' in b) s.memo = (b.memo as string | null) ?? null
       s.version++
-      return done(body(s))
+      return done(fullSong(s))
     }
 
     if (sub === 'requirements' && method === 'PUT') {
@@ -731,7 +723,7 @@ export function createSongMock() {
       if (typeof b.reason === 'string') s.note = b.reason
       s.version++
       renumber(pid)
-      return done(body(s))
+      return done(resource(s))
     }
 
     if ((sub === 'unconfirm' || sub === 'reject') && method === 'POST') {
@@ -779,7 +771,7 @@ export function createSongMock() {
         return no(409, 'STATE_CONFLICT', 'NOT_REJECTED')
       s.status = 'PROPOSED'
       s.version++
-      return done({ id: s.id, status: s.status, version: String(s.version) })
+      return done(fullSong(s))
     }
 
     if ((sub === 'withdraw' || sub === 'remove') && method === 'POST') {
@@ -790,12 +782,7 @@ export function createSongMock() {
       s.status = 'WITHDRAWN'
       s.withdrawal = sub === 'withdraw' ? 'PROPOSER' : 'ADMIN'
       s.version++
-      return done({
-        id: s.id,
-        status: s.status,
-        withdrawalType: s.withdrawal,
-        version: String(s.version),
-      })
+      return done(fullSong(s))
     }
 
     if (sub === 'assigned-team' && method === 'PUT') {

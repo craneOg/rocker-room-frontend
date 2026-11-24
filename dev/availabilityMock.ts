@@ -343,13 +343,12 @@ export function createAvailabilityMock() {
           const can = people.filter(([id]) => state.slots[id]?.has(t))
           return {
             startAt: iso(t),
+            endAt: iso(t + SLOT),
             availableCount: can.length,
             ...(admin ? { availableMembers: named(can) } : {}),
           }
         })
       return ok(ctx, {
-        from: iso(from),
-        to: iso(to),
         participantCount: people.length,
         respondedCount: people.length - missing.length,
         ...(admin
