@@ -90,8 +90,9 @@ export type ClubDetail = ClubSummary & {
   updatedAt: string
 }
 
+/** A GUEST gets the summary only: no status / isSearchable / createdAt / updatedAt (API-015). */
 export const getClub = (clubId: string) =>
-  api.get<ClubDetail>(`/api/v1/clubs/${clubId}`)
+  api.get<ClubSummary | ClubDetail>(`/api/v1/clubs/${clubId}`)
 
 export type MemberPart = {
   id: string
@@ -160,6 +161,20 @@ export const listMembers = (
     },
     signal,
   })
+
+/**
+ * The total of API-020. A GUEST caller gets 404 there (no member list for guests): an answer here,
+ * not a missing page, so null keeps the global 404 view away and the count is simply not shown.
+ */
+export const countMembers = async (clubId: string, status?: string[]) => {
+  try {
+    return (await listMembers(clubId, { status }, 0, undefined, 1))
+      .totalElements
+  } catch (e) {
+    if (isApiError(e, 'NOT_FOUND')) return null
+    throw e
+  }
+}
 
 export type MemberPerformance = {
   id: string

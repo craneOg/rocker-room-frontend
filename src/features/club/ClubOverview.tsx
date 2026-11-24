@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { isClubAdmin, useSession } from '../../shared/auth/session'
 import { ErrorState, ListSkeleton } from '../../shared/ui/StateViews'
-import { getClub, getMember, listMembers } from './api'
+import { countMembers, getClub, getMember } from './api'
 import { CLUB_TYPE_LABEL, MEMBER_COPY as T } from './copy'
 import { ClubEditModal } from './ClubEditModal'
 import { MANAGE_COPY as M } from './manageCopy'
@@ -43,17 +43,15 @@ export function ClubOverview() {
     queryKey: [KEY, clubId, 'club'],
     queryFn: () => getClub(clubId),
   })
-  // The member count is the list's totalElements. Officers' default filter is ACTIVE only, so
-  // they ask for the same three statuses a regular member sees.
+  // The member count is the list's totalElements (not shown to a GUEST: the list is 404 for them).
+  // Officers' default filter is ACTIVE only, so they ask for the same three statuses a regular
+  // member sees.
   const count = useQuery({
     queryKey: [KEY, clubId, 'count', admin],
     queryFn: () =>
-      listMembers(
+      countMembers(
         clubId,
-        { status: admin ? ['ACTIVE', 'ON_LEAVE', 'GRADUATED'] : undefined },
-        0,
-        undefined,
-        1,
+        admin ? ['ACTIVE', 'ON_LEAVE', 'GRADUATED'] : undefined,
       ),
   })
   // Right side of "내 소속 정보": display name and own parts. Quiet when it fails.
@@ -66,6 +64,8 @@ export function ClubOverview() {
   if (club.isPending) return <ListSkeleton rows={3} />
   if (club.isError) return <ErrorState onRetry={() => void club.refetch()} />
   const c = club.data
+  // A GUEST's club answer has no status: the session's membership carries it too.
+  const status = 'status' in c ? c.status : own?.club.status
   const base = `/clubs/${clubId}`
   const myExtra = mine.data
     ? [memberName(mine.data), ...mine.data.parts.map((p) => p.name)].join(' · ')
@@ -105,12 +105,12 @@ export function ClubOverview() {
           <Typography
             variant="caption1"
             color={
-              c.status === 'INACTIVE'
+              status === 'INACTIVE'
                 ? 'semantic.foreground.negative.primary'
                 : 'semantic.foreground.neutral.tertiary'
             }
           >
-            {c.status === 'INACTIVE' ? T.inactive : T.statusActive}
+            {status === 'INACTIVE' ? T.inactive : T.statusActive}
           </Typography>
         </div>
         {admin ? (
@@ -124,7 +124,7 @@ export function ClubOverview() {
           </Button>
         ) : null}
       </section>
-      {editing ? (
+      {editing && 'status' in c ? (
         <ClubEditModal club={c} onClose={() => setEditing(false)} />
       ) : null}
 
@@ -132,7 +132,7 @@ export function ClubOverview() {
         <MenuRow
           to={`${base}/members`}
           label={T.menuMembers}
-          extra={count.data ? `${count.data.totalElements}` : undefined}
+          extra={count.data != null ? `${count.data}` : undefined}
         />
         <MenuRow
           to="/me/membership"

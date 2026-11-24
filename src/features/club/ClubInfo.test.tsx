@@ -167,6 +167,49 @@ describe('CLUB-101 ClubOverview', () => {
     await screen.findByText(T.inactive)
   })
 
+  describe('as a GUEST', () => {
+    // The BE answers a GUEST with the club summary only (no status) and the member list with 404.
+    const guestClub = {
+      id: '10',
+      name: 'Crane Band',
+      description: '신촌 기반 밴드',
+      clubType: 'BAND',
+      profileImageUrl: null,
+      themeColor: '#1A2B3C',
+    }
+    const asGuest = (clubStatus: 'ACTIVE' | 'INACTIVE' = 'ACTIVE') =>
+      open('/clubs/10/info', 'MEMBER', {
+        [`GET ${API_PATHS.memberships}`]: () =>
+          json({
+            items: [
+              {
+                ...membership('MEMBER'),
+                club: { ...membership('MEMBER').club, status: clubStatus },
+              },
+            ],
+          }),
+        [`GET ${BASE}`]: () => json(guestClub),
+        [`GET ${BASE}/memberships`]: () => apiError('NOT_FOUND', 404),
+      })
+
+    it('shows the club without a member count instead of the 404 page', async () => {
+      asGuest()
+      await findScreen('CLUB-101')
+      await screen.findByText('Crane Band')
+      expect(screen.queryByText(COPY.notFoundTitle)).toBeNull()
+      expect(screen.getByText(T.menuMembers).closest('a')?.textContent).toBe(
+        T.menuMembers,
+      )
+    })
+
+    it('takes the inactive state of the club from the session membership', async () => {
+      asGuest('INACTIVE')
+      await findScreen('CLUB-101')
+      await screen.findByText(T.inactive)
+      expect(screen.queryByText(T.statusActive)).toBeNull()
+    })
+  })
+
   it('offers a retry when the club fails to load', async () => {
     let fail = true
     const { fetchMock } = open('/clubs/10/info', 'MEMBER', {
