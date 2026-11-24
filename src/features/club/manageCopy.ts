@@ -68,8 +68,8 @@ export const MANAGE_COPY = {
     `${performance} ${team}의 팀장이 ${successor}님으로 바뀌어요.`,
   withdrawLeaderNone: (performance: string, team: string) =>
     `${performance} ${team}에는 팀장을 이어받을 팀원이 없어 팀장이 비어요.`,
-  // Team notices worded like MY_COPY.teamDeleted / teamAuto / teamAutoNone (MY-004); only the verb
-  // ("내보내면") is adapted to this dialog (assumed).
+  // Team notices by team status (CLUB-103 5-3), worded like MY_COPY.teamDeleted / teamAuto /
+  // teamAutoNone (MY-004).
   withdrawTeamDeleted: (performance: string, team: string) =>
     `작성 중인 ${performance} ${team}은(는) 내보내면 삭제돼요.`,
   withdrawLeaderAuto: (performance: string, team: string, successor: string) =>
