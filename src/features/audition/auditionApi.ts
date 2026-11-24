@@ -51,6 +51,8 @@ export type AuditionFilter = {
   type?: AuditionType
   songId?: string
   scheduleId?: string
+  /** One audition of the performance; another performance's id gives an empty list. */
+  auditionId?: string
 }
 
 export const AUDITION_PAGE_SIZE = 20
@@ -74,6 +76,7 @@ export const listAuditions = (
       type: filter.type,
       songId: filter.songId || undefined,
       scheduleId: filter.scheduleId || undefined,
+      auditionId: filter.auditionId || undefined,
       page,
       size,
     },
@@ -81,8 +84,8 @@ export const listAuditions = (
   })
 
 /**
- * AUDI-003 has no single-read API (requested from the server): the target is found by paging
- * through both tabs, 100 rows a page.
+ * AUDI-003 has no single-read API: the target is read through the list's `auditionId` filter, once
+ * per tab (PENDING first; the server's default tab is PENDING, and a judged one is on DONE).
  */
 export const findAudition = async (
   clubId: string,
@@ -90,15 +93,15 @@ export const findAudition = async (
   auditionId: string,
 ) => {
   for (const tab of ['PENDING', 'DONE'] as const) {
-    let page = 0
-    let totalPages = 1
-    while (page < totalPages) {
-      const r = await listAuditions(clubId, performanceId, { tab }, page, 100)
-      const found = r.items.find((a) => a.id === auditionId)
-      if (found) return found
-      totalPages = r.totalPages
-      page += 1
-    }
+    const r = await listAuditions(
+      clubId,
+      performanceId,
+      { tab, auditionId },
+      0,
+      1,
+    )
+    const found = r.items.find((a) => a.id === auditionId)
+    if (found) return found
   }
   return null
 }

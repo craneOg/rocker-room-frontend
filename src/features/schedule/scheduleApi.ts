@@ -270,8 +270,8 @@ export const createSchedule = (
     .then(parsed)
 
 /**
- * API-110. It never changes `status` (use confirm / unconfirm for that).
- * ponytail: whether the server's PATCH also takes `status` is unconfirmed (backend).
+ * API-110. It never changes `status` (use confirm / unconfirm for that): the server rejects a
+ * different `status` with 409 INVALID_STATE (BE-confirmed), so none is sent.
  */
 export const updateSchedule = (
   clubId: string,
