@@ -56,8 +56,8 @@ export const SETTINGS_COPY = {
     '넘길 멤버가 없어 동아리가 비활성 상태가 되고 서비스 관리자가 복구를 돕게 돼요.',
   leaderSuccessor: (team: string) => `${team} 팀장을 이어받을 팀원`,
   noLeader: '팀장 없음',
-  // Team notices worded like MY_COPY.teamDeleted / teamAuto / teamAutoNone (MY-004); only the verb
-  // ("나가면") is adapted to this screen (assumed).
+  // Team notices by team status (CLUB-108 2), worded like MY_COPY.teamDeleted / teamAuto /
+  // teamAutoNone (MY-004).
   leaderTeamDeleted: (team: string) =>
     `작성 중인 ${team}은(는) 나가면 삭제돼요.`,
   leaderAutoSuccessor: (team: string, name: string) =>

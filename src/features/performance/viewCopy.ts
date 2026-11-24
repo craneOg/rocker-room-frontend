@@ -77,7 +77,7 @@ export const VIEW_COPY = {
   progressPlayability: (n: number) => `미응답 ${n}곡`,
   progressVote: (used: number, limit: number | null) =>
     limit === null ? `선택 ${used}곡` : `선택 ${used}/${limit}곡`,
-  // Not in the spec (assumed)
+  // PERF-003 (the spec example): never saved. An empty save is "입력 완료 0칸" (API-101).
   progressAvailabilityEmpty: '미입력',
   progressAvailability: (n: number) => `입력 완료 ${n}칸`,
   summary: '공연 요약',
