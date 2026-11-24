@@ -40,6 +40,8 @@ const inDialog = async (name: string) => {
   await waitFor(() => expect(button.hasAttribute('disabled')).toBe(false))
   fireEvent.click(button)
 }
+const confirmOk = (warnings: unknown[] = []) =>
+  json({ resource: { id: '41' }, warnings, effects: {} })
 const ok = () => json({ resource: { id: '41' }, warnings: [] })
 
 const MINE_PLAYABILITY: Route = () =>
@@ -893,7 +895,7 @@ describe('SONG-003 officer decisions', () => {
             json({
               items: [team('7', 'Crane Team'), team('8', '초안 팀', 'DRAFT')],
             }),
-          [`POST ${S}/confirm`]: () => json({}),
+          [`POST ${S}/confirm`]: () => confirmOk(),
         },
       ),
     })
@@ -920,6 +922,51 @@ describe('SONG-003 officer decisions', () => {
     })
   })
 
+  it('shows the part warnings answered by the confirmation', async () => {
+    openSong(PATH, 'CLUB_ADMIN', {
+      routes: base(
+        { version: '8' },
+        {},
+        {
+          [`GET ${TEAMS}`]: () => json({ items: [team('7', 'Crane Team')] }),
+          [`POST ${S}/confirm`]: () =>
+            confirmOk([
+              {
+                type: 'PART_SHORTAGE',
+                partId: '4',
+                partName: '드럼',
+                requiredCount: 2,
+                assignedCount: 1,
+              },
+            ]),
+        },
+      ),
+    })
+    await click(T.actionConfirm)
+    await screen.findByText(T.confirmOrderHint)
+    await inDialog(T.actionConfirm)
+    await screen.findByText(T.confirmDone)
+    await screen.findByText(T.warnShortage('드럼', 1))
+  })
+
+  it('shows no warning when the confirmation answers none', async () => {
+    openSong(PATH, 'CLUB_ADMIN', {
+      routes: base(
+        { version: '8' },
+        {},
+        {
+          [`GET ${TEAMS}`]: () => json({ items: [team('7', 'Crane Team')] }),
+          [`POST ${S}/confirm`]: () => confirmOk(),
+        },
+      ),
+    })
+    await click(T.actionConfirm)
+    await screen.findByText(T.confirmOrderHint)
+    await inDialog(T.actionConfirm)
+    await screen.findByText(T.confirmDone)
+    expect(screen.queryByText(T.warnShortage('드럼', 1))).toBeNull()
+  })
+
   it('selects with 나중에 정하기 as a null team', async () => {
     const { fetchMock } = openSong(PATH, 'CLUB_ADMIN', {
       routes: base(
@@ -927,7 +974,7 @@ describe('SONG-003 officer decisions', () => {
         {},
         {
           [`GET ${TEAMS}`]: () => json({ items: [team('7', 'Crane Team')] }),
-          [`POST ${S}/confirm`]: () => json({}),
+          [`POST ${S}/confirm`]: () => confirmOk(),
         },
       ),
     })
@@ -977,7 +1024,7 @@ describe('SONG-003 officer decisions', () => {
         {
           [`GET ${TEAMS}`]: () => json({ items: [team('7', 'Crane Team')] }),
           [`GET ${PERF}/members`]: () => participants(),
-          [`POST ${S}/confirm`]: () => json({}),
+          [`POST ${S}/confirm`]: () => confirmOk(),
         },
       ),
     })
