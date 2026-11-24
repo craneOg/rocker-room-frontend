@@ -384,20 +384,22 @@ describe('AUDI-003 AuditionResult', () => {
     )
   })
 
-  it('keeps looking on the next pages when the target is past the first 100', async () => {
+  it('reads the target through the auditionId filter in one request, however many there are', async () => {
     const { fetchMock } = show('150', {
-      [`GET ${AUDITIONS}`]: (url) => {
-        const page = Number(new URL(url, 'http://x').searchParams.get('page'))
-        if (url.includes('tab=DONE')) return auditionPage([], { totalPages: 1 })
-        return auditionPage(page === 1 ? [audition('150')] : [audition('1')], {
-          page,
-          totalPages: 2,
-        })
-      },
+      [`GET ${AUDITIONS}`]: listOf([audition('150')]),
     })
     await ready()
     expect(screen.getByText('곡: Song A')).toBeTruthy()
-    expect(callsTo(fetchMock, AUDITIONS).length).toBeGreaterThanOrEqual(2)
+    const queries = callsTo(fetchMock, AUDITIONS).map(
+      ([u]) => new URL(u, 'http://x').searchParams,
+    )
+    expect(queries).toHaveLength(1)
+    expect([
+      queries[0]?.get('auditionId'),
+      queries[0]?.get('tab'),
+      queries[0]?.get('page'),
+      queries[0]?.get('size'),
+    ]).toEqual(['150', 'PENDING', '0', '1'])
   })
 
   it('searches the done tab too, and gives up with the not-found view', async () => {
@@ -406,10 +408,13 @@ describe('AUDI-003 AuditionResult', () => {
     })
     await findScreen('AUDI-003')
     await screen.findByText(COPY.notFoundTitle)
-    const tabs = callsTo(fetchMock, AUDITIONS).map(([u]) =>
-      new URL(u, 'http://x').searchParams.get('tab'),
+    const queries = callsTo(fetchMock, AUDITIONS).map(
+      ([u]) => new URL(u, 'http://x').searchParams,
     )
-    expect(tabs).toEqual(expect.arrayContaining(['PENDING', 'DONE']))
+    expect(queries.map((q) => q.get('tab'))).toEqual(
+      expect.arrayContaining(['PENDING', 'DONE']),
+    )
+    expect(queries.every((q) => q.get('auditionId') === '99')).toBe(true)
   })
 
   it('asks for a reason when the server says REASON_REQUIRED (400)', async () => {

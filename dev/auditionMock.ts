@@ -238,6 +238,7 @@ function createAuditionMock() {
         .filter((r) => r.pid === pid)
         .filter((r) => !q.get('type') || r.type === q.get('type'))
         .filter((r) => !q.get('songId') || r.songId === q.get('songId'))
+        .filter((r) => !q.get('auditionId') || r.id === q.get('auditionId'))
         .filter(
           (r) => !q.get('scheduleId') || r.scheduleId === q.get('scheduleId'),
         )
