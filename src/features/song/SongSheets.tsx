@@ -164,6 +164,7 @@ function ConfirmSheet(p: SheetProps) {
           : {}),
       }),
     T.confirmDone,
+    (r) => warningTexts((r as { warnings?: unknown }).warnings),
   )
   return (
     <ActionModal

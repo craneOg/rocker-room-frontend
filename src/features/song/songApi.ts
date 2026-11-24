@@ -214,7 +214,10 @@ export const confirmSong = (
   songId: string,
   body: ConfirmBody,
 ) =>
-  api.post<unknown>(`${songPath(clubId, performanceId, songId)}/confirm`, body)
+  api.post<MutationResult>(
+    `${songPath(clubId, performanceId, songId)}/confirm`,
+    body,
+  )
 
 type Decision = { version: string; reason?: string; decisionNote?: string }
 /** API-081. */
