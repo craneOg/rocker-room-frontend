@@ -125,9 +125,9 @@ export type MutationResult = {
   warnings?: unknown
 }
 
-/** The Team of a write answer: `team`, `resource` (API-062), or the Team itself (API-064 / 068). */
-export const briefOf = (r: MutationResult | TeamBrief): TeamBrief =>
-  'id' in r ? r : (r.team ?? (r.resource as TeamBrief))
+/** The Team of a write answer: `resource` for the creation (API-062), `team` for every other write. */
+export const briefOf = (r: MutationResult): TeamBrief =>
+  r.team ?? (r.resource as TeamBrief)
 
 /** API-062 / 064 found the name already used in the performance (T-07). */
 export class TeamNameTakenError extends Error {
@@ -222,7 +222,7 @@ export const createTeam = (
     api.post<MutationResult>(teamsPath(clubId, performanceId), body),
   )
 
-/** API-064 answers the Team itself. `reason` is required on a LOCKED performance. */
+/** API-064 answers `{team, warnings, effects}` like the other writes. `reason` is required on a LOCKED performance. */
 export const renameTeam = (
   clubId: string,
   performanceId: string,
@@ -230,7 +230,10 @@ export const renameTeam = (
   body: { version: string; name: string; reason?: string },
 ) =>
   nameChecked(() =>
-    api.patch<TeamBrief>(`${teamsPath(clubId, performanceId)}/${teamId}`, body),
+    api.patch<MutationResult>(
+      `${teamsPath(clubId, performanceId)}/${teamId}`,
+      body,
+    ),
   )
 
 /** API-065. */
@@ -317,7 +320,7 @@ export const replaceLeader = (
     reason?: string
   },
 ) =>
-  api.put<TeamBrief>(
+  api.put<MutationResult>(
     `${teamsPath(clubId, performanceId)}/${teamId}/leader`,
     body,
   )
@@ -359,4 +362,4 @@ export const teamKey = (
   teamId: string,
 ) => [...teamsKey(clubId, performanceId), 'detail', teamId] as const
 
-export const versionOf = (r: MutationResult | TeamBrief) => briefOf(r).version
+export const versionOf = (r: MutationResult) => briefOf(r).version
